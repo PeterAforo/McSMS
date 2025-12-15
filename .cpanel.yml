@@ -29,8 +29,11 @@ deployment:
     # Deploy backend .htaccess
     - /bin/cp backend/.htaccess $DEPLOYPATH
     
-    # Deploy config folder
-    - /bin/cp -R config $DEPLOYPATH
+    # Deploy config folder (but don't overwrite database.php if it exists)
+    - /bin/mkdir -p $DEPLOYPATH/config
+    - /bin/cp config/config.php $DEPLOYPATH/config/ 2>/dev/null || true
+    - /bin/cp config/constants.php $DEPLOYPATH/config/ 2>/dev/null || true
+    - '[ ! -f $DEPLOYPATH/config/database.php ] && /bin/cp config/database.php $DEPLOYPATH/config/ || echo "Keeping existing database.php"'
     
     # Create uploads directory if it doesn't exist
     - /bin/mkdir -p $DEPLOYPATH/uploads

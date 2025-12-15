@@ -19,10 +19,13 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Environment files (keep config for deployment)
+# Environment files
 .env
 .env.local
 .env.*.local
+
+# Production config (managed separately on server)
+config/database.php
 
 # Temporary files
 *.tmp
