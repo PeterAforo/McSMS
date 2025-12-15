@@ -427,7 +427,7 @@ export function VoiceCommandButton() {
     <>
       <button
         onClick={() => setShowModal(true)}
-        className="fixed bottom-24 right-6 w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform z-40 group"
+        className="fixed bottom-36 right-6 w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform z-40 group"
         title="Voice Commands (Ctrl+Shift+V)"
       >
         <Mic className="w-5 h-5" />

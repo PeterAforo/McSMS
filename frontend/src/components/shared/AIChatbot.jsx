@@ -239,7 +239,7 @@ export default function AIChatbot() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform z-50 group"
+        className="fixed bottom-20 right-6 w-14 h-14 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full shadow-lg flex items-center justify-center text-white hover:scale-110 transition-transform z-50 group"
       >
         <MessageCircle className="w-6 h-6" />
         <span className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center animate-pulse">
@@ -253,7 +253,7 @@ export default function AIChatbot() {
   }
 
   return (
-    <div className={`fixed bottom-6 right-6 z-50 ${isMinimized ? 'w-72' : 'w-96'} transition-all duration-300`}>
+    <div className={`fixed bottom-20 right-6 z-50 ${isMinimized ? 'w-72' : 'w-96'} transition-all duration-300`}>
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-gray-700">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 flex items-center justify-between">
