@@ -1,8 +1,18 @@
 RewriteEngine On
 RewriteBase /
 
+# Handle OPTIONS preflight requests for CORS
+RewriteCond %{REQUEST_METHOD} OPTIONS
+RewriteRule ^(.*)$ $1 [R=200,L]
+
 # Allow API requests to pass through
 RewriteRule ^api/ - [L]
+
+# Allow config requests to pass through
+RewriteRule ^config/ - [L]
+
+# Allow uploads requests to pass through
+RewriteRule ^uploads/ - [L]
 
 # Allow real files and directories
 RewriteCond %{REQUEST_FILENAME} !-f
@@ -10,3 +20,9 @@ RewriteCond %{REQUEST_FILENAME} !-d
 
 # Redirect all other requests to index.html for SPA routing
 RewriteRule ^ index.html [QSA,L]
+
+# PHP settings
+<IfModule mod_php.c>
+    php_flag display_errors Off
+    php_value error_reporting 0
+</IfModule>
