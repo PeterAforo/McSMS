@@ -1,0 +1,41 @@
+---
+deployment:
+  tasks:
+    # Deploy frontend files to public_html root
+    - export DEPLOYPATH=/home/aforo/eea.mcaforo.com/
+    
+    # Copy frontend index.html and root files
+    - /bin/cp frontend_dist/index.html $DEPLOYPATH
+    - /bin/cp frontend_dist/manifest.json $DEPLOYPATH
+    - /bin/cp frontend_dist/sw.js $DEPLOYPATH
+    - /bin/cp frontend_dist/offline.html $DEPLOYPATH
+    - /bin/cp frontend_dist/vite.svg $DEPLOYPATH
+    
+    # Copy frontend assets folder
+    - /bin/cp -R frontend_dist/assets $DEPLOYPATH
+    
+    # Copy frontend icons folder
+    - /bin/cp -R frontend_dist/icons $DEPLOYPATH
+    
+    # Deploy backend API folder
+    - /bin/cp -R backend/api $DEPLOYPATH
+    
+    # Deploy backend src folder
+    - /bin/cp -R backend/src $DEPLOYPATH
+    
+    # Deploy backend vendor folder (composer dependencies)
+    - /bin/cp -R backend/vendor $DEPLOYPATH
+    
+    # Deploy backend .htaccess
+    - /bin/cp backend/.htaccess $DEPLOYPATH
+    
+    # Deploy config folder
+    - /bin/cp -R config $DEPLOYPATH
+    
+    # Create uploads directory if it doesn't exist
+    - /bin/mkdir -p $DEPLOYPATH/uploads
+    
+    # Set proper permissions
+    - /bin/chmod -R 755 $DEPLOYPATH/api
+    - /bin/chmod -R 755 $DEPLOYPATH/assets
+    - /bin/chmod -R 777 $DEPLOYPATH/uploads

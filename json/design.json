@@ -1,0 +1,305 @@
+{
+  "project": "School Management System",
+  "version": "1.0",
+  "design_style": {
+    "theme": "clean, modern, minimal",
+    "colors": {
+      "primary": "#3F51B5",
+      "secondary": "#607D8B",
+      "accent": "#4CAF50",
+      "background": "#F5F7FA"
+    },
+    "components": "Bootstrap-like UI, card-based layout, icons, tables, charts"
+  },
+
+  "screens": [
+
+    {
+      "name": "Parent Dashboard",
+      "sections": [
+        { "type": "header", "title": "Parent Dashboard", "subtitle": "Overview of all children and school updates" },
+        {
+          "type": "widgets",
+          "items": [
+            { "title": "Children Count", "value": "2", "icon": "users" },
+            { "title": "Outstanding Fees", "value": "$450", "icon": "wallet" },
+            { "title": "Notifications", "value": "5 New", "icon": "bell" }
+          ]
+        },
+        {
+          "type": "list",
+          "title": "Children",
+          "item_structure": ["Photo", "Full Name", "Gender", "Class", "Status"]
+        },
+        {
+          "type": "list",
+          "title": "Recent Notifications",
+          "item_structure": ["Message Title", "Description", "Timestamp"]
+        }
+      ]
+    },
+
+    {
+      "name": "Children List",
+      "sections": [
+        { "type": "header", "title": "Your Children" },
+        {
+          "type": "table",
+          "columns": ["Photo", "Full Name", "Gender", "DOB", "Previous School", "Actions"],
+          "actions": ["View", "Apply for Admission", "Fees", "Performance"]
+        },
+        { "type": "button", "label": "Add Child", "style": "primary" }
+      ]
+    },
+
+    {
+      "name": "Add Child Form",
+      "sections": [
+        { "type": "header", "title": "Register New Child" },
+        {
+          "type": "form",
+          "fields": [
+            "Full Name:text",
+            "Gender:dropdown[male,female]",
+            "Date of Birth:date",
+            "Previous School:text",
+            "Photo:file"
+          ],
+          "submit_label": "Save Child"
+        }
+      ]
+    },
+
+    {
+      "name": "Admission Application Form",
+      "sections": [
+        { "type": "header", "title": "Admission Application" },
+        {
+          "type": "form",
+          "fields": [
+            "Preferred Class:dropdown[Creche,Nursery,KG,Grade]",
+            "Upload Birth Certificate:file",
+            "Upload Passport Photo:file",
+            "Upload Medical Report:file",
+            "Upload Previous Results:file"
+          ],
+          "submit_label": "Submit Application"
+        }
+      ]
+    },
+
+    {
+      "name": "Invoice & Payments",
+      "sections": [
+        { "type": "header", "title": "Invoice & Payments" },
+        {
+          "type": "table",
+          "title": "Fee Breakdown",
+          "columns": ["Fee Type", "Amount"]
+        },
+        {
+          "type": "checkbox_group",
+          "title": "Optional Services",
+          "options": ["Lunch", "Transport", "After School Care", "Sports"]
+        },
+        {
+          "type": "summary",
+          "fields": ["Subtotal", "Total Optional Fees", "Grand Total"]
+        },
+        { "type": "button", "label": "Pay Now", "style": "primary" },
+        {
+          "type": "table",
+          "title": "Payment History",
+          "columns": ["Date", "Amount", "Method", "Status"]
+        }
+      ]
+    },
+
+    {
+      "name": "Academic Performance",
+      "sections": [
+        { "type": "header", "title": "Academic Performance" },
+        {
+          "type": "table",
+          "columns": ["Subject", "CA Score", "Exam Score", "Total", "Grade"]
+        },
+        { "type": "chart", "chart_type": "line", "title": "Performance Trend" },
+        { "type": "button", "label": "Download Report Card", "style": "secondary" }
+      ]
+    },
+
+    {
+      "name": "Admissions Dashboard",
+      "sections": [
+        { "type": "header", "title": "Admissions Dashboard" },
+        {
+          "type": "widgets",
+          "items": [
+            { "title": "Pending Applications", "value": "14" },
+            { "title": "Approved", "value": "6" },
+            { "title": "Rejected", "value": "3" }
+          ]
+        },
+        {
+          "type": "table",
+          "title": "Pending Applications",
+          "columns": ["Child Name", "Parent", "Class", "Submitted", "Actions"]
+        }
+      ]
+    },
+
+    {
+      "name": "Application Review",
+      "sections": [
+        { "type": "header", "title": "Application Review" },
+        { "type": "details", "items": ["Child Name", "DOB", "Gender", "Preferred Class", "Parent Info"] },
+        {
+          "type": "files",
+          "title": "Uploaded Documents",
+          "items": ["Birth Certificate", "Photo", "Medical Report", "Previous Results"]
+        },
+        {
+          "type": "form",
+          "title": "Approval",
+          "fields": [
+            "Assign Class:dropdown[Creche,Nursery,KG,Grade]",
+            "Assign Section:dropdown[A,B,C]"
+          ],
+          "actions": ["Approve", "Reject"]
+        }
+      ]
+    },
+
+    {
+      "name": "Teacher Dashboard",
+      "sections": [
+        { "type": "header", "title": "Teacher Dashboard" },
+        {
+          "type": "widgets",
+          "items": [
+            { "title": "My Classes", "value": "3" },
+            { "title": "Homework Due", "value": "2" },
+            { "title": "Pending Grading", "value": "8" }
+          ]
+        },
+        {
+          "type": "list",
+          "title": "Assigned Classes",
+          "item_structure": ["Class Name", "Students Count", "Actions"]
+        }
+      ]
+    },
+
+    {
+      "name": "Attendance Entry",
+      "sections": [
+        { "type": "header", "title": "Class Attendance" },
+        {
+          "type": "table",
+          "columns": ["Student Name", "Present:checkbox", "Absent:checkbox", "Late:checkbox"]
+        },
+        { "type": "button", "label": "Submit Attendance" }
+      ]
+    },
+
+    {
+      "name": "Grade Entry",
+      "sections": [
+        { "type": "header", "title": "Grade Entry" },
+        { "type": "dropdown", "label": "Subject", "options": ["Math", "English", "Science"] },
+        {
+          "type": "table",
+          "columns": ["Student Name", "CA Score:number", "Exam Score:number", "Total:auto"]
+        },
+        { "type": "button", "label": "Save Grades" }
+      ]
+    },
+
+    {
+      "name": "Homework Upload",
+      "sections": [
+        { "type": "header", "title": "Upload Homework" },
+        {
+          "type": "form",
+          "fields": [
+            "Title:text",
+            "Description:textarea",
+            "Attachment:file",
+            "Due Date:date"
+          ],
+          "submit_label": "Publish Homework"
+        }
+      ]
+    },
+
+    {
+      "name": "Finance Dashboard",
+      "sections": [
+        { "type": "header", "title": "Finance Management" },
+        {
+          "type": "table",
+          "title": "Transactions",
+          "columns": ["Date", "Student", "Amount", "Method", "Status"]
+        },
+        { "type": "chart", "chart_type": "bar", "title": "Monthly Revenue" }
+      ]
+    },
+
+    {
+      "name": "Admin Dashboard",
+      "sections": [
+        { "type": "header", "title": "Admin Dashboard" },
+        {
+          "type": "widgets",
+          "items": [
+            { "title": "Total Students", "value": "340" },
+            { "title": "Teachers", "value": "22" },
+            { "title": "Revenue This Term", "value": "$54,000" }
+          ]
+        },
+        {
+          "type": "chart",
+          "chart_type": "line",
+          "title": "Admissions Trend"
+        }
+      ]
+    },
+
+    {
+      "name": "User Management",
+      "sections": [
+        { "type": "header", "title": "Manage Users" },
+        {
+          "type": "table",
+          "columns": ["Name", "Email", "Role", "Status", "Actions"]
+        },
+        { "type": "button", "label": "Add New User", "style": "primary" }
+      ]
+    },
+
+    {
+      "name": "Reports - Finance",
+      "sections": [
+        { "type": "header", "title": "Financial Reports" },
+        { "type": "chart", "chart_type": "bar", "title": "Fee Collections" },
+        {
+          "type": "table",
+          "columns": ["Student", "Invoice", "Amount", "Status"]
+        }
+      ]
+    },
+
+    {
+      "name": "Reports - Academic",
+      "sections": [
+        { "type": "header", "title": "Academic Reports" },
+        { "type": "chart", "chart_type": "line", "title": "Academic Performance Trend" },
+        {
+          "type": "table",
+          "columns": ["Student", "Subject", "Total Score", "Grade"]
+        }
+      ]
+    }
+
+  ]
+}

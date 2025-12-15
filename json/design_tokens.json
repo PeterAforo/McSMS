@@ -1,0 +1,173 @@
+{
+  "design_tokens": {
+    "version": "1.0",
+    "project": "School Management System",
+
+    "colors": {
+      "primary": { "value": "#3F51B5" },
+      "primaryLight": { "value": "#5C6BC0" },
+      "primaryDark": { "value": "#303F9F" },
+
+      "secondary": { "value": "#607D8B" },
+      "secondaryLight": { "value": "#90A4AE" },
+      "secondaryDark": { "value": "#455A64" },
+
+      "accent": { "value": "#4CAF50" },
+      "accentLight": { "value": "#81C784" },
+      "accentDark": { "value": "#388E3C" },
+
+      "success": { "value": "#4CAF50" },
+      "error": { "value": "#F44336" },
+      "warning": { "value": "#FF9800" },
+      "info": { "value": "#2196F3" },
+
+      "textPrimary": { "value": "#212121" },
+      "textSecondary": { "value": "#555555" },
+      "textMuted": { "value": "#9E9E9E" },
+      "textLight": { "value": "#FFFFFF" },
+
+      "background": { "value": "#F5F7FA" },
+      "surface": { "value": "#FFFFFF" },
+      "border": { "value": "#E0E0E0" }
+    },
+
+    "typography": {
+      "fontFamily": {
+        "primary": { "value": "Inter, Roboto, Helvetica, Arial, sans-serif" },
+        "heading": { "value": "Inter, Roboto, Helvetica, Arial, sans-serif" }
+      },
+
+      "fontSize": {
+        "xs": { "value": "12px" },
+        "sm": { "value": "14px" },
+        "md": { "value": "16px" },
+        "lg": { "value": "20px" },
+        "xl": { "value": "24px" },
+        "xxl": { "value": "32px" }
+      },
+
+      "fontWeight": {
+        "light": { "value": "300" },
+        "regular": { "value": "400" },
+        "medium": { "value": "500" },
+        "semibold": { "value": "600" },
+        "bold": { "value": "700" }
+      },
+
+      "lineHeight": {
+        "tight": { "value": "1.1" },
+        "normal": { "value": "1.5" },
+        "loose": { "value": "1.8" }
+      }
+    },
+
+    "spacing": {
+      "0": { "value": "0px" },
+      "1": { "value": "4px" },
+      "2": { "value": "8px" },
+      "3": { "value": "12px" },
+      "4": { "value": "16px" },
+      "5": { "value": "20px" },
+      "6": { "value": "24px" },
+      "8": { "value": "32px" },
+      "10": { "value": "40px" },
+      "12": { "value": "48px" }
+    },
+
+    "radius": {
+      "none": { "value": "0px" },
+      "sm": { "value": "4px" },
+      "md": { "value": "8px" },
+      "lg": { "value": "12px" },
+      "xl": { "value": "20px" },
+      "full": { "value": "9999px" }
+    },
+
+    "shadow": {
+      "sm": { "value": "0 1px 2px rgba(0,0,0,0.08)" },
+      "md": { "value": "0 2px 4px rgba(0,0,0,0.12)" },
+      "lg": { "value": "0 4px 12px rgba(0,0,0,0.14)" },
+      "xl": { "value": "0 8px 20px rgba(0,0,0,0.18)" }
+    },
+
+    "breakpoints": {
+      "xs": { "value": "480px" },
+      "sm": { "value": "640px" },
+      "md": { "value": "768px" },
+      "lg": { "value": "1024px" },
+      "xl": { "value": "1280px" },
+      "xxl": { "value": "1440px" }
+    },
+
+    "components": {
+      "button": {
+        "default": {
+          "background": "{colors.primary}",
+          "color": "{colors.textLight}",
+          "padding": "{spacing.3} {spacing.5}",
+          "radius": "{radius.md}",
+          "shadow": "{shadow.sm}"
+        },
+        "secondary": {
+          "background": "{colors.secondary}",
+          "color": "{colors.textLight}",
+          "padding": "{spacing.3} {spacing.5}",
+          "radius": "{radius.md}"
+        },
+        "outline": {
+          "background": "transparent",
+          "border": "1px solid {colors.primary}",
+          "color": "{colors.primary}",
+          "radius": "{radius.md}"
+        }
+      },
+
+      "card": {
+        "background": "{colors.surface}",
+        "radius": "{radius.lg}",
+        "padding": "{spacing.5}",
+        "shadow": "{shadow.sm}",
+        "border": "1px solid {colors.border}"
+      },
+
+      "input": {
+        "background": "{colors.surface}",
+        "border": "1px solid {colors.border}",
+        "radius": "{radius.md}",
+        "padding": "{spacing.3}"
+      },
+
+      "table": {
+        "headerBackground": "{colors.primaryDark}",
+        "headerTextColor": "{colors.textLight}",
+        "rowHover": "rgba(63, 81, 181, 0.05)"
+      },
+
+      "navbar": {
+        "background": "{colors.primaryDark}",
+        "textColor": "{colors.textLight}",
+        "height": "64px"
+      },
+
+      "sidebar": {
+        "background": "{colors.primary}",
+        "textColor": "{colors.textLight}",
+        "activeItemBackground": "{colors.primaryLight}",
+        "width": "260px"
+      },
+
+      "badge": {
+        "primary": {
+          "background": "{colors.primaryLight}",
+          "color": "{colors.textLight}",
+          "radius": "{radius.full}",
+          "padding": "{spacing.1} {spacing.3}"
+        },
+        "success": {
+          "background": "{colors.accentDark}",
+          "color": "{colors.textLight}"
+        }
+      }
+    }
+  }
+}

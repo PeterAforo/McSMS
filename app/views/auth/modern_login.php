@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - <?= APP_NAME ?></title>
+    <!-- Google Fonts - Raleway -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Raleway:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Auth CSS -->
+    <link rel="stylesheet" href="<?= ASSETS_URL ?>/css/auth.css">
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-wrapper">
+            <!-- Header -->
+            <div class="auth-header">
+                <h1>Welcome Back</h1>
+                <p>Sign in to your school management account</p>
+            </div>
+
+            <!-- Auth Card -->
+            <div class="auth-card">
+                <!-- Left Side - Form -->
+                <div class="auth-form-side">
+                    <!-- Tabs -->
+                    <div class="auth-tabs">
+                        <button class="auth-tab active" onclick="window.location.href='<?= APP_URL ?>/index.php?c=auth&a=login'">Login</button>
+                        <button class="auth-tab" onclick="window.location.href='<?= APP_URL ?>/index.php?c=auth&a=register'">Register</button>
+                    </div>
+
+                    <!-- Form Content -->
+                    <div class="auth-form-content">
+                        <h2>Welcome!</h2>
+                        <p>Please enter your credentials to continue</p>
+
+                        <!-- Flash Messages -->
+                        <?php if (isset($_SESSION['flash'])): ?>
+                            <div class="auth-alert auth-alert-<?= $_SESSION['flash']['type'] ?>">
+                                <i class="fas fa-<?= $_SESSION['flash']['type'] === 'success' ? 'check-circle' : 'exclamation-circle' ?>"></i>
+                                <?= $_SESSION['flash']['message'] ?>
+                            </div>
+                            <?php unset($_SESSION['flash']); ?>
+                        <?php endif; ?>
+
+                        <!-- Login Form -->
+                        <form action="<?= APP_URL ?>/index.php?c=auth&a=doLogin" method="POST">
+                            <div class="auth-form-group">
+                                <input type="email" name="email" class="auth-input" placeholder="Email address" required autofocus>
+                            </div>
+
+                            <div class="auth-form-group">
+                                <input type="password" name="password" class="auth-input" placeholder="Password" required>
+                            </div>
+
+                            <div class="auth-checkbox-group">
+                                <input type="checkbox" name="remember" id="remember" class="auth-checkbox">
+                                <label for="remember" class="auth-checkbox-label">Remember me</label>
+                            </div>
+
+                            <div class="auth-forgot">
+                                <a href="#">Forgot password?</a>
+                            </div>
+
+                            <button type="submit" class="auth-submit-btn">
+                                Sign In
+                            </button>
+                        </form>
+
+                        <!-- Social Login -->
+                        <div class="auth-social">
+                            <p class="auth-social-text">Or continue with</p>
+                            <div class="auth-social-buttons">
+                                <button class="auth-social-btn" title="Facebook">
+                                    <i class="fab fa-facebook-f"></i>
+                                </button>
+                                <button class="auth-social-btn" title="Google">
+                                    <i class="fab fa-google"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Toggle to Register -->
+                        <div class="auth-toggle-text">
+                            Don't have an account? <a href="<?= APP_URL ?>/index.php?c=auth&a=register" class="auth-link">Sign up</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Side - Image -->
+                <div class="auth-image-side">
+                    <div class="auth-image-overlay">
+                        <div class="auth-image-content">
+                            <h3><?= APP_NAME ?></h3>
+                            <p>Empowering education through technology</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

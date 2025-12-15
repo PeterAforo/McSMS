@@ -1,0 +1,139 @@
+{
+  "project": "School Management System (Creche to Grade School)",
+  "mode": "autonomous_build",
+  "auto_approve": true,
+  "auto_accept_file_changes": true,
+  "development_goal": "Deliver a full, production-ready School Management System with UI, frontend, backend (PHP MVC), MySQL database, and all modules fully implemented end-to-end.",
+
+  "technology_stack": {
+    "backend": "PHP 8+, MVC architecture, XAMPP (Apache), PDO prepared statements",
+    "frontend": "Bootstrap 5, jQuery, DataTables, Chart.js/ApexCharts, HTML5/CSS3",
+    "database": "MySQL 5.7+",
+    "design": "Bootstrap design system, AdminLTE/Tabler structure, custom design tokens",
+    "tools": "Windsurf autonomous planning + execution"
+  },
+
+  "development_principles": {
+    "consistency": true,
+    "scalable_architecture": true,
+    "secure_coding_practices": true,
+    "clean_mvc_structure": true,
+    "responsive_ui": true
+  },
+
+  "design_tokens": {
+    "colors": {
+      "primary": "#3F51B5",
+      "secondary": "#607D8B",
+      "accent": "#4CAF50",
+      "background": "#F5F7FA",
+      "surface": "#FFFFFF",
+      "textPrimary": "#212121",
+      "textLight": "#FFFFFF"
+    },
+    "typography": {
+      "fontFamily": "Inter, Roboto, Helvetica, Arial, sans-serif",
+      "fontSizeBase": "16px",
+      "headingWeight": "600"
+    },
+    "spacing": [0,4,8,12,16,20,24,32],
+    "radius": {
+      "md": "8px",
+      "lg": "12px"
+    }
+  },
+
+  "system_modules": [
+    "Authentication",
+    "Parent Portal",
+    "Admissions",
+    "Student Management",
+    "Academic Management",
+    "Teacher Portal",
+    "Fees & Payments",
+    "Finance Dashboard",
+    "Admin Settings",
+    "Notifications & Messaging",
+    "Reports & Analytics"
+  ],
+
+  "workflow": {
+    "stages": [
+      {
+        "stage": "UI_Design_Foundation",
+        "description": "Generate complete UI designs (HTML+CSS+Bootstrap+JS structure) for ALL modules BEFORE writing backend logic. Maintain strict consistency using design tokens.",
+        "tasks": [
+          "Create global layout: header, sidebar, user menus",
+          "Create design system UI components (buttons, forms, tables, modals, cards)",
+          "Build parent portal UI: dashboard, children, admissions, performance, fees",
+          "Build admissions UI: pending list, review page, approval flows",
+          "Build teacher UI: dashboard, attendance, grading, homework",
+          "Build admin UI: users, classes, subjects, settings",
+          "Build finance UI: invoices, payments, reports",
+          "Build reporting UI screens with chart placeholders"
+        ],
+        "output": "Complete UI front-end file structure (views, partials, components) with full navigation and placeholder data."
+      },
+
+      {
+        "stage": "Backend_MVC_Scaffolding",
+        "description": "Generate all controllers, models, and routes with empty method stubs based on PRD and navigation map.",
+        "tasks": [
+          "Create core MVC folders: /controllers, /models, /views, /core",
+          "Implement routing engine in index.php",
+          "Generate controllers for every module",
+          "Generate models with method stubs matching database schema"
+        ]
+      },
+
+      {
+        "stage": "Database_Integration",
+        "description": "Implement MySQL interaction using PDO, migrations, seeders, and SQL schema.",
+        "tasks": [
+          "Create connection handler (DB.php)",
+          "Implement prepared statements",
+          "Import CREATE TABLE schema",
+          "Generate sample seed records"
+        ]
+      },
+
+      {
+        "stage": "Backend_Feature_Implementation",
+        "description": "Fill in backend logic for all modules, connecting controllers → models → views.",
+        "tasks": [
+          "Authentication + roles",
+          "Parent dashboard logic",
+          "Admissions review and approval",
+          "Invoice generation + calculations",
+          "Optional service selection logic",
+          "Teacher attendance + grading",
+          "Report card generation",
+          "Notifications + messaging"
+        ]
+      },
+
+      {
+        "stage": "Integration_and_QA",
+        "description": "Perform UI/UX adjustments, bug fixes, end-to-end tests, and finalize app.",
+        "tasks": [
+          "Fix layout inconsistencies",
+          "Verify database operations",
+          "Test all user flows",
+          "Optimize performance",
+          "Prepare production build"
+        ]
+      }
+    ]
+  },
+
+  "rules": {
+    "auto_continue": true,
+    "no_user_confirmation_needed": true,
+    "generate_files_directly": true,
+    "fix_and_retry_on_errors": true,
+    "maintain_code_comments": true,
+    "follow_design_tokens_consistently": true
+  },
+
+  "final_goal": "A complete school management system, production-ready, with all UI, frontend, backend, database schemas, controllers, models, views, interactions, and features implemented, tested, and optimized. Windsurf should autonomously progress through all tasks until reaching 100% completion."
+}

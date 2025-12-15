@@ -1,0 +1,350 @@
+{
+  "project": "School Management System (Creche to Grade School)",
+  "version": "1.0",
+  "mode": "autonomous_full_build",
+  "auto_approve": true,
+  "auto_accept_file_changes": true,
+  "auto_continue": true,
+  "goal": "Autonomously plan, design, build, integrate, and finalize a complete, production-ready School Management System using PHP MVC (XAMPP), MySQL, Bootstrap UI, and fully consistent design system.",
+
+  "technology_stack": {
+    "backend": "PHP 8+ MVC (Custom lightweight framework)",
+    "frontend": "Bootstrap 5, jQuery, Chart.js",
+    "database": "MySQL 5.7+",
+    "design_tokens": "Custom tokens included in this config"
+  },
+
+  "design_tokens": {
+    "colors": {
+      "primary": "#3F51B5",
+      "secondary": "#607D8B",
+      "accent": "#4CAF50",
+      "background": "#F5F7FA",
+      "surface": "#FFFFFF",
+      "textPrimary": "#212121",
+      "textLight": "#FFFFFF"
+    },
+    "typography": {
+      "fontFamily": "Inter, Roboto, Helvetica, Arial, sans-serif",
+      "fontSizeBase": "16px",
+      "headingWeight": "600"
+    },
+    "spacing": [0,4,8,12,16,20,24,32],
+    "radius": { "md": "8px", "lg": "12px" }
+  },
+
+  "architecture_enforcement_rules": {
+    "mvc_structure": {
+      "controllers_directory": "app/controllers",
+      "models_directory": "app/models",
+      "views_directory": "app/views",
+      "core_directory": "app/core",
+      "public_entry": "public/index.php",
+      "config_directory": "config"
+    },
+    "controller_rules": {
+      "naming_convention": "PascalCase + 'Controller'",
+      "prohibited": ["SQL inside controllers", "HTML directly inside controllers"],
+      "responsibilities": [
+        "Receive request",
+        "Call model",
+        "Render view with data",
+        "Redirect"
+      ]
+    },
+    "model_rules": {
+      "naming_convention": "PascalCase",
+      "must_use": "PDO prepared statements",
+      "prohibited": ["Inline HTML", "Direct echo output"],
+      "responsibilities": [
+        "CRUD logic",
+        "Business rules",
+        "Data transformation"
+      ]
+    },
+    "view_rules": {
+      "no_business_logic": true,
+      "no_sql": true,
+      "layout_required": true
+    },
+    "security_rules": {
+      "password_hashing": "bcrypt",
+      "session_regenerate": true,
+      "prevent_sql_injection": true,
+      "sanitize_user_input": true
+    }
+  },
+
+  "ui_components": [
+    {
+      "name": "PrimaryButton",
+      "selector": ".btn-primary-sms",
+      "classes": "btn btn-primary",
+      "radius": "8px"
+    },
+    {
+      "name": "Card",
+      "selector": ".sms-card",
+      "classes": "card shadow-sm",
+      "radius": "12px"
+    },
+    {
+      "name": "DataTable",
+      "selector": ".sms-table",
+      "classes": "table table-striped table-bordered"
+    },
+    {
+      "name": "DashboardStatCard",
+      "selector": ".sms-stat-card",
+      "fields": ["value", "title", "icon"]
+    }
+  ],
+
+  "file_generation_blueprint": {
+    "root": {
+      "public": {
+        "files": [
+          { "path": "public/index.php", "description": "Front controller + router" },
+          { "path": "public/.htaccess", "description": "Rewrite rules (optional)" }
+        ],
+        "directories": {
+          "assets": {
+            "directories": {
+              "css": {}, "js": {}, "images": {},
+              "uploads": {
+                "directories": {
+                  "children": {},
+                  "homework": {},
+                  "logos": {}
+                }
+              }
+            }
+          }
+        }
+      },
+
+      "app": {
+        "core": {
+          "files": [
+            { "path": "app/core/DB.php", "description": "PDO Singleton" },
+            { "path": "app/core/Controller.php", "description": "Base render/redirect" },
+            { "path": "app/core/Model.php", "description": "Base DB model" },
+            { "path": "app/core/Auth.php", "description": "Session auth + roles" },
+            { "path": "app/core/Session.php", "description": "Flash & helpers" }
+          ]
+        },
+
+        "controllers": {
+          "files": [
+            "AuthController.php",
+            "ParentController.php",
+            "AdmissionsController.php",
+            "StudentController.php",
+            "AcademicController.php",
+            "TeacherController.php",
+            "FeesController.php",
+            "AdminController.php",
+            "ReportController.php"
+          ]
+        },
+
+        "models": {
+          "files": [
+            "User.php", "ParentModel.php", "ChildModel.php",
+            "Admission.php", "Student.php",
+            "ClassModel.php", "Section.php", "Subject.php",
+            "ClassSubject.php", "Attendance.php", "Result.php",
+            "Homework.php", "HomeworkSubmission.php",
+            "FeeType.php", "OptionalService.php",
+            "Invoice.php", "InvoiceItem.php", "Payment.php",
+            "Notification.php", "Message.php",
+            "Setting.php", "ActivityLog.php"
+          ]
+        },
+
+        "views": {
+          "layouts": {
+            "files": [
+              "auth.php",
+              "parent.php",
+              "teacher.php",
+              "admin.php"
+            ]
+          },
+
+          "auth": ["login.php", "register.php"],
+          "parent": [
+            "dashboard.php", "children_list.php", "child_form.php",
+            "applications_list.php", "admission_form.php",
+            "invoices_list.php", "invoice_view.php",
+            "optional_services.php", "performance.php",
+            "attendance.php", "homework.php", "messages.php"
+          ],
+          "admissions": [
+            "dashboard.php", "list_pending.php", "view_application.php",
+            "approve_form.php", "reject_form.php", "history.php"
+          ],
+          "teacher": [
+            "dashboard.php", "my_classes.php", "attendance_form.php",
+            "results_form.php", "homework_list.php",
+            "homework_form.php", "homework_submissions.php",
+            "messages.php"
+          ],
+          "student": [
+            "list.php", "view.php", "edit.php", "promote.php"
+          ],
+          "academic": [
+            "classes.php", "class_form.php",
+            "sections.php", "subjects.php",
+            "assign_subjects.php", "sessions.php",
+            "terms.php", "calendar.php"
+          ],
+          "fees": [
+            "fee_types.php", "optional_services.php",
+            "invoices_list.php", "invoice_view.php",
+            "payment_form.php", "student_fees.php",
+            "finance_dashboard.php"
+          ],
+          "admin": [
+            "dashboard.php", "users.php",
+            "user_form.php", "settings.php",
+            "logs.php"
+          ],
+          "reports": [
+            "index.php", "fees.php", "admissions.php",
+            "performance.php", "attendance.php"
+          ],
+          "notifications": ["list.php"],
+          "messages": ["inbox.php", "thread.php"]
+        }
+      },
+
+      "config": {
+        "files": [
+          "config/database.php",
+          "config/app.php"
+        ]
+      }
+    }
+  },
+
+  "module_deep_tasks": [
+
+    {
+      "name": "Authentication",
+      "tasks": [
+        "Build login/register UI",
+        "Implement session authentication",
+        "Password hashing and verification",
+        "Role-based routing",
+        "Logout + session cleanup"
+      ]
+    },
+
+    {
+      "name": "Parent Portal",
+      "tasks": [
+        "Build parent dashboard UI",
+        "Children CRUD",
+        "Admission application UI + posting",
+        "Invoice list + view",
+        "Optional services UI",
+        "Performance view",
+        "Attendance summary",
+        "Homework list",
+        "Messages (parent ↔ teacher)"
+      ]
+    },
+
+    {
+      "name": "Admissions Module",
+      "tasks": [
+        "Admissions dashboard UI",
+        "Pending applications list",
+        "Application detail page",
+        "Approve / Reject workflow",
+        "Create student on approval",
+        "Notifications for parent",
+        "History list"
+      ]
+    },
+
+    {
+      "name": "Student Management",
+      "tasks": [
+        "Admin student list",
+        "Student profile view",
+        "Edit/update student",
+        "Promotion and class reassignment"
+      ]
+    },
+
+    {
+      "name": "Academic Management",
+      "tasks": [
+        "Classes CRUD",
+        "Sections CRUD",
+        "Subjects CRUD",
+        "Assign subjects to classes",
+        "Sessions + terms management",
+        "Academic calendar"
+      ]
+    },
+
+    {
+      "name": "Teacher Portal",
+      "tasks": [
+        "Teacher dashboard",
+        "Class list",
+        "Attendance entry UI + save",
+        "Grade entry UI + save",
+        "Homework create + submissions",
+        "Teacher messaging"
+      ]
+    },
+
+    {
+      "name": "Fees & Payments",
+      "tasks": [
+        "Fee types CRUD",
+        "Optional services CRUD",
+        "Invoice generation",
+        "Payment entry",
+        "Balance calculation",
+        "Receipt generation (UI placeholder)"
+      ]
+    },
+
+    {
+      "name": "Finance Dashboard",
+      "tasks": [
+        "Charts: monthly revenue, paid/unpaid",
+        "Transaction list with filters",
+        "CSV export"
+      ]
+    },
+
+    {
+      "name": "Admin Settings",
+      "tasks": [
+        "Users CRUD",
+        "Roles and access control",
+        "School general settings",
+        "Activity logs"
+      ]
+    },
+
+    {
+      "name": "Reports & Analytics",
+      "tasks": [
+        "Admissions report",
+        "Financial report",
+        "Academic performance report",
+        "Attendance report",
+        "Charts + table exports"
+      ]
+    }
+  ],
+
+  "completion_criteria": "The entire application is fully functional, tested, visually consistent, MVC-compliant, production-ready and deployable with zero missing features or pages."
+}

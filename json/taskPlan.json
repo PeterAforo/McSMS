@@ -1,0 +1,195 @@
+{
+  "project": "School Management System",
+  "goal": "Autonomously build all modules from UI → backend → database → integration until 100% production-ready.",
+  "auto_approve": true,
+  "auto_accept_file_changes": true,
+
+  "modules": [
+    
+    {
+      "name": "1. Authentication Module",
+      "tasks": [
+        "Design UI pages: login, register, forgot password",
+        "Implement global auth layout (minimal header)",
+        "Create users table integration",
+        "Implement registration (parent default)",
+        "Implement login using sessions",
+        "Create Auth middleware / helper",
+        "Integrate password hashing (bcrypt)",
+        "Add logout + session destroy",
+        "Add role-based access (admin, parent, teacher, finance, admissions)"
+      ]
+    },
+
+    {
+      "name": "2. Parent Portal",
+      "tasks": [
+        "Build parent dashboard UI with cards (children, fees, notifications, performance summary)",
+        "Create navigation sidebar for parent portal",
+        "Create children list UI with CRUD screens",
+        "Create Add Child form",
+        "Implement child photo upload",
+        "Create Admission Application UI",
+        "Connect application form to database (admissions table)",
+        "Create Invoice list UI",
+        "Build invoice view page with breakdown",
+        "Build optional services selection interface (checkbox groups)",
+        "Display academic results UI for parent",
+        "Display attendance summary",
+        "Display homework list for parent",
+        "Implement parent → teacher messaging UI",
+        "Hook all pages to backend controllers + models"
+      ]
+    },
+
+    {
+      "name": "3. Admissions Module",
+      "tasks": [
+        "Design Admissions Dashboard UI (pending, approved, rejected counts)",
+        "Create applications list UI (with filters)",
+        "Create application review page",
+        "UI for uploaded document previews",
+        "Add Approve / Reject modal UIs",
+        "Implement class assignment",
+        "Generate student ID automatically",
+        "Insert student into students table on approval",
+        "Send parent notification on approval/rejection",
+        "Build admissions history screen",
+        "Test end-to-end parent → admissions flow"
+      ]
+    },
+
+    {
+      "name": "4. Student Management Module",
+      "tasks": [
+        "Create student list UI (admin/teacher view)",
+        "Create student details page",
+        "Build student edit form",
+        "Implement student promotion logic",
+        "Implement class reassignment logic",
+        "Display child → student link conversion logic",
+        "Add medical and guardian info fields",
+        "Display student timeline (optional)",
+        "Integrate with backend using Student model"
+      ]
+    },
+
+    {
+      "name": "5. Academic Management Module",
+      "tasks": [
+        "Design class management UI",
+        "Design section management UI",
+        "Design subject management UI",
+        "Create UI for assigning subjects to classes",
+        "Build academic sessions UI",
+        "Build academic terms management UI",
+        "Add set active term/session logic",
+        "Build timetable UI placeholder",
+        "Build academic calendar UI",
+        "Connect CRUD screens to MySQL",
+        "Ensure academic data links with student, teacher, and performance modules"
+      ]
+    },
+
+    {
+      "name": "6. Teacher Portal",
+      "tasks": [
+        "Build teacher dashboard UI (classes, attendance, homework, grading)",
+        "Create class list + details UI",
+        "UI for taking attendance (checkbox granularity)",
+        "Implement attendance POST → DB",
+        "Build Grade Entry UI (CA, Exam, Total auto-calc)",
+        "Implement grade save logic",
+        "Build Homework creation UI",
+        "Implement file upload for attachments",
+        "Create Homework submissions review UI",
+        "Implement messaging UI (teacher ↔ parent)",
+        "Add teacher sidebar/navigation",
+        "Integrate backend controller and models"
+      ]
+    },
+
+    {
+      "name": "7. Fees & Payments Module",
+      "tasks": [
+        "Design fee types management UI",
+        "Design optional services management UI",
+        "Build invoice list UI (admin + parent views)",
+        "Create invoice detail UI with items table",
+        "Implement invoice generation logic",
+        "Implement optional services selection → recalc logic",
+        "Build payment entry UI (finance role)",
+        "Save payments to DB and update invoice status",
+        "Create PDF receipt generator",
+        "Create payment report UI",
+        "Integrate backend fee calculations"
+      ]
+    },
+
+    {
+      "name": "8. Finance Dashboard",
+      "tasks": [
+        "Design Finance Dashboard UI (charts + stats)",
+        "Create transaction list table",
+        "Create monthly revenue chart",
+        "Build fee collection reports UI",
+        "Export CSV/PDF interface",
+        "Integrate payments + invoices SQL queries"
+      ]
+    },
+
+    {
+      "name": "9. Admin Settings",
+      "tasks": [
+        "Design Admin Dashboard UI",
+        "Build user management UI (list, create, edit)",
+        "Assign roles to users",
+        "Activate/deactivate users",
+        "Build system settings form",
+        "Branding settings (logo, name, theme colors)",
+        "Activity logs viewer",
+        "Backend integration with Settings model"
+      ]
+    },
+
+    {
+      "name": "10. Notifications & Messaging",
+      "tasks": [
+        "Create notifications dropdown UI",
+        "Create notifications list page (read/unread)",
+        "Implement Notification model + DB triggers",
+        "Build messaging inbox UI",
+        "Build messaging thread UI",
+        "Connect parent ↔ teacher conversations",
+        "Add auto-notifications on admission, payments, grades, homework"
+      ]
+    },
+
+    {
+      "name": "11. Reports & Analytics",
+      "tasks": [
+        "Design global reports home UI",
+        "Financial reports UI",
+        "Admissions reports UI",
+        "Academic performance report UI",
+        "Attendance report UI",
+        "Charts: line, bar, pie",
+        "Export CSV/PDF capabilities",
+        "Connect to SQL queries and models"
+      ]
+    }
+  ],
+
+  "final_integration_tasks": [
+    "Verify all navigation links and routes",
+    "Fix broken pages or missing includes",
+    "Ensure all UI pages use same layout + design tokens",
+    "Connect all CRUD and form submissions",
+    "Full end-to-end testing for each user role",
+    "Performance optimization",
+    "Security hardening (SQL injection, session security)",
+    "Prepare deployment-ready build with documentation"
+  ],
+
+  "completion_criteria": "The entire School Management System is built, integrated, fully functional, bug-free, visually consistent, and production-ready with no missing modules."
+}

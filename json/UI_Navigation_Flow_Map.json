@@ -1,0 +1,176 @@
+{
+  "project": "School Management System",
+  "version": "1.0",
+  "navigation": {
+    "global": {
+      "login": "/login",
+      "logout": "/logout",
+      "forgotPassword": "/forgot-password",
+      "resetPassword": "/reset-password",
+      "profile": "/profile",
+      "notifications": "/notifications"
+    },
+
+    "parent_portal": {
+      "dashboard": "/parent/dashboard",
+
+      "children": {
+        "list": "/parent/children",
+        "addChild": "/parent/children/add",
+        "viewChild": "/parent/children/{childId}",
+        "editChild": "/parent/children/{childId}/edit"
+      },
+
+      "admissions": {
+        "applicationList": "/parent/admissions",
+        "apply": "/parent/admissions/apply/{childId}",
+        "applicationStatus": "/parent/admissions/{applicationId}"
+      },
+
+      "fees": {
+        "invoices": "/parent/fees",
+        "viewInvoice": "/parent/fees/{invoiceId}",
+        "optionalServices": "/parent/fees/optional-services/{studentId}",
+        "paymentHistory": "/parent/fees/history"
+      },
+
+      "academics": {
+        "performance": "/parent/performance/{studentId}",
+        "attendance": "/parent/attendance/{studentId}",
+        "homework": "/parent/homework/{studentId}"
+      },
+
+      "messages": {
+        "inbox": "/parent/messages",
+        "thread": "/parent/messages/{teacherId}"
+      }
+    },
+
+    "admissions_portal": {
+      "dashboard": "/admissions/dashboard",
+      "pendingApplications": "/admissions/applications/pending",
+      "viewApplication": "/admissions/applications/{applicationId}",
+      "approveApplication": "/admissions/applications/{applicationId}/approve",
+      "rejectApplication": "/admissions/applications/{applicationId}/reject",
+      "history": "/admissions/applications/history"
+    },
+
+    "teacher_portal": {
+      "dashboard": "/teacher/dashboard",
+
+      "classes": {
+        "myClasses": "/teacher/classes",
+        "classDetails": "/teacher/classes/{classId}"
+      },
+
+      "attendance": {
+        "takeAttendance": "/teacher/attendance/{classId}",
+        "attendanceHistory": "/teacher/attendance/history/{classId}"
+      },
+
+      "grading": {
+        "subjects": "/teacher/grades/subjects",
+        "gradeEntry": "/teacher/grades/entry/{classId}/{subjectId}",
+        "gradeHistory": "/teacher/grades/history/{classId}"
+      },
+
+      "homework": {
+        "list": "/teacher/homework",
+        "create": "/teacher/homework/create",
+        "edit": "/teacher/homework/{homeworkId}/edit",
+        "submissions": "/teacher/homework/{homeworkId}/submissions"
+      },
+
+      "messages": {
+        "inbox": "/teacher/messages",
+        "thread": "/teacher/messages/{parentId}"
+      }
+    },
+
+    "finance_portal": {
+      "dashboard": "/finance/dashboard",
+
+      "feeTypes": {
+        "list": "/finance/fee-types",
+        "add": "/finance/fee-types/add",
+        "edit": "/finance/fee-types/{feeTypeId}/edit"
+      },
+
+      "optionalServices": {
+        "list": "/finance/services",
+        "add": "/finance/services/add",
+        "edit": "/finance/services/{serviceId}/edit"
+      },
+
+      "invoices": {
+        "list": "/finance/invoices",
+        "view": "/finance/invoices/{invoiceId}",
+        "generate": "/finance/invoices/generate/{studentId}/{termId}"
+      },
+
+      "payments": {
+        "recordPayment": "/finance/payments/new/{invoiceId}",
+        "history": "/finance/payments/history"
+      },
+
+      "reports": {
+        "feeReport": "/finance/reports/fees",
+        "paymentReport": "/finance/reports/payments",
+        "exportFees": "/finance/reports/fees/export"
+      }
+    },
+
+    "admin_portal": {
+      "dashboard": "/admin/dashboard",
+
+      "users": {
+        "list": "/admin/users",
+        "create": "/admin/users/create",
+        "edit": "/admin/users/{userId}/edit",
+        "roles": "/admin/users/roles"
+      },
+
+      "academics": {
+        "classes": "/admin/academics/classes",
+        "addClass": "/admin/academics/classes/add",
+        "editClass": "/admin/academics/classes/{classId}/edit",
+
+        "sections": "/admin/academics/sections",
+        "addSection": "/admin/academics/sections/add",
+        "editSection": "/admin/academics/sections/{sectionId}/edit",
+
+        "subjects": "/admin/academics/subjects",
+        "addSubject": "/admin/academics/subjects/add",
+        "editSubject": "/admin/academics/subjects/{subjectId}/edit",
+
+        "assignSubjects": "/admin/academics/assign-subjects/{classId}"
+      },
+
+      "academic_sessions": {
+        "sessions": "/admin/sessions",
+        "addSession": "/admin/sessions/add",
+        "editSession": "/admin/sessions/{sessionId}/edit",
+        "terms": "/admin/terms",
+        "addTerm": "/admin/terms/add",
+        "activateTerm": "/admin/terms/{termId}/activate"
+      },
+
+      "settings": {
+        "general": "/admin/settings",
+        "schoolInfo": "/admin/settings/school-info",
+        "branding": "/admin/settings/branding"
+      },
+
+      "logs": {
+        "activityLogs": "/admin/logs/activity"
+      }
+    },
+
+    "reports": {
+      "admissionsReport": "/reports/admissions",
+      "financialReport": "/reports/finance",
+      "academicReport": "/reports/academic",
+      "attendanceReport": "/reports/attendance"
+    }
+  }
+}

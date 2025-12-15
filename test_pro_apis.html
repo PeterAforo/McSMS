@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>McSMS Pro API Tester</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f5f5f5; }
+        .test { background: white; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { border-left: 4px solid #4CAF50; }
+        .error { border-left: 4px solid #f44336; }
+        button { background: #2196F3; color: white; border: none; padding: 10px 20px; cursor: pointer; border-radius: 4px; margin: 5px; }
+        button:hover { background: #0b7dda; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        h1 { color: #333; }
+        .status { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>🧪 McSMS Pro API Tester</h1>
+    <p>Click buttons to test each Pro feature API</p>
+    
+    <div id="results"></div>
+    
+    <button onclick="testAll()">Test All APIs</button>
+    <button onclick="testAPI('timetable', 'templates')">Test Timetable</button>
+    <button onclick="testAPI('exams', 'exams')">Test Exams</button>
+    <button onclick="testAPI('lms', 'courses')">Test LMS</button>
+    <button onclick="testAPI('analytics', 'overview')">Test Analytics</button>
+    <button onclick="testAPI('transport', 'vehicles')">Test Transport</button>
+    <button onclick="testAPI('hr_payroll', 'employees')">Test HR & Payroll</button>
+    <button onclick="testAPI('biometric', 'devices')">Test Biometric</button>
+    <button onclick="testAPI('multi_school', 'branches')">Test Multi-School</button>
+    <button onclick="testAPI('ai_features', 'predictions')">Test AI Features</button>
+
+    <script>
+        const API_BASE = 'http://localhost/McSMS/backend/api';
+        
+        async function testAPI(endpoint, resource) {
+            const url = `${API_BASE}/${endpoint}.php?resource=${resource}`;
+            const resultDiv = document.getElementById('results');
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const testDiv = document.createElement('div');
+                testDiv.className = data.success ? 'test success' : 'test error';
+                testDiv.innerHTML = `
+                    <h3>${endpoint.toUpperCase()} - ${resource}</h3>
+                    <p class="status">Status: ${data.success ? '✅ SUCCESS' : '❌ FAILED'}</p>
+                    <p>URL: ${url}</p>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+                resultDiv.appendChild(testDiv);
+                
+                return data.success;
+            } catch (error) {
+                const testDiv = document.createElement('div');
+                testDiv.className = 'test error';
+                testDiv.innerHTML = `
+                    <h3>${endpoint.toUpperCase()} - ${resource}</h3>
+                    <p class="status">Status: ❌ ERROR</p>
+                    <p>URL: ${url}</p>
+                    <pre>${error.message}</pre>
+                `;
+                resultDiv.appendChild(testDiv);
+                return false;
+            }
+        }
+        
+        async function testAll() {
+            document.getElementById('results').innerHTML = '<h2>Running all tests...</h2>';
+            
+            const tests = [
+                ['timetable', 'templates'],
+                ['exams', 'exams'],
+                ['lms', 'courses'],
+                ['analytics', 'overview'],
+                ['transport', 'vehicles'],
+                ['hr_payroll', 'employees'],
+                ['biometric', 'devices'],
+                ['multi_school', 'branches'],
+                ['ai_features', 'predictions']
+            ];
+            
+            let passed = 0;
+            for (const [endpoint, resource] of tests) {
+                const success = await testAPI(endpoint, resource);
+                if (success) passed++;
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
+            const summary = document.createElement('div');
+            summary.className = 'test ' + (passed === tests.length ? 'success' : 'error');
+            summary.innerHTML = `
+                <h2>Test Summary</h2>
+                <p class="status">Passed: ${passed}/${tests.length}</p>
+            `;
+            document.getElementById('results').insertBefore(summary, document.getElementById('results').firstChild);
+        }
+    </script>
+</body>
+</html>
