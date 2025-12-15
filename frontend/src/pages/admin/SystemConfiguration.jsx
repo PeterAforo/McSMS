@@ -136,7 +136,7 @@ export default function SystemConfiguration() {
     try {
       const response = await axios.post(`${API_BASE_URL}/upload_logo.php`, formData);
       if (response.data.success) {
-        setConfig(prev => ({ ...prev, school_logo: response.data.url }));
+        setConfig(prev => ({ ...prev, school_logo: response.data.logo_url }));
         alert('✅ Logo uploaded!');
         // Refresh global settings so sidebar updates immediately
         await refreshSettings();
