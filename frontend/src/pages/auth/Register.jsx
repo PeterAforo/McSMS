@@ -205,32 +205,24 @@ export default function Register() {
 
           {/* Register Card */}
           <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-            {/* School Logo */}
+            {/* School Logo or App Icon */}
             <div className="flex justify-center mb-6">
               {settings.school_logo ? (
-                <>
-                  <img 
-                    src={settings.school_logo} 
-                    alt={settings.school_name}
-                    className="h-20 w-auto object-contain"
-                    onError={(e) => {
-                      console.error('Logo failed to load:', settings.school_logo);
-                      e.target.style.display = 'none';
-                      e.target.nextElementSibling.style.display = 'flex';
-                    }}
-                    onLoad={() => console.log('Logo loaded successfully:', settings.school_logo)}
-                  />
-                  <div 
-                    className="hidden items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-xl"
-                  >
-                    <GraduationCap className="w-12 h-12 text-white" />
-                  </div>
-                </>
-              ) : (
-                <div className="flex items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-xl">
-                  <GraduationCap className="w-12 h-12 text-white" />
-                </div>
-              )}
+                <img 
+                  src={settings.school_logo} 
+                  alt={settings.school_name}
+                  className="h-20 w-20 object-contain rounded-xl"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextElementSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div 
+                className={`${settings.school_logo ? 'hidden' : 'flex'} items-center justify-center w-20 h-20 bg-gradient-to-br from-emerald-600 to-teal-600 rounded-xl`}
+              >
+                <GraduationCap className="w-12 h-12 text-white" />
+              </div>
             </div>
 
             <div className="mb-6 text-center">
