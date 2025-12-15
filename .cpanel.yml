@@ -10,6 +10,7 @@ deployment:
     - /bin/cp frontend_dist/sw.js $DEPLOYPATH
     - /bin/cp frontend_dist/offline.html $DEPLOYPATH
     - /bin/cp frontend_dist/vite.svg $DEPLOYPATH
+    - /bin/cp frontend_dist/.htaccess $DEPLOYPATH
     
     # Copy frontend assets folder
     - /bin/cp -R frontend_dist/assets $DEPLOYPATH
