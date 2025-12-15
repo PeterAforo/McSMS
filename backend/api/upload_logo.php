@@ -70,7 +70,7 @@ try {
     $host = $_SERVER['HTTP_HOST'];
     $logoUrl = $protocol . '://' . $host . '/uploads/' . $filename;
 
-    // Update database
+    // Update database - use system_config table
     $pdo = new PDO(
         "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
         DB_USER,
@@ -78,12 +78,8 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
-    $stmt = $pdo->prepare("
-        INSERT INTO system_settings (setting_key, setting_value, setting_type, category) 
-        VALUES ('school_logo', ?, 'string', 'general')
-        ON DUPLICATE KEY UPDATE setting_value = ?
-    ");
-    $stmt->execute([$logoUrl, $logoUrl]);
+    $stmt = $pdo->prepare("UPDATE system_config SET school_logo = ? WHERE id = 1");
+    $stmt->execute([$logoUrl]);
 
     echo json_encode([
         'success' => true,
