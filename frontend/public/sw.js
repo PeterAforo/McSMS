@@ -1,5 +1,5 @@
 // McSMS Service Worker - Offline Support & Push Notifications
-const CACHE_NAME = 'mcsms-v1';
+const CACHE_NAME = 'mcsms-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately
@@ -43,6 +43,11 @@ self.addEventListener('fetch', (event) => {
   
   // Skip non-GET requests
   if (request.method !== 'GET') return;
+
+  // Skip blob URLs
+  if (request.url.startsWith('blob:')) {
+    return;
+  }
 
   // Skip non-http(s) schemes (chrome-extension, etc.)
   if (!request.url.startsWith('http')) {
