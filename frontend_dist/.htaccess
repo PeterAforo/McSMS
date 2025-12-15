@@ -1,9 +1,12 @@
 RewriteEngine On
 RewriteBase /
 
-# If the request is for a real file or directory, serve it
+# Allow API requests to pass through
+RewriteRule ^api/ - [L]
+
+# Allow real files and directories
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 
-# Otherwise, redirect all requests to index.html
+# Redirect all other requests to index.html for SPA routing
 RewriteRule ^ index.html [QSA,L]
