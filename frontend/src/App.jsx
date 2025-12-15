@@ -311,11 +311,8 @@ function App() {
         <Route path="*" element={<div className="p-8"><h1 className="text-2xl">404 - Page Not Found</h1></div>} />
       </Routes>
       
-      {/* AI Chatbot - Available on all pages */}
+      {/* AI Chatbot - Available on all pages (bottom-left) */}
       <AIChatbot />
-      
-      {/* Voice Commands - Available on all pages */}
-      <VoiceCommandButton />
     </BrowserRouter>
   );
 }

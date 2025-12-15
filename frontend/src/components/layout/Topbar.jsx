@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../../config';
 import axios from 'axios';
 import ThemeToggle from '../shared/ThemeToggle';
 import { VoiceSearchButton } from '../shared/VoiceSearch';
+import { VoiceCommandButton } from '../shared/VoiceCommands';
 
 export default function Topbar() {
   const { user, logout } = useAuthStore();
@@ -290,6 +291,9 @@ export default function Topbar() {
 
       {/* Actions */}
       <div className="flex items-center gap-4">
+        {/* Voice Commands */}
+        <VoiceCommandButton variant="navbar" />
+
         {/* Help Center */}
         <Link 
           to={`/${user?.user_type || 'admin'}/help`}

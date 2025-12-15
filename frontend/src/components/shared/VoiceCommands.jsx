@@ -398,9 +398,10 @@ export default function VoiceCommands({ onClose }) {
 }
 
 /**
- * Voice Command Button - Floating button to trigger voice commands
+ * Voice Command Button - Can be used in navbar or as floating button
+ * @param {string} variant - 'navbar' for topbar integration, 'floating' for fixed position (default)
  */
-export function VoiceCommandButton() {
+export function VoiceCommandButton({ variant = 'floating' }) {
   const [showModal, setShowModal] = useState(false);
   const [isSupported, setIsSupported] = useState(false);
 
@@ -423,6 +424,23 @@ export function VoiceCommandButton() {
 
   if (!isSupported) return null;
 
+  // Navbar variant - simple icon button
+  if (variant === 'navbar') {
+    return (
+      <>
+        <button
+          onClick={() => setShowModal(true)}
+          className="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+          title="Voice Commands (Ctrl+Shift+V)"
+        >
+          <Mic className="w-5 h-5" />
+        </button>
+        {showModal && <VoiceCommands onClose={() => setShowModal(false)} />}
+      </>
+    );
+  }
+
+  // Floating variant (default) - fixed position button
   return (
     <>
       <button
