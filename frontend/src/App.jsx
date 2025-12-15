@@ -17,6 +17,7 @@ import StudentProfile from './pages/admin/StudentProfile';
 import Admissions from './pages/admin/Admissions';
 import Classes from './pages/admin/Classes';
 import ClassSubjects from './pages/admin/ClassSubjects';
+import EducationLevels from './pages/admin/EducationLevels';
 import Subjects from './pages/admin/Subjects';
 import Terms from './pages/admin/Terms';
 import Teachers from './pages/admin/Teachers';
@@ -148,6 +149,7 @@ function App() {
           <Route path="admissions" element={<Admissions />} />
           <Route path="classes" element={<Classes />} />
           <Route path="class-subjects" element={<ClassSubjects />} />
+          <Route path="education-levels" element={<EducationLevels />} />
           <Route path="subjects" element={<Subjects />} />
           <Route path="terms" element={<Terms />} />
           <Route path="teachers" element={<Teachers />} />

@@ -7,8 +7,10 @@ import {
 import { classesAPI } from '../../services/api';
 import { API_BASE_URL } from '../../config';
 import axios from 'axios';
+import { useEducationLevels } from '../../hooks/useEducationLevels';
 
 export default function Classes() {
+  const { levels, getLevelName } = useEducationLevels();
   const [classes, setClasses] = useState([]);
   const [teachers, setTeachers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -429,12 +431,9 @@ export default function Classes() {
               className="input w-auto"
             >
               <option value="">All Levels</option>
-              <option value="creche">Creche</option>
-              <option value="nursery">Nursery</option>
-              <option value="kg">KG</option>
-              <option value="primary">Primary</option>
-              <option value="jhs">JHS</option>
-              <option value="shs">SHS</option>
+              {levels.map(level => (
+                <option key={level.id} value={level.level_code}>{level.level_name}</option>
+              ))}
             </select>
             <select
               value={statusFilter}
@@ -591,12 +590,9 @@ export default function Classes() {
                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                     className="input"
                   >
-                    <option value="creche">Creche</option>
-                    <option value="nursery">Nursery</option>
-                    <option value="kg">KG</option>
-                    <option value="primary">Primary</option>
-                    <option value="jhs">JHS</option>
-                    <option value="shs">SHS</option>
+                    {levels.map(level => (
+                      <option key={level.id} value={level.level_code}>{level.level_name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>

@@ -7,8 +7,10 @@ import {
 import { feeGroupsAPI, feeItemsAPI, financeAPI, classesAPI, termsAPI } from '../../services/api';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import { useEducationLevels } from '../../hooks/useEducationLevels';
 
 export default function FeeStructure() {
+  const { levels: educationLevels, levelCodes: levels } = useEducationLevels();
   const [activeTab, setActiveTab] = useState('groups');
   const [feeGroups, setFeeGroups] = useState([]);
   const [feeItems, setFeeItems] = useState([]);
@@ -39,7 +41,6 @@ export default function FeeStructure() {
   const fileInputRef = useRef();
 
   const academicYears = ['2023/2024', '2024/2025', '2025/2026'];
-  const levels = ['creche', 'nursery', 'kg', 'primary', 'jhs', 'shs'];
 
   const [groupForm, setGroupForm] = useState({ group_name: '', group_code: '', description: '', status: 'active' });
   const [itemForm, setItemForm] = useState({ fee_group_id: '', item_name: '', item_code: '', description: '', frequency: 'term', is_optional: 0, is_taxable: 0, tax_rate: 0, status: 'active' });
@@ -987,12 +988,7 @@ export default function FeeStructure() {
                     <label className="block text-sm font-medium mb-2">Level</label>
                     <select value={ruleForm.level} onChange={(e) => setRuleForm({...ruleForm, level: e.target.value})} className="input">
                       <option value="">All Levels</option>
-                      <option value="creche">Creche</option>
-                      <option value="nursery">Nursery</option>
-                      <option value="kg">KG</option>
-                      <option value="primary">Primary</option>
-                      <option value="jhs">JHS</option>
-                      <option value="shs">SHS</option>
+                      {educationLevels.map(l => <option key={l.id} value={l.level_code}>{l.level_name}</option>)}
                     </select>
                   </div>
                   <div>

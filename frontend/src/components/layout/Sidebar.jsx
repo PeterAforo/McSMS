@@ -109,6 +109,7 @@ export default function Sidebar() {
         { icon: Users, label: 'Teachers', path: '/admin/teachers' },
         { icon: School, label: 'Classes', path: '/admin/classes' },
         { icon: BookOpen, label: 'Class Curriculum', path: '/admin/class-subjects' },
+        { icon: GraduationCap, label: 'Education Levels', path: '/admin/education-levels' },
         { icon: BookOpen, label: 'Subjects', path: '/admin/subjects' },
         { icon: Calendar, label: 'Terms', path: '/admin/terms' },
         { icon: Clock, label: 'Timetable', path: '/admin/timetable' },
