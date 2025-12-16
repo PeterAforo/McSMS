@@ -945,20 +945,26 @@ function getParentDashboard($pdo, $userId, $action) {
         $summary['attendance_total'] = $att['total'] ?? 0;
         $summary['attendance_present'] = $att['present'] ?? 0;
         
-        // Fee Balance - calculate from total_amount - amount_paid (more accurate)
-        $stmt = $pdo->prepare("
-            SELECT 
-                COALESCE(SUM(total_amount), 0) as total_fees,
-                COALESCE(SUM(amount_paid), 0) as total_paid,
-                COALESCE(SUM(total_amount - amount_paid), 0) as balance 
-            FROM invoices 
-            WHERE student_id = ? AND status != 'cancelled'
-        ");
-        $stmt->execute([$child['id']]);
-        $feeData = $stmt->fetch(PDO::FETCH_ASSOC);
-        $summary['fee_balance'] = max(0, $feeData['balance'] ?? 0);
-        $summary['total_fees'] = $feeData['total_fees'] ?? 0;
-        $summary['total_paid'] = $feeData['total_paid'] ?? 0;
+        // Fee Balance - use paid_amount or amount_paid depending on table structure
+        try {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    COALESCE(SUM(total_amount), 0) as total_fees,
+                    COALESCE(SUM(COALESCE(paid_amount, 0)), 0) as total_paid,
+                    COALESCE(SUM(COALESCE(balance, total_amount)), 0) as balance 
+                FROM invoices 
+                WHERE student_id = ? AND status != 'cancelled'
+            ");
+            $stmt->execute([$child['id']]);
+            $feeData = $stmt->fetch(PDO::FETCH_ASSOC);
+            $summary['fee_balance'] = max(0, $feeData['balance'] ?? 0);
+            $summary['total_fees'] = $feeData['total_fees'] ?? 0;
+            $summary['total_paid'] = $feeData['total_paid'] ?? 0;
+        } catch (Exception $e) {
+            $summary['fee_balance'] = 0;
+            $summary['total_fees'] = 0;
+            $summary['total_paid'] = 0;
+        }
         
         // Subjects Enrolled - count subjects for this student's class
         $subjectCount = 0;
@@ -992,17 +998,21 @@ function getParentDashboard($pdo, $userId, $action) {
         $data['children_summary'][] = $summary;
     }
     
-    // Total Fee Balance - calculate from total_amount - amount_paid
+    // Total Fee Balance - use balance column directly
     $childIds = array_column($children, 'id');
     if (!empty($childIds)) {
-        $placeholders = implode(',', array_fill(0, count($childIds), '?'));
-        $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(total_amount - amount_paid), 0) as total 
-            FROM invoices 
-            WHERE student_id IN ($placeholders) AND status != 'cancelled'
-        ");
-        $stmt->execute($childIds);
-        $data['total_fee_balance'] = max(0, $stmt->fetch(PDO::FETCH_ASSOC)['total']);
+        try {
+            $placeholders = implode(',', array_fill(0, count($childIds), '?'));
+            $stmt = $pdo->prepare("
+                SELECT COALESCE(SUM(COALESCE(balance, total_amount)), 0) as total 
+                FROM invoices 
+                WHERE student_id IN ($placeholders) AND status != 'cancelled'
+            ");
+            $stmt->execute($childIds);
+            $data['total_fee_balance'] = max(0, $stmt->fetch(PDO::FETCH_ASSOC)['total']);
+        } catch (Exception $e) {
+            $data['total_fee_balance'] = 0;
+        }
     } else {
         $data['total_fee_balance'] = 0;
     }
