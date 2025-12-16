@@ -88,7 +88,10 @@ export default function StudentIdCard({ student, schoolSettings, apiBaseUrl }) {
   const getPhotoUrl = () => {
     const photo = student.profile_picture || student.photo || student.id_card?.photo_path;
     if (!photo) return null;
-    return `${apiBaseUrl.replace('/backend/api', '')}/${photo}`;
+    if (photo.startsWith('http')) return photo;
+    // Remove leading slash and 'uploads/' if present to avoid duplication
+    const cleanPath = photo.replace(/^\/?(uploads\/)?/, '');
+    return `${apiBaseUrl.replace('/backend/api', '')}/uploads/${cleanPath}`;
   };
 
   const handlePrint = () => {

@@ -115,7 +115,7 @@ function handleStudents($pdo, $method, $action, $id) {
                 // Get full student profile with all related data including class teacher
                 $stmt = $pdo->prepare("
                     SELECT s.*, c.class_name, 
-                           COALESCE(u.name, t.name, CONCAT(t.first_name, ' ', t.last_name)) as class_teacher
+                           COALESCE(u.name, CONCAT(t.first_name, ' ', t.last_name)) as class_teacher
                     FROM students s 
                     LEFT JOIN classes c ON s.class_id = c.id 
                     LEFT JOIN users u ON c.class_teacher_id = u.id
@@ -131,66 +131,84 @@ function handleStudents($pdo, $method, $action, $id) {
                     return;
                 }
                 
-                // Get documents
-                $stmt = $pdo->prepare("SELECT * FROM student_documents WHERE student_id = ? ORDER BY created_at DESC LIMIT 10");
-                $stmt->execute([$id]);
-                $student['documents'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                // Get documents (wrap in try-catch in case table doesn't exist)
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM student_documents WHERE student_id = ? ORDER BY created_at DESC LIMIT 10");
+                    $stmt->execute([$id]);
+                    $student['documents'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['documents'] = []; }
                 
                 // Get timeline
-                $stmt = $pdo->prepare("SELECT * FROM student_timeline WHERE student_id = ? ORDER BY event_date DESC LIMIT 20");
-                $stmt->execute([$id]);
-                $student['timeline'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM student_timeline WHERE student_id = ? ORDER BY event_date DESC LIMIT 20");
+                    $stmt->execute([$id]);
+                    $student['timeline'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['timeline'] = []; }
                 
                 // Get awards
-                $stmt = $pdo->prepare("SELECT * FROM student_awards WHERE student_id = ? ORDER BY award_date DESC");
-                $stmt->execute([$id]);
-                $student['awards'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM student_awards WHERE student_id = ? ORDER BY award_date DESC");
+                    $stmt->execute([$id]);
+                    $student['awards'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['awards'] = []; }
                 
                 // Get discipline records
-                $stmt = $pdo->prepare("SELECT * FROM student_discipline WHERE student_id = ? ORDER BY incident_date DESC");
-                $stmt->execute([$id]);
-                $student['discipline'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM student_discipline WHERE student_id = ? ORDER BY incident_date DESC");
+                    $stmt->execute([$id]);
+                    $student['discipline'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['discipline'] = []; }
                 
                 // Get notes
-                $stmt = $pdo->prepare("SELECT * FROM student_notes WHERE student_id = ? AND is_private = FALSE ORDER BY created_at DESC LIMIT 10");
-                $stmt->execute([$id]);
-                $student['notes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM student_notes WHERE student_id = ? AND is_private = FALSE ORDER BY created_at DESC LIMIT 10");
+                    $stmt->execute([$id]);
+                    $student['notes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['notes'] = []; }
                 
                 // Get ID card
-                $stmt = $pdo->prepare("SELECT * FROM student_id_cards WHERE student_id = ? ORDER BY id DESC LIMIT 1");
-                $stmt->execute([$id]);
-                $student['id_card'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("SELECT * FROM student_id_cards WHERE student_id = ? ORDER BY id DESC LIMIT 1");
+                    $stmt->execute([$id]);
+                    $student['id_card'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['id_card'] = null; }
                 
                 // Get attendance summary
-                $stmt = $pdo->prepare("
-                    SELECT 
-                        COUNT(*) as total_days,
-                        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-                        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-                        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
-                    FROM attendance WHERE student_id = ?
-                ");
-                $stmt->execute([$id]);
-                $student['attendance_summary'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("
+                        SELECT 
+                            COUNT(*) as total_days,
+                            SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+                            SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+                            SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
+                        FROM attendance WHERE student_id = ?
+                    ");
+                    $stmt->execute([$id]);
+                    $student['attendance_summary'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['attendance_summary'] = null; }
                 
                 // Get exam results summary
-                $stmt = $pdo->prepare("
-                    SELECT AVG(percentage) as average_score, COUNT(*) as total_exams
-                    FROM exam_results WHERE student_id = ?
-                ");
-                $stmt->execute([$id]);
-                $student['exam_summary'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("
+                        SELECT AVG(percentage) as average_score, COUNT(*) as total_exams
+                        FROM exam_results WHERE student_id = ?
+                    ");
+                    $stmt->execute([$id]);
+                    $student['exam_summary'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['exam_summary'] = null; }
                 
                 // Get fee summary
-                $stmt = $pdo->prepare("
-                    SELECT 
-                        SUM(total_amount) as total_fees,
-                        SUM(paid_amount) as total_paid,
-                        SUM(balance) as balance
-                    FROM invoices WHERE student_id = ?
-                ");
-                $stmt->execute([$id]);
-                $student['fee_summary'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                try {
+                    $stmt = $pdo->prepare("
+                        SELECT 
+                            SUM(total_amount) as total_fees,
+                            SUM(paid_amount) as total_paid,
+                            SUM(balance) as balance
+                        FROM invoices WHERE student_id = ?
+                    ");
+                    $stmt->execute([$id]);
+                    $student['fee_summary'] = $stmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) { $student['fee_summary'] = null; }
                 
                 echo json_encode(['success' => true, 'student' => $student]);
             } elseif ($id) {

@@ -228,7 +228,13 @@ export default function StudentProfile() {
         <div className="card p-6">
           <div className="text-center">
             {(student.profile_picture || student.photo) ? (
-              <img src={`${API_BASE_URL.replace('/backend/api', '')}/${student.profile_picture || student.photo}`} alt={student.first_name} className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-blue-100" />
+              <img src={(() => {
+                const photo = student.profile_picture || student.photo;
+                if (!photo) return '';
+                if (photo.startsWith('http')) return photo;
+                const cleanPath = photo.replace(/^\/?(uploads\/)?/, '');
+                return `${API_BASE_URL.replace('/backend/api', '')}/uploads/${cleanPath}`;
+              })()} alt={student.first_name} className="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-blue-100" />
             ) : (
               <div className="w-32 h-32 rounded-full mx-auto mb-4 bg-blue-100 flex items-center justify-center border-4 border-blue-200">
                 <User className="w-16 h-16 text-blue-600" />
