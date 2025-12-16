@@ -32,6 +32,12 @@ try {
 
     $method = $_SERVER['REQUEST_METHOD'];
     $action = $_GET['action'] ?? '';
+    
+    // Return action info for debugging (temporary)
+    if (isset($_GET['debug'])) {
+        echo json_encode(['method' => $method, 'action' => $action, 'get' => $_GET]);
+        exit;
+    }
 
     switch ($method) {
         case 'GET':
@@ -53,6 +59,7 @@ try {
             break;
 
         case 'POST':
+            error_log("POST action received: '$action'");
             if ($action === 'mark') {
                 markAttendance($pdo);
             } elseif ($action === 'bulk') {
@@ -60,8 +67,10 @@ try {
             } elseif ($action === 'mark_teacher') {
                 markTeacherAttendance($pdo);
             } elseif ($action === 'mark_class') {
+                error_log("Calling markClassAttendance");
                 markClassAttendance($pdo);
             } else {
+                error_log("Falling through to createAttendance, action was: '$action'");
                 createAttendance($pdo);
             }
             break;
