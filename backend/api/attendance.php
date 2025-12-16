@@ -33,10 +33,17 @@ try {
     $method = $_SERVER['REQUEST_METHOD'];
     $action = $_GET['action'] ?? '';
     
-    // For POST requests, also check the request body for action
+    // Version check endpoint
+    if (isset($_GET['version'])) {
+        echo json_encode(['version' => '2024-12-16-v3', 'method' => $method, 'action' => $action, 'get' => $_GET]);
+        exit;
+    }
+    
+    // For POST requests, read input once
     $rawInput = file_get_contents('php://input');
     $inputData = json_decode($rawInput, true);
     
+    // Fallback: check body for action if not in query string
     if ($method === 'POST' && empty($action) && isset($inputData['action'])) {
         $action = $inputData['action'];
     }
