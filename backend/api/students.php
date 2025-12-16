@@ -7,8 +7,10 @@ header('Content-Type: application/json');
 
 // CORS headers
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin)) {
+if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin) || strpos($origin, 'eea.mcaforo.com') !== false) {
     header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    header('Access-Control-Allow-Origin: *');
 }
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -34,6 +36,14 @@ try {
         DB_PASS,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
+
+    // Auto-migrate: Add first admission columns if they don't exist
+    try {
+        $pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS is_first_admission TINYINT(1) DEFAULT 1");
+        $pdo->exec("ALTER TABLE students ADD COLUMN IF NOT EXISTS payment_plan_approved TINYINT(1) DEFAULT 0");
+    } catch (Exception $e) {
+        // Columns might already exist or table structure differs - ignore
+    }
 
     switch ($method) {
         case 'GET':

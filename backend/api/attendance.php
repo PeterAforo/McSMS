@@ -6,8 +6,10 @@
 
 header('Content-Type: application/json');
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin)) {
+if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin) || strpos($origin, 'eea.mcaforo.com') !== false) {
     header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    header('Access-Control-Allow-Origin: *');
 }
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -57,6 +59,8 @@ try {
                 markBulkAttendance($pdo);
             } elseif ($action === 'mark_teacher') {
                 markTeacherAttendance($pdo);
+            } elseif ($action === 'mark_class') {
+                markClassAttendance($pdo);
             } else {
                 createAttendance($pdo);
             }
@@ -472,6 +476,59 @@ function markBulkAttendance($pdo) {
             'count' => $marked
         ]);
 
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
+function markClassAttendance($pdo) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (!isset($data['class_id']) || !isset($data['students'])) {
+        throw new Exception('class_id and students array required');
+    }
+    
+    $pdo->beginTransaction();
+    try {
+        $marked = 0;
+        foreach ($data['students'] as $record) {
+            // Check if attendance already exists for this student on this date
+            $checkSql = "SELECT id FROM attendance WHERE student_id = ? AND date = ?";
+            $checkStmt = $pdo->prepare($checkSql);
+            $checkStmt->execute([$record['student_id'], $data['date']]);
+            $existing = $checkStmt->fetch();
+            
+            if ($existing) {
+                // Update existing record
+                $sql = "UPDATE attendance SET status = ?, time_in = ?, remarks = ?, marked_by = ? WHERE id = ?";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    $record['status'],
+                    $record['time_in'] ?? null,
+                    $record['notes'] ?? null,
+                    $data['marked_by'] ?? null,
+                    $existing['id']
+                ]);
+            } else {
+                // Insert new record
+                $sql = "INSERT INTO attendance (student_id, class_id, term_id, date, status, time_in, remarks, marked_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute([
+                    $record['student_id'],
+                    $data['class_id'],
+                    $data['term_id'] ?? null,
+                    $data['date'],
+                    $record['status'],
+                    $record['time_in'] ?? null,
+                    $record['notes'] ?? null,
+                    $data['marked_by'] ?? null
+                ]);
+            }
+            $marked++;
+        }
+        $pdo->commit();
+        echo json_encode(['success' => true, 'message' => "Attendance marked for $marked students", 'count' => $marked]);
     } catch (Exception $e) {
         $pdo->rollBack();
         throw $e;

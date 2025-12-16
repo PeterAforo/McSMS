@@ -189,22 +189,84 @@ switch ($action) {
             exit;
         }
         
+        // Check if first-time admission requires full payment
+        if ($invoiceId) {
+            $stmt = $pdo->prepare("
+                SELECT i.*, s.is_first_admission, s.payment_plan_approved 
+                FROM invoices i
+                JOIN students s ON i.student_id = s.id
+                WHERE i.id = ?
+            ");
+            $stmt->execute([$invoiceId]);
+            $invoiceCheck = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($invoiceCheck) {
+                $isFirstAdmission = $invoiceCheck['is_first_admission'] ?? false;
+                $paymentPlanApproved = $invoiceCheck['payment_plan_approved'] ?? false;
+                $invoiceBalance = floatval($invoiceCheck['balance']);
+                
+                // First-time admissions must pay in full unless payment plan is approved
+                if ($isFirstAdmission && !$paymentPlanApproved && $amount < $invoiceBalance) {
+                    echo json_encode([
+                        'success' => false, 
+                        'error' => 'First-time admissions require full payment. Please pay the full balance of GHS ' . number_format($invoiceBalance, 2) . ' or request a payment plan from the administrator.',
+                        'requires_full_payment' => true,
+                        'invoice_balance' => $invoiceBalance
+                    ]);
+                    exit;
+                }
+            }
+        }
+        
         $balanceAfter = $balanceBefore - $amount;
         
-        // Update wallet balance
-        $stmt = $pdo->prepare("UPDATE wallets SET balance = ? WHERE id = ?");
-        $stmt->execute([$balanceAfter, $wallet['id']]);
-        
-        // Record transaction
-        $reference = recordTransaction($pdo, $wallet['id'], 'debit', $amount, $description, $balanceBefore, $balanceAfter, 'wallet', $invoiceId);
-        
-        echo json_encode([
-            'success' => true,
-            'message' => 'Payment successful',
-            'reference' => $reference,
-            'balance' => $balanceAfter,
-            'amount_deducted' => $amount
-        ]);
+        $pdo->beginTransaction();
+        try {
+            // Update wallet balance
+            $stmt = $pdo->prepare("UPDATE wallets SET balance = ? WHERE id = ?");
+            $stmt->execute([$balanceAfter, $wallet['id']]);
+            
+            // Record wallet transaction
+            $reference = recordTransaction($pdo, $wallet['id'], 'debit', $amount, $description, $balanceBefore, $balanceAfter, 'wallet', $invoiceId);
+            
+            // If invoice_id provided, also record in payments table and update invoice
+            if ($invoiceId) {
+                // Get invoice details
+                $stmt = $pdo->prepare("SELECT student_id, amount_paid, balance as invoice_balance, total_amount FROM invoices WHERE id = ?");
+                $stmt->execute([$invoiceId]);
+                $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($invoice) {
+                    // Record payment in payments table
+                    $stmt = $pdo->prepare("
+                        INSERT INTO payments (invoice_id, student_id, amount, payment_method, reference_no, status, created_at)
+                        VALUES (?, ?, ?, 'wallet', ?, 'completed', NOW())
+                    ");
+                    $stmt->execute([$invoiceId, $invoice['student_id'], $amount, $reference]);
+                    
+                    // Update invoice
+                    $newAmountPaid = floatval($invoice['amount_paid']) + $amount;
+                    $newBalance = floatval($invoice['total_amount']) - $newAmountPaid;
+                    $newStatus = $newBalance <= 0 ? 'paid' : ($newAmountPaid > 0 ? 'partial' : 'unpaid');
+                    
+                    $stmt = $pdo->prepare("UPDATE invoices SET amount_paid = ?, balance = ?, status = ? WHERE id = ?");
+                    $stmt->execute([$newAmountPaid, max(0, $newBalance), $newStatus, $invoiceId]);
+                }
+            }
+            
+            $pdo->commit();
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Payment successful',
+                'reference' => $reference,
+                'balance' => $balanceAfter,
+                'amount_deducted' => $amount
+            ]);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            echo json_encode(['success' => false, 'error' => 'Payment failed: ' . $e->getMessage()]);
+        }
         break;
         
     case 'transactions':
