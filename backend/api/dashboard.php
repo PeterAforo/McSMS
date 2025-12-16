@@ -23,6 +23,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once dirname(dirname(__DIR__)) . '/config/database.php';
 require_once __DIR__ . '/debug_helper.php';
 
+// Debug endpoint for parent dashboard
+if (isset($_GET['debug_parent'])) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+    
+    try {
+        $pdo = new PDO(
+            "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+            DB_USER,
+            DB_PASS,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+        
+        $userId = $_GET['user_id'] ?? 17;
+        
+        // Check if parent exists
+        $stmt = $pdo->prepare("SELECT * FROM parents WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Check if students exist for this parent
+        $stmt2 = $pdo->prepare("SELECT * FROM students WHERE parent_id = ?");
+        $stmt2->execute([$parent['id'] ?? 0]);
+        $students = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+        
+        echo json_encode([
+            'debug' => true,
+            'user_id' => $userId,
+            'parent' => $parent,
+            'students' => $students,
+            'tables_exist' => [
+                'parents' => tableExists($pdo, 'parents'),
+                'students' => tableExists($pdo, 'students'),
+                'attendance' => tableExists($pdo, 'attendance'),
+                'invoices' => tableExists($pdo, 'invoices'),
+                'class_subjects' => tableExists($pdo, 'class_subjects')
+            ]
+        ]);
+    } catch (Exception $e) {
+        echo json_encode(['error' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+    }
+    exit;
+}
+
+function tableExists($pdo, $table) {
+    try {
+        $pdo->query("SELECT 1 FROM $table LIMIT 1");
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 try {
     $pdo = new PDO(
         "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
