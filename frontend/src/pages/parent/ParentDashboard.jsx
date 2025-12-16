@@ -275,20 +275,52 @@ export default function ParentDashboard() {
           <div className="border-b border-gray-100 p-4">
             <div className="flex items-center gap-2 overflow-x-auto pb-2">
               <span className="text-gray-500 text-sm whitespace-nowrap mr-2">Select Child:</span>
-              {children.map((child) => (
-                <button
-                  key={child.id}
-                  onClick={() => setSelectedChild(child)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl transition-all whitespace-nowrap ${
-                    selectedChild?.id === child.id
-                      ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <GraduationCap size={18} />
-                  {child.first_name} {child.last_name}
-                </button>
-              ))}
+              {children.map((child) => {
+                const childPhoto = getChildSummary(child.id)?.photo || child.photo;
+                let photoUrl = null;
+                if (childPhoto) {
+                  if (childPhoto.startsWith('http')) {
+                    photoUrl = childPhoto;
+                  } else {
+                    const cleanPath = childPhoto.replace(/^\/?(uploads\/)?/, '');
+                    photoUrl = `${API_BASE_URL.replace('/api', '')}/uploads/${cleanPath}`;
+                  }
+                }
+                return (
+                  <button
+                    key={child.id}
+                    onClick={() => setSelectedChild(child)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all whitespace-nowrap ${
+                      selectedChild?.id === child.id
+                        ? 'bg-purple-600 text-white shadow-lg shadow-purple-200'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {photoUrl ? (
+                      <img 
+                        src={photoUrl} 
+                        alt={child.first_name}
+                        className="w-8 h-8 rounded-full object-cover border-2 border-white"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div 
+                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                        selectedChild?.id === child.id 
+                          ? 'bg-purple-400 text-white' 
+                          : 'bg-purple-200 text-purple-700'
+                      }`}
+                      style={{ display: photoUrl ? 'none' : 'flex' }}
+                    >
+                      {child.first_name?.[0]}{child.last_name?.[0]}
+                    </div>
+                    <span className="font-medium">{child.first_name} {child.last_name}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -298,22 +330,33 @@ export default function ParentDashboard() {
               {/* Child Header */}
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
-                  {getChildSummary(selectedChild.id)?.photo ? (
-                    <img 
-                      src={getChildSummary(selectedChild.id).photo.startsWith('http') 
-                        ? getChildSummary(selectedChild.id).photo 
-                        : `${API_BASE_URL.replace('/api', '')}/uploads/${getChildSummary(selectedChild.id).photo}`}
-                      alt={`${selectedChild.first_name} ${selectedChild.last_name}`}
-                      className="w-16 h-16 rounded-2xl object-cover border-2 border-purple-200"
-                      onError={(e) => {
-                        e.target.style.display = 'none';
-                        e.target.nextSibling.style.display = 'flex';
-                      }}
-                    />
-                  ) : null}
+                  {(() => {
+                    const photo = getChildSummary(selectedChild.id)?.photo || selectedChild.photo;
+                    if (photo) {
+                      // Fix photo URL - remove duplicate paths
+                      let photoUrl = photo;
+                      if (!photo.startsWith('http')) {
+                        // Remove leading slash and 'uploads/' if present to avoid duplication
+                        const cleanPath = photo.replace(/^\/?(uploads\/)?/, '');
+                        photoUrl = `${API_BASE_URL.replace('/api', '')}/uploads/${cleanPath}`;
+                      }
+                      return (
+                        <img 
+                          src={photoUrl}
+                          alt={`${selectedChild.first_name} ${selectedChild.last_name}`}
+                          className="w-16 h-16 rounded-2xl object-cover border-2 border-purple-200"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      );
+                    }
+                    return null;
+                  })()}
                   <div 
                     className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold"
-                    style={{ display: getChildSummary(selectedChild.id)?.photo ? 'none' : 'flex' }}
+                    style={{ display: (getChildSummary(selectedChild.id)?.photo || selectedChild.photo) ? 'none' : 'flex' }}
                   >
                     {selectedChild.first_name?.[0]}{selectedChild.last_name?.[0]}
                   </div>
