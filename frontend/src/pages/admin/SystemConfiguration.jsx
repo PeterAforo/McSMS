@@ -48,6 +48,8 @@ export default function SystemConfiguration() {
     // Backup
     auto_backup_enabled: false, backup_frequency: 'daily', backup_time: '02:00', backup_retention_days: 30, backup_location: 'local',
     maintenance_mode: false, maintenance_message: 'System is under maintenance. Please check back later.',
+    // Debug
+    debug_mode: false, debug_log_api_requests: false, debug_show_sql_errors: false,
     // Integrations
     google_calendar_enabled: false, google_client_id: '', google_client_secret: '',
     microsoft_365_enabled: false, microsoft_client_id: '', microsoft_client_secret: '',
@@ -62,7 +64,8 @@ export default function SystemConfiguration() {
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'backup', label: 'Backup', icon: Database },
-    { id: 'integrations', label: 'Integrations', icon: Link }
+    { id: 'integrations', label: 'Integrations', icon: Link },
+    { id: 'debug', label: 'Debug', icon: TestTube }
   ];
 
   useEffect(() => { fetchConfiguration(); }, []);
@@ -508,6 +511,84 @@ export default function SystemConfiguration() {
                 <ExternalLink className="w-5 h-5" />
                 Go to Integration Hub
               </button>
+            </div>
+          )}
+
+          {/* DEBUG TAB */}
+          {activeTab === 'debug' && (
+            <div className="space-y-6">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-yellow-800">Developer Mode</h3>
+                    <p className="text-sm text-yellow-700">
+                      Debug mode should only be enabled during development or troubleshooting. 
+                      Disable it in production to prevent exposing sensitive error information.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg border p-6">
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <TestTube className="w-5 h-5 text-purple-600" />
+                  Debug Settings
+                </h3>
+                <div className="space-y-4">
+                  <label className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <div>
+                      <p className="font-medium">Enable Debug Mode</p>
+                      <p className="text-sm text-gray-500">Show detailed error messages in API responses</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={config.debug_mode}
+                      onChange={(e) => setConfig({...config, debug_mode: e.target.checked})}
+                      className="w-5 h-5 rounded text-blue-600"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <div>
+                      <p className="font-medium">Log API Requests</p>
+                      <p className="text-sm text-gray-500">Log all API requests to the server error log</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={config.debug_log_api_requests}
+                      onChange={(e) => setConfig({...config, debug_log_api_requests: e.target.checked})}
+                      className="w-5 h-5 rounded text-blue-600"
+                    />
+                  </label>
+                  <label className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <div>
+                      <p className="font-medium">Show SQL Errors</p>
+                      <p className="text-sm text-gray-500">Include SQL error details in debug output</p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={config.debug_show_sql_errors}
+                      onChange={(e) => setConfig({...config, debug_show_sql_errors: e.target.checked})}
+                      className="w-5 h-5 rounded text-blue-600"
+                    />
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-gray-100 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-2">Debug Status</h4>
+                <div className="flex items-center gap-2">
+                  <span className={`w-3 h-3 rounded-full ${config.debug_mode ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                  <span className="text-sm text-gray-700">
+                    Debug mode is currently <strong>{config.debug_mode ? 'ENABLED' : 'DISABLED'}</strong>
+                  </span>
+                </div>
+                {config.debug_mode && (
+                  <p className="text-xs text-orange-600 mt-2">
+                    ⚠️ Remember to disable debug mode after troubleshooting
+                  </p>
+                )}
+              </div>
             </div>
           )}
         </div>
