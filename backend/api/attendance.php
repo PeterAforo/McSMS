@@ -33,10 +33,12 @@ try {
     $method = $_SERVER['REQUEST_METHOD'];
     $action = $_GET['action'] ?? '';
     
-    // Return action info for debugging (temporary)
-    if (isset($_GET['debug'])) {
-        echo json_encode(['method' => $method, 'action' => $action, 'get' => $_GET]);
-        exit;
+    // For POST requests, also check the request body for action
+    $rawInput = file_get_contents('php://input');
+    $inputData = json_decode($rawInput, true);
+    
+    if ($method === 'POST' && empty($action) && isset($inputData['action'])) {
+        $action = $inputData['action'];
     }
 
     switch ($method) {
@@ -59,19 +61,16 @@ try {
             break;
 
         case 'POST':
-            error_log("POST action received: '$action'");
             if ($action === 'mark') {
-                markAttendance($pdo);
+                markAttendance($pdo, $inputData);
             } elseif ($action === 'bulk') {
-                markBulkAttendance($pdo);
+                markBulkAttendance($pdo, $inputData);
             } elseif ($action === 'mark_teacher') {
-                markTeacherAttendance($pdo);
+                markTeacherAttendance($pdo, $inputData);
             } elseif ($action === 'mark_class') {
-                error_log("Calling markClassAttendance");
-                markClassAttendance($pdo);
+                markClassAttendance($pdo, $inputData);
             } else {
-                error_log("Falling through to createAttendance, action was: '$action'");
-                createAttendance($pdo);
+                createAttendance($pdo, $inputData);
             }
             break;
 
@@ -353,8 +352,10 @@ function getStudentAttendance($pdo) {
     ]);
 }
 
-function createAttendance($pdo) {
-    $data = json_decode(file_get_contents('php://input'), true);
+function createAttendance($pdo, $data = null) {
+    if ($data === null) {
+        $data = json_decode(file_get_contents('php://input'), true);
+    }
 
     $required = ['student_id', 'class_id', 'date', 'status'];
     foreach ($required as $field) {
@@ -390,8 +391,10 @@ function createAttendance($pdo) {
     ]);
 }
 
-function markAttendance($pdo) {
-    $data = json_decode(file_get_contents('php://input'), true);
+function markAttendance($pdo, $data = null) {
+    if ($data === null) {
+        $data = json_decode(file_get_contents('php://input'), true);
+    }
 
     $required = ['student_id', 'class_id', 'date', 'status'];
     foreach ($required as $field) {
@@ -436,8 +439,10 @@ function markAttendance($pdo) {
     }
 }
 
-function markBulkAttendance($pdo) {
-    $data = json_decode(file_get_contents('php://input'), true);
+function markBulkAttendance($pdo, $data = null) {
+    if ($data === null) {
+        $data = json_decode(file_get_contents('php://input'), true);
+    }
 
     if (!isset($data['attendance']) || !is_array($data['attendance'])) {
         throw new Exception('Attendance array is required');
@@ -491,8 +496,10 @@ function markBulkAttendance($pdo) {
     }
 }
 
-function markClassAttendance($pdo) {
-    $data = json_decode(file_get_contents('php://input'), true);
+function markClassAttendance($pdo, $data = null) {
+    if ($data === null) {
+        $data = json_decode(file_get_contents('php://input'), true);
+    }
     
     if (!$data) {
         throw new Exception('Invalid JSON data received');
@@ -728,8 +735,10 @@ function getStudentStats($pdo) {
     echo json_encode(['success' => true, 'stats' => $stats]);
 }
 
-function markTeacherAttendance($pdo) {
-    $data = json_decode(file_get_contents('php://input'), true);
+function markTeacherAttendance($pdo, $data = null) {
+    if ($data === null) {
+        $data = json_decode(file_get_contents('php://input'), true);
+    }
     
     if (!isset($data['teachers']) || !is_array($data['teachers'])) {
         throw new Exception('Teachers array is required');
