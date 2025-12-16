@@ -149,24 +149,33 @@ export default function WelcomeModal({ isOpen, onClose, onStart, onSkip }) {
     setSaving(true);
     try {
       // Upload logo if exists
+      let logoUrl = null;
       if (schoolData.school_logo instanceof File) {
         const formData = new FormData();
         formData.append('logo', schoolData.school_logo);
         const uploadRes = await axios.post(`${API_BASE_URL}/upload_logo.php`, formData);
         if (uploadRes.data.success) {
-          schoolData.school_logo = uploadRes.data.url;
+          logoUrl = uploadRes.data.logo_url;
         }
       }
       
-      // Save school settings
-      await axios.post(`${API_BASE_URL}/system_config.php`, {
+      // Save school settings (don't include logo - it's saved by upload_logo.php)
+      const configData = {
         school_name: schoolData.school_name,
         school_motto: schoolData.school_motto,
         school_email: schoolData.school_email,
         school_phone: schoolData.school_phone,
-        school_address: schoolData.school_address,
-        school_logo: typeof schoolData.school_logo === 'string' ? schoolData.school_logo : schoolData.logoPreview
-      });
+        school_address: schoolData.school_address
+      };
+      
+      // Only include logo if it's a valid URL (not a blob URL)
+      if (logoUrl) {
+        configData.school_logo = logoUrl;
+      } else if (schoolData.logoPreview && !schoolData.logoPreview.startsWith('blob:')) {
+        configData.school_logo = schoolData.logoPreview;
+      }
+      
+      await axios.post(`${API_BASE_URL}/system_config.php`, configData);
       
       setCompletedSteps(prev => new Set([...prev, 1]));
       return true;
