@@ -237,12 +237,17 @@ switch ($action) {
                 $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
                 
                 if ($invoice) {
+                    // Generate payment number
+                    $countStmt = $pdo->query("SELECT COUNT(*) as count FROM payments");
+                    $paymentCount = $countStmt->fetch(PDO::FETCH_ASSOC)['count'];
+                    $paymentNumber = 'PAY' . date('Y') . str_pad($paymentCount + 1, 5, '0', STR_PAD_LEFT);
+                    
                     // Record payment in payments table
                     $stmt = $pdo->prepare("
-                        INSERT INTO payments (invoice_id, student_id, amount, payment_method, reference_no, status, created_at)
-                        VALUES (?, ?, ?, 'wallet', ?, 'completed', NOW())
+                        INSERT INTO payments (payment_number, invoice_id, student_id, amount, payment_method, payment_date, reference_number, status, notes)
+                        VALUES (?, ?, ?, ?, 'wallet', CURDATE(), ?, 'completed', 'Paid via parent wallet')
                     ");
-                    $stmt->execute([$invoiceId, $invoice['student_id'], $amount, $reference]);
+                    $stmt->execute([$paymentNumber, $invoiceId, $invoice['student_id'], $amount, $reference]);
                     
                     // Update invoice
                     $newAmountPaid = floatval($invoice['amount_paid']) + $amount;

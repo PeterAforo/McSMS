@@ -6,8 +6,10 @@
 
 header('Content-Type: application/json');
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin)) {
+if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin) || strpos($origin, 'eea.mcaforo.com') !== false) {
     header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    header('Access-Control-Allow-Origin: *');
 }
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
@@ -27,6 +29,29 @@ $action = $_GET['action'] ?? null;
 
 try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+
+    // Ensure payments table exists with correct structure
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS payments (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            payment_number VARCHAR(50),
+            invoice_id INT,
+            student_id INT,
+            parent_id INT,
+            amount DECIMAL(10,2) NOT NULL,
+            payment_method VARCHAR(50) DEFAULT 'cash',
+            payment_date DATE,
+            reference_number VARCHAR(100),
+            received_by INT,
+            status VARCHAR(20) DEFAULT 'completed',
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_invoice_id (invoice_id),
+            INDEX idx_student_id (student_id),
+            INDEX idx_payment_date (payment_date)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
 
     // ============================================
     // FEE RULES
