@@ -23,6 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once dirname(dirname(__DIR__)) . '/config/database.php';
 require_once __DIR__ . '/debug_helper.php';
 
+// Version check
+if (isset($_GET['version'])) {
+    echo json_encode(['version' => '2024-12-16-v3', 'file' => 'dashboard.php']);
+    exit;
+}
+
 // Debug endpoint for parent dashboard
 if (isset($_GET['debug_parent'])) {
     error_reporting(E_ALL);
