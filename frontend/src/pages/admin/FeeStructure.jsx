@@ -421,15 +421,48 @@ export default function FeeStructure() {
       return;
     }
     const classInfo = classes.find(c => c.id == selectedClass);
-    const level = classInfo?.level || '';
+    const educationLevel = classInfo?.level || ''; // e.g., "primary", "jhs"
+    const className = classInfo?.class_name || ''; // e.g., "Grade 1"
     
-    const applicableRules = feeRules.filter(r => 
-      r.is_active == 1 && 
-      r.academic_year === yearFilter &&
-      (!r.level || r.level === level || r.level === '') &&
-      (!r.class_id || r.class_id == selectedClass) &&
-      (!r.term_id || r.term_id == selectedTerm || !selectedTerm)
+    // Find the fee group that matches this class name
+    const matchingGroup = feeGroups.find(g => 
+      g.group_name?.toLowerCase() === className?.toLowerCase() ||
+      g.group_code?.toLowerCase() === className?.toLowerCase()
     );
+    
+    const applicableRules = feeRules.filter(r => {
+      // Must be active and match academic year
+      if (r.is_active != 1 || r.academic_year !== yearFilter) return false;
+      
+      // Check term match
+      if (r.term_id && selectedTerm && r.term_id != selectedTerm) return false;
+      
+      // Check class match - if rule has specific class, it must match
+      if (r.class_id && r.class_id != selectedClass) return false;
+      
+      // Check level match - level can be:
+      // 1. Empty or "All Levels" - applies to all
+      // 2. Education level like "primary", "jhs" - match class's education level
+      // 3. Class/group name like "Grade 1" - match class name or fee group
+      const ruleLevel = (r.level || '').toLowerCase().trim();
+      if (!ruleLevel || ruleLevel === 'all levels' || ruleLevel === 'all') {
+        return true; // Applies to all
+      }
+      
+      // Match against education level
+      if (ruleLevel === educationLevel?.toLowerCase()) return true;
+      
+      // Match against class name
+      if (ruleLevel === className?.toLowerCase()) return true;
+      
+      // Match against fee group name/code
+      if (matchingGroup && (
+        ruleLevel === matchingGroup.group_name?.toLowerCase() ||
+        ruleLevel === matchingGroup.group_code?.toLowerCase()
+      )) return true;
+      
+      return false;
+    });
     
     const fees = applicableRules.map(r => ({
       item_name: r.item_name,
