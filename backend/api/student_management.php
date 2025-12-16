@@ -163,18 +163,25 @@ function handleStudents($pdo, $method, $action, $id) {
                 $stmt->execute([$parentId, $parentId]);
                 echo json_encode(['success' => true, 'students' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
             } elseif ($action === 'profile' && $id) {
-                // Get full student profile with all related data including class teacher
-                $stmt = $pdo->prepare("
-                    SELECT s.*, c.class_name, 
-                           COALESCE(u.name, CONCAT(t.first_name, ' ', t.last_name)) as class_teacher
-                    FROM students s 
-                    LEFT JOIN classes c ON s.class_id = c.id 
-                    LEFT JOIN users u ON c.class_teacher_id = u.id
-                    LEFT JOIN teachers t ON c.class_teacher_id = t.id
-                    WHERE s.id = ?
-                ");
-                $stmt->execute([$id]);
-                $student = $stmt->fetch(PDO::FETCH_ASSOC);
+                // Get full student profile with all related data
+                try {
+                    $stmt = $pdo->prepare("
+                        SELECT s.*, c.class_name, u.name as class_teacher
+                        FROM students s 
+                        LEFT JOIN classes c ON s.class_id = c.id 
+                        LEFT JOIN users u ON c.class_teacher_id = u.id
+                        WHERE s.id = ?
+                    ");
+                    $stmt->execute([$id]);
+                    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+                } catch (Exception $e) {
+                    // Fallback to simple query
+                    $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+                    $stmt->execute([$id]);
+                    $student = $stmt->fetch(PDO::FETCH_ASSOC);
+                    $student['class_name'] = null;
+                    $student['class_teacher'] = null;
+                }
                 
                 if (!$student) {
                     http_response_code(404);
