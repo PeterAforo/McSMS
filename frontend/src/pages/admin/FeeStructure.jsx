@@ -182,6 +182,7 @@ export default function FeeStructure() {
   const handleSubmitRule = async (e) => {
     e.preventDefault();
     try {
+      console.log('Submitting rule form:', ruleForm);
       if (editingItem) {
         await financeAPI.updateFeeRule(editingItem.id, ruleForm);
       } else {
@@ -191,6 +192,7 @@ export default function FeeStructure() {
       fetchData();
       alert('Fee rule saved successfully!');
     } catch (error) {
+      console.error('Error saving rule:', error);
       alert('Error: ' + (error.response?.data?.error || error.message));
     }
   };
@@ -672,7 +674,13 @@ export default function FeeStructure() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
-                      <button onClick={() => { setEditingItem(rule); setRuleForm(rule); setModalType('rule'); setShowModal(true); }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
+                      <button onClick={() => { 
+                        console.log('Editing rule:', rule, 'level:', rule.level);
+                        setEditingItem(rule); 
+                        setRuleForm({...rule, level: rule.level || ''}); 
+                        setModalType('rule'); 
+                        setShowModal(true); 
+                      }} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" title="Edit">
                         <Edit className="w-4 h-4" />
                       </button>
                       <button onClick={() => handleDuplicateRule(rule)} className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Duplicate">
