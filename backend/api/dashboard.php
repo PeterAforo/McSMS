@@ -892,18 +892,28 @@ function getParentDashboard($pdo, $userId, $action) {
         $summary['total_paid'] = $feeData['total_paid'] ?? 0;
         
         // Subjects Enrolled - count subjects for this student's class
-        $stmt = $pdo->prepare("
-            SELECT COUNT(DISTINCT subject_id) as count 
-            FROM class_subjects 
-            WHERE class_id = ?
-        ");
-        $stmt->execute([$child['class_id']]);
-        $subjectCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+        $subjectCount = 0;
+        try {
+            // First try class_subjects table
+            $stmt = $pdo->prepare("
+                SELECT COUNT(DISTINCT subject_id) as count 
+                FROM class_subjects 
+                WHERE class_id = ?
+            ");
+            $stmt->execute([$child['class_id']]);
+            $subjectCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+        } catch (Exception $e) {
+            // class_subjects table might not exist
+        }
         
         // If no class_subjects, try subjects table directly
         if ($subjectCount == 0) {
-            $stmt = $pdo->query("SELECT COUNT(*) as count FROM subjects WHERE status = 'active'");
-            $subjectCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+            try {
+                $stmt = $pdo->query("SELECT COUNT(*) as count FROM subjects WHERE status = 'active'");
+                $subjectCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+            } catch (Exception $e) {
+                $subjectCount = 0;
+            }
         }
         $summary['subjects_enrolled'] = $subjectCount;
         
