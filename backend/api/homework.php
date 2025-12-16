@@ -218,6 +218,16 @@ function getStudentHomework($pdo) {
         throw new Exception('Student not found');
     }
 
+    // If student has no class assigned, return empty homework list
+    if (!$student['class_id']) {
+        echo json_encode([
+            'success' => true,
+            'homework' => [],
+            'message' => 'Student is not assigned to any class yet'
+        ]);
+        return;
+    }
+
     // Get all homework for student's class
     $sql = "
         SELECT 
