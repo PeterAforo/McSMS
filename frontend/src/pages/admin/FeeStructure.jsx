@@ -523,6 +523,100 @@ export default function FeeStructure() {
         </nav>
       </div>
 
+      {/* Setup Instructions */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-blue-100 rounded-lg">
+            <Settings className="w-6 h-6 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Fee Structure Setup Guide</h3>
+            <p className="text-gray-600 text-sm mb-4">Follow these steps to properly configure fee structures so students can see their applicable fees during enrollment.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Step 1 */}
+              <div className={`p-4 rounded-lg border-2 ${feeGroups.length > 0 ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${feeGroups.length > 0 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                    {feeGroups.length > 0 ? <Check className="w-4 h-4" /> : '1'}
+                  </div>
+                  <span className="font-medium text-sm">Create Fee Groups</span>
+                </div>
+                <p className="text-xs text-gray-500">Create groups for each class/grade (e.g., "Grade 1", "Grade 2"). Each group represents a class level.</p>
+                <div className="mt-2 text-xs">
+                  <span className={feeGroups.length > 0 ? 'text-green-600 font-medium' : 'text-orange-600'}>
+                    {feeGroups.length > 0 ? `✓ ${feeGroups.length} groups created` : '⚠ No groups yet'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className={`p-4 rounded-lg border-2 ${feeItems.length > 0 ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${feeItems.length > 0 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                    {feeItems.length > 0 ? <Check className="w-4 h-4" /> : '2'}
+                  </div>
+                  <span className="font-medium text-sm">Add Fee Items</span>
+                </div>
+                <p className="text-xs text-gray-500">Add fee items under each group (e.g., "Tuition", "Books", "Uniform"). Assign items to their respective groups.</p>
+                <div className="mt-2 text-xs">
+                  <span className={feeItems.length > 0 ? 'text-green-600 font-medium' : 'text-orange-600'}>
+                    {feeItems.length > 0 ? `✓ ${feeItems.length} items created` : '⚠ No items yet'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Step 3 */}
+              <div className={`p-4 rounded-lg border-2 ${feeRules.length > 0 ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${feeRules.length > 0 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                    {feeRules.length > 0 ? <Check className="w-4 h-4" /> : '3'}
+                  </div>
+                  <span className="font-medium text-sm">Set Pricing Rules</span>
+                </div>
+                <p className="text-xs text-gray-500">Define amounts for each fee item per class/level. Set the academic year and term for each rule.</p>
+                <div className="mt-2 text-xs">
+                  <span className={feeRules.length > 0 ? 'text-green-600 font-medium' : 'text-orange-600'}>
+                    {feeRules.length > 0 ? `✓ ${feeRules.length} rules configured` : '⚠ No rules yet'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className={`p-4 rounded-lg border-2 ${classes.length > 0 ? 'bg-green-50 border-green-300' : 'bg-white border-gray-200'}`}>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${classes.length > 0 ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-600'}`}>
+                    {classes.length > 0 ? <Check className="w-4 h-4" /> : '4'}
+                  </div>
+                  <span className="font-medium text-sm">Link to Classes</span>
+                </div>
+                <p className="text-xs text-gray-500">Ensure classes are created in Academic → Classes. Rules can target specific classes or education levels.</p>
+                <div className="mt-2 text-xs">
+                  <span className={classes.length > 0 ? 'text-green-600 font-medium' : 'text-orange-600'}>
+                    {classes.length > 0 ? `✓ ${classes.length} classes available` : '⚠ No classes yet'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-amber-800">
+                  <strong>Important:</strong> For students to see their fees during enrollment, ensure:
+                  <ul className="list-disc ml-4 mt-1 space-y-1">
+                    <li>Fee rules have the correct <strong>academic year</strong> selected (e.g., 2024/2025)</li>
+                    <li>Rules are set to <strong>Active</strong> status</li>
+                    <li>Either assign rules to specific <strong>classes</strong> OR use <strong>education levels</strong> (e.g., primary, jhs, shs)</li>
+                    <li>Use the <strong>Fee Calculator</strong> button above to preview what students will see</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Filters */}
       <div className="card p-4">
         <div className="flex flex-wrap items-center gap-4">
