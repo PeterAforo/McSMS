@@ -995,16 +995,24 @@ function getParentDashboard($pdo, $userId, $action) {
     }
     
     // Get Applications submitted by this parent (using user_id)
-    $stmt = $pdo->prepare("
-        SELECT * FROM student_applications 
-        WHERE parent_id = ?
-        ORDER BY application_date DESC
-    ");
-    $stmt->execute([$parent['user_id']]);
-    $data['applications'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->prepare("
+            SELECT * FROM student_applications 
+            WHERE parent_id = ?
+            ORDER BY application_date DESC
+        ");
+        $stmt->execute([$parent['user_id']]);
+        $data['applications'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $data['applications'] = [];
+    }
     
     // AI Insights for Parent
-    $data['insights'] = generateParentInsights($pdo, $parent, $data);
+    try {
+        $data['insights'] = generateParentInsights($pdo, $parent, $data);
+    } catch (Exception $e) {
+        $data['insights'] = [];
+    }
     
     return $data;
 }
@@ -1015,22 +1023,23 @@ function generateParentInsights($pdo, $parent, $data) {
     foreach ($data['children_summary'] as $summary) {
         $childName = $summary['student']['first_name'];
         
-        // Academic Performance
-        if ($summary['average_marks_obtained'] < 50 && $summary['average_marks_obtained'] > 0) {
+        // Academic Performance - use average_score (not average_marks_obtained)
+        $avgScore = $summary['average_score'] ?? 0;
+        if ($avgScore < 50 && $avgScore > 0) {
             $insights[] = [
                 'type' => 'warning',
                 'category' => 'Academic',
                 'title' => "{$childName} Needs Support",
-                'message' => "{$childName}'s average score is {$summary['average_marks_obtained']}%. Consider extra tutoring.",
+                'message' => "{$childName}'s average score is {$avgScore}%. Consider extra tutoring.",
                 'action' => 'View Grades',
                 'priority' => 'high'
             ];
-        } elseif ($summary['average_marks_obtained'] >= 80) {
+        } elseif ($avgScore >= 80) {
             $insights[] = [
                 'type' => 'success',
                 'category' => 'Academic',
                 'title' => "{$childName} Excelling!",
-                'message' => "{$childName}'s average score is {$summary['average_marks_obtained']}%. Great performance!",
+                'message' => "{$childName}'s average score is {$avgScore}%. Great performance!",
                 'action' => null,
                 'priority' => 'low'
             ];
