@@ -860,39 +860,70 @@ function getParentDashboard($pdo, $userId, $action) {
         $stmt->execute([$child['id']]);
         $summary['average_score'] = round($stmt->fetch(PDO::FETCH_ASSOC)['avg_score'] ?? 0, 1);
         
-        // Attendance Rate
+        // Attendance Rate - check last 30 days
         $stmt = $pdo->prepare("
             SELECT 
                 COUNT(*) as total,
                 SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present
             FROM attendance 
-            WHERE student_id = ?
+            WHERE student_id = ? AND date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
         ");
         $stmt->execute([$child['id']]);
         $att = $stmt->fetch(PDO::FETCH_ASSOC);
         $summary['attendance_rate'] = $att['total'] > 0 
             ? round(($att['present'] / $att['total']) * 100, 1) 
             : 0;
+        $summary['attendance_total'] = $att['total'] ?? 0;
+        $summary['attendance_present'] = $att['present'] ?? 0;
         
-        // Fee Balance
+        // Fee Balance - calculate from total_amount - amount_paid (more accurate)
         $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(balance), 0) as balance FROM invoices WHERE student_id = ?
+            SELECT 
+                COALESCE(SUM(total_amount), 0) as total_fees,
+                COALESCE(SUM(amount_paid), 0) as total_paid,
+                COALESCE(SUM(total_amount - amount_paid), 0) as balance 
+            FROM invoices 
+            WHERE student_id = ? AND status != 'cancelled'
         ");
         $stmt->execute([$child['id']]);
-        $summary['fee_balance'] = $stmt->fetch(PDO::FETCH_ASSOC)['balance'];
+        $feeData = $stmt->fetch(PDO::FETCH_ASSOC);
+        $summary['fee_balance'] = max(0, $feeData['balance'] ?? 0);
+        $summary['total_fees'] = $feeData['total_fees'] ?? 0;
+        $summary['total_paid'] = $feeData['total_paid'] ?? 0;
+        
+        // Subjects Enrolled - count subjects for this student's class
+        $stmt = $pdo->prepare("
+            SELECT COUNT(DISTINCT subject_id) as count 
+            FROM class_subjects 
+            WHERE class_id = ?
+        ");
+        $stmt->execute([$child['class_id']]);
+        $subjectCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+        
+        // If no class_subjects, try subjects table directly
+        if ($subjectCount == 0) {
+            $stmt = $pdo->query("SELECT COUNT(*) as count FROM subjects WHERE status = 'active'");
+            $subjectCount = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
+        }
+        $summary['subjects_enrolled'] = $subjectCount;
+        
+        // Get student photo
+        $summary['photo'] = $child['photo'] ?? $child['profile_photo'] ?? null;
         
         $data['children_summary'][] = $summary;
     }
     
-    // Total Fee Balance
+    // Total Fee Balance - calculate from total_amount - amount_paid
     $childIds = array_column($children, 'id');
     if (!empty($childIds)) {
         $placeholders = implode(',', array_fill(0, count($childIds), '?'));
         $stmt = $pdo->prepare("
-            SELECT COALESCE(SUM(balance), 0) as total FROM invoices WHERE student_id IN ($placeholders)
+            SELECT COALESCE(SUM(total_amount - amount_paid), 0) as total 
+            FROM invoices 
+            WHERE student_id IN ($placeholders) AND status != 'cancelled'
         ");
         $stmt->execute($childIds);
-        $data['total_fee_balance'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        $data['total_fee_balance'] = max(0, $stmt->fetch(PDO::FETCH_ASSOC)['total']);
     } else {
         $data['total_fee_balance'] = 0;
     }

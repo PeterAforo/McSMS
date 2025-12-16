@@ -298,7 +298,23 @@ export default function ParentDashboard() {
               {/* Child Header */}
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+                  {getChildSummary(selectedChild.id)?.photo ? (
+                    <img 
+                      src={getChildSummary(selectedChild.id).photo.startsWith('http') 
+                        ? getChildSummary(selectedChild.id).photo 
+                        : `${API_BASE_URL.replace('/api', '')}/uploads/${getChildSummary(selectedChild.id).photo}`}
+                      alt={`${selectedChild.first_name} ${selectedChild.last_name}`}
+                      className="w-16 h-16 rounded-2xl object-cover border-2 border-purple-200"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold"
+                    style={{ display: getChildSummary(selectedChild.id)?.photo ? 'none' : 'flex' }}
+                  >
                     {selectedChild.first_name?.[0]}{selectedChild.last_name?.[0]}
                   </div>
                   <div>
@@ -348,7 +364,7 @@ export default function ParentDashboard() {
                 <PerformanceCard
                   icon={<BookOpen />}
                   label="Subjects"
-                  value={getChildSummary(selectedChild.id)?.subjects_count || 0}
+                  value={getChildSummary(selectedChild.id)?.subjects_enrolled || 0}
                   subtext="Enrolled courses"
                   color="blue"
                 />
