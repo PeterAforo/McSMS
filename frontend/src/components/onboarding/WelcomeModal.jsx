@@ -221,7 +221,9 @@ export default function WelcomeModal({ isOpen, onClose, onStart, onSkip }) {
       return true;
     } catch (error) {
       console.error('Error saving academic year:', error);
-      return true; // Continue anyway
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to save academic year';
+      alert(`❌ Error: ${errorMsg}`);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -258,7 +260,9 @@ export default function WelcomeModal({ isOpen, onClose, onStart, onSkip }) {
       return true;
     } catch (error) {
       console.error('Error saving classes:', error);
-      return true; // Continue anyway
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to save classes';
+      alert(`❌ Error: ${errorMsg}`);
+      return false;
     } finally {
       setSaving(false);
     }
@@ -279,7 +283,9 @@ export default function WelcomeModal({ isOpen, onClose, onStart, onSkip }) {
       return true;
     } catch (error) {
       console.error('Error saving subjects:', error);
-      return true; // Continue anyway
+      const errorMsg = error.response?.data?.error || error.message || 'Failed to save subjects';
+      alert(`❌ Error: ${errorMsg}`);
+      return false;
     } finally {
       setSaving(false);
     }
