@@ -18,6 +18,21 @@ export default function ParentDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedChild, setSelectedChild] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [failedImages, setFailedImages] = useState({});
+
+  // Helper to get photo URL
+  const getPhotoUrl = (photo) => {
+    if (!photo) return null;
+    if (photo.startsWith('http')) return photo;
+    const cleanPath = photo.replace(/^\/?(uploads\/)?/, '');
+    const baseUrl = API_BASE_URL.replace('/backend/api', '');
+    return `${baseUrl}/uploads/${cleanPath}`;
+  };
+
+  // Handle image error
+  const handleImageError = (childId) => {
+    setFailedImages(prev => ({ ...prev, [childId]: true }));
+  };
 
   useEffect(() => {
     if (user?.id) {
@@ -277,18 +292,9 @@ export default function ParentDashboard() {
               <span className="text-gray-500 text-sm whitespace-nowrap mr-2">Select Child:</span>
               {children.map((child) => {
                 const childPhoto = getChildSummary(child.id)?.photo || child.photo;
-                let photoUrl = null;
-                if (childPhoto) {
-                  if (childPhoto.startsWith('http')) {
-                    photoUrl = childPhoto;
-                  } else {
-                    // Remove leading slash and 'uploads/' if present to avoid duplication
-                    const cleanPath = childPhoto.replace(/^\/?(uploads\/)?/, '');
-                    // Use base domain without /backend/api path
-                    const baseUrl = API_BASE_URL.replace('/backend/api', '');
-                    photoUrl = `${baseUrl}/uploads/${cleanPath}`;
-                  }
-                }
+                const photoUrl = getPhotoUrl(childPhoto);
+                const showFallback = !photoUrl || failedImages[child.id];
+                
                 return (
                   <button
                     key={child.id}
@@ -299,27 +305,25 @@ export default function ParentDashboard() {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {photoUrl ? (
+                    {!showFallback && (
                       <img 
                         src={photoUrl} 
                         alt={child.first_name}
                         className="w-8 h-8 rounded-full object-cover border-2 border-white"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                          e.target.nextSibling.style.display = 'flex';
-                        }}
+                        onError={() => handleImageError(child.id)}
                       />
-                    ) : null}
-                    <div 
-                      className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                        selectedChild?.id === child.id 
-                          ? 'bg-purple-400 text-white' 
-                          : 'bg-purple-200 text-purple-700'
-                      }`}
-                      style={{ display: photoUrl ? 'none' : 'flex' }}
-                    >
-                      {child.first_name?.[0]}{child.last_name?.[0]}
-                    </div>
+                    )}
+                    {showFallback && (
+                      <div 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold ${
+                          selectedChild?.id === child.id 
+                            ? 'bg-purple-400 text-white' 
+                            : 'bg-purple-200 text-purple-700'
+                        }`}
+                      >
+                        {child.first_name?.[0]}{child.last_name?.[0]}
+                      </div>
+                    )}
                     <span className="font-medium">{child.first_name} {child.last_name}</span>
                   </button>
                 );
@@ -335,36 +339,27 @@ export default function ParentDashboard() {
                 <div className="flex items-center gap-4">
                   {(() => {
                     const photo = getChildSummary(selectedChild.id)?.photo || selectedChild.photo;
-                    if (photo) {
-                      // Fix photo URL - remove duplicate paths
-                      let photoUrl = photo;
-                      if (!photo.startsWith('http')) {
-                        // Remove leading slash and 'uploads/' if present to avoid duplication
-                        const cleanPath = photo.replace(/^\/?(uploads\/)?/, '');
-                        // Use base domain without /backend/api path
-                        const baseUrl = API_BASE_URL.replace('/backend/api', '');
-                        photoUrl = `${baseUrl}/uploads/${cleanPath}`;
-                      }
-                      return (
-                        <img 
-                          src={photoUrl}
-                          alt={`${selectedChild.first_name} ${selectedChild.last_name}`}
-                          className="w-16 h-16 rounded-2xl object-cover border-2 border-purple-200"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      );
-                    }
-                    return null;
+                    const photoUrl = getPhotoUrl(photo);
+                    const showFallback = !photoUrl || failedImages[selectedChild.id];
+                    
+                    return (
+                      <>
+                        {!showFallback && (
+                          <img 
+                            src={photoUrl}
+                            alt={`${selectedChild.first_name} ${selectedChild.last_name}`}
+                            className="w-16 h-16 rounded-2xl object-cover border-2 border-purple-200"
+                            onError={() => handleImageError(selectedChild.id)}
+                          />
+                        )}
+                        {showFallback && (
+                          <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold">
+                            {selectedChild.first_name?.[0]}{selectedChild.last_name?.[0]}
+                          </div>
+                        )}
+                      </>
+                    );
                   })()}
-                  <div 
-                    className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center text-white text-2xl font-bold"
-                    style={{ display: (getChildSummary(selectedChild.id)?.photo || selectedChild.photo) ? 'none' : 'flex' }}
-                  >
-                    {selectedChild.first_name?.[0]}{selectedChild.last_name?.[0]}
-                  </div>
                   <div>
                     <h3 className="text-xl font-bold text-gray-800">
                       {selectedChild.first_name} {selectedChild.last_name}
