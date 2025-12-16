@@ -662,7 +662,7 @@ export default function FeeStructure() {
               ) : filteredRules.map((rule) => (
                 <tr key={rule.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900">{rule.item_name}</td>
-                  <td className="px-4 py-3 text-sm uppercase">{rule.level || 'All'}</td>
+                  <td className="px-4 py-3 text-sm">{rule.level ? (educationLevels.find(l => l.level_code === rule.level)?.level_name || rule.level.toUpperCase()) : 'All Levels'}</td>
                   <td className="px-4 py-3 text-sm">{rule.class_name || 'All'}</td>
                   <td className="px-4 py-3 font-semibold text-green-600">GHS {parseFloat(rule.amount).toFixed(2)}</td>
                   <td className="px-4 py-3 text-sm text-orange-600">{rule.late_fee ? `GHS ${rule.late_fee}` : '-'}</td>
@@ -675,7 +675,9 @@ export default function FeeStructure() {
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
                       <button onClick={() => { 
-                        console.log('Editing rule:', rule, 'level:', rule.level);
+                        console.log('Editing rule:', rule);
+                        console.log('Rule level from DB:', rule.level);
+                        console.log('Available education levels:', educationLevels.map(l => l.level_code));
                         setEditingItem(rule); 
                         setRuleForm({...rule, level: rule.level || ''}); 
                         setModalType('rule'); 
