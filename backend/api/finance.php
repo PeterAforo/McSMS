@@ -27,6 +27,12 @@ $resource = $_GET['resource'] ?? null;
 $id = $_GET['id'] ?? null;
 $action = $_GET['action'] ?? null;
 
+// Version check endpoint
+if (isset($_GET['version'])) {
+    echo json_encode(['version' => '2024-12-16-v2', 'resource' => $resource, 'id' => $id]);
+    exit;
+}
+
 try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
