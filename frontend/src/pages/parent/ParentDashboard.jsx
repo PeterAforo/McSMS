@@ -282,8 +282,11 @@ export default function ParentDashboard() {
                   if (childPhoto.startsWith('http')) {
                     photoUrl = childPhoto;
                   } else {
+                    // Remove leading slash and 'uploads/' if present to avoid duplication
                     const cleanPath = childPhoto.replace(/^\/?(uploads\/)?/, '');
-                    photoUrl = `${API_BASE_URL.replace('/api', '')}/uploads/${cleanPath}`;
+                    // Use base domain without /backend/api path
+                    const baseUrl = API_BASE_URL.replace('/backend/api', '');
+                    photoUrl = `${baseUrl}/uploads/${cleanPath}`;
                   }
                 }
                 return (
@@ -338,7 +341,9 @@ export default function ParentDashboard() {
                       if (!photo.startsWith('http')) {
                         // Remove leading slash and 'uploads/' if present to avoid duplication
                         const cleanPath = photo.replace(/^\/?(uploads\/)?/, '');
-                        photoUrl = `${API_BASE_URL.replace('/api', '')}/uploads/${cleanPath}`;
+                        // Use base domain without /backend/api path
+                        const baseUrl = API_BASE_URL.replace('/backend/api', '');
+                        photoUrl = `${baseUrl}/uploads/${cleanPath}`;
                       }
                       return (
                         <img 
