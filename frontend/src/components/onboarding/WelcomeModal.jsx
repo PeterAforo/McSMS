@@ -191,20 +191,29 @@ export default function WelcomeModal({ isOpen, onClose, onStart, onSkip }) {
   const saveAcademicYear = async () => {
     setSaving(true);
     try {
-      // Create academic year
-      await axios.post(`${API_BASE_URL}/academic_sessions.php`, {
-        name: academicData.academic_year,
-        start_date: academicData.start_date,
-        end_date: academicData.end_date,
-        is_current: true
+      // Extract year from academic_year string (e.g., "2024-2025" -> 2024)
+      const yearMatch = academicData.academic_year.match(/\d{4}/);
+      const academicYear = yearMatch ? parseInt(yearMatch[0]) : new Date().getFullYear();
+      
+      // Extract term number from term_name (e.g., "Term 1" -> 1)
+      const termMatch = academicData.term_name.match(/\d/);
+      const termNumber = termMatch ? parseInt(termMatch[0]) : 1;
+      
+      // Save academic year to system_config
+      await axios.post(`${API_BASE_URL}/system_config.php`, {
+        current_academic_year: academicData.academic_year,
+        current_term: termNumber.toString()
       });
       
-      // Create term
+      // Create term in academic_terms table
       await axios.post(`${API_BASE_URL}/terms.php`, {
         term_name: academicData.term_name,
-        academic_year: academicData.academic_year,
-        start_date: academicData.start_date,
-        end_date: academicData.end_date,
+        term_code: `T${termNumber}-${academicYear}`,
+        academic_year: academicYear,
+        term_number: termNumber,
+        start_date: academicData.start_date || null,
+        end_date: academicData.end_date || null,
+        is_active: 1,
         status: 'active'
       });
       
@@ -223,8 +232,24 @@ export default function WelcomeModal({ isOpen, onClose, onStart, onSkip }) {
     try {
       const validClasses = classesData.filter(c => c.name.trim());
       for (const cls of validClasses) {
+        // Generate class_code from name (e.g., "Class 1" -> "CLS1")
+        const classCode = cls.name.replace(/[^a-zA-Z0-9]/g, '').substring(0, 6).toUpperCase();
+        
+        // Determine level based on class name
+        let level = 'primary';
+        const nameLower = cls.name.toLowerCase();
+        if (nameLower.includes('nursery') || nameLower.includes('kg') || nameLower.includes('kindergarten')) {
+          level = 'creche';
+        } else if (nameLower.includes('jhs') || nameLower.includes('junior')) {
+          level = 'jhs';
+        } else if (nameLower.includes('shs') || nameLower.includes('senior')) {
+          level = 'shs';
+        }
+        
         await axios.post(`${API_BASE_URL}/classes.php`, {
           class_name: cls.name,
+          class_code: classCode,
+          level: level,
           capacity: cls.capacity || 40,
           status: 'active'
         });
