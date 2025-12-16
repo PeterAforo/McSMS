@@ -485,8 +485,23 @@ function markBulkAttendance($pdo) {
 function markClassAttendance($pdo) {
     $data = json_decode(file_get_contents('php://input'), true);
     
-    if (!isset($data['class_id']) || !isset($data['students'])) {
-        throw new Exception('class_id and students array required');
+    if (!$data) {
+        throw new Exception('Invalid JSON data received');
+    }
+    
+    if (!isset($data['class_id'])) {
+        throw new Exception('class_id is required');
+    }
+    
+    if (!isset($data['students']) || !is_array($data['students']) || empty($data['students'])) {
+        throw new Exception('students array is required and must not be empty');
+    }
+    
+    // Validate each student record has student_id
+    foreach ($data['students'] as $index => $record) {
+        if (!isset($record['student_id']) || empty($record['student_id'])) {
+            throw new Exception("student_id is missing for record at index $index");
+        }
     }
     
     $pdo->beginTransaction();

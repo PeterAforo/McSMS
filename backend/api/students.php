@@ -70,6 +70,17 @@ try {
                 $parent_id = $_GET['parent_id'] ?? '';
                 
                 $sql = "SELECT s.*, c.class_name FROM students s LEFT JOIN classes c ON s.class_id = c.id WHERE 1=1";
+                
+                // Helper function to fix photo URLs
+                $fixPhotoUrl = function($url) {
+                    if (!$url) return null;
+                    // Replace localhost URLs with production URL
+                    $url = str_replace('http://localhost/McSMS/public/assets/uploads/', 'https://eea.mcaforo.com/uploads/', $url);
+                    $url = str_replace('http://localhost/McSMS/uploads/', 'https://eea.mcaforo.com/uploads/', $url);
+                    // Fix double slashes in path
+                    $url = preg_replace('#/uploads/+#', '/uploads/', $url);
+                    return $url;
+                };
                 $params = [];
                 
                 // If parent_id is a user_id, look up the actual parent_id from parents table
@@ -109,6 +120,16 @@ try {
                 $stmt = $pdo->prepare($sql);
                 $stmt->execute($params);
                 $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                
+                // Fix photo URLs for each student
+                foreach ($students as &$student) {
+                    if (isset($student['photo'])) {
+                        $student['photo'] = $fixPhotoUrl($student['photo']);
+                    }
+                    if (isset($student['profile_photo'])) {
+                        $student['profile_photo'] = $fixPhotoUrl($student['profile_photo']);
+                    }
+                }
                 
                 echo json_encode(['success' => true, 'students' => $students]);
             }

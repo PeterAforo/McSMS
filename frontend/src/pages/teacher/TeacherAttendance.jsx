@@ -263,14 +263,21 @@ export default function TeacherAttendance() {
       return;
     }
 
+    if (!students || students.length === 0) {
+      alert('No students found in this class. Please select a class with students.');
+      return;
+    }
+
     try {
       setSaving(true);
       const attendanceData = students.map(student => ({
-        student_id: student.id,
+        student_id: parseInt(student.id),
         status: attendance[student.id]?.status || 'present',
         time_in: attendance[student.id]?.time_in || null,
         notes: notes[student.id] || null
       }));
+      
+      console.log('Submitting attendance:', { class_id: selectedClass, students: attendanceData });
 
       await axios.post(`${API_BASE_URL}/attendance.php?action=mark_class`, {
         class_id: selectedClass,
