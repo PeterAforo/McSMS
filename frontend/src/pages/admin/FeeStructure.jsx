@@ -79,20 +79,19 @@ export default function FeeStructure() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      if (activeTab === 'groups') {
-        const response = await feeGroupsAPI.getAll();
-        setFeeGroups(response.data.fee_groups || []);
-      } else if (activeTab === 'items') {
-        const response = await feeItemsAPI.getAll();
-        setFeeItems(response.data.fee_items || []);
-        const groupsResponse = await feeGroupsAPI.getAll();
-        setFeeGroups(groupsResponse.data.fee_groups || []);
-      } else if (activeTab === 'rules') {
-        const response = await financeAPI.getFeeRules();
-        setFeeRules(response.data.fee_rules || []);
-        const itemsResponse = await feeItemsAPI.getAll();
-        setFeeItems(itemsResponse.data.fee_items || []);
-      } else if (activeTab === 'plans') {
+      
+      // Always fetch rules, groups, and items for the calculator
+      const [rulesRes, groupsRes, itemsRes] = await Promise.all([
+        financeAPI.getFeeRules(),
+        feeGroupsAPI.getAll(),
+        feeItemsAPI.getAll()
+      ]);
+      setFeeRules(rulesRes.data.fee_rules || []);
+      setFeeGroups(groupsRes.data.fee_groups || []);
+      setFeeItems(itemsRes.data.fee_items || []);
+      
+      // Fetch tab-specific data
+      if (activeTab === 'plans') {
         const response = await financeAPI.getInstallmentPlans();
         setInstallmentPlans(response.data.installment_plans || []);
       } else if (activeTab === 'discounts') {
@@ -102,8 +101,6 @@ export default function FeeStructure() {
         } catch (e) {
           setDiscountRules([]);
         }
-        const itemsResponse = await feeItemsAPI.getAll();
-        setFeeItems(itemsResponse.data.fee_items || []);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -424,45 +421,82 @@ export default function FeeStructure() {
     const educationLevel = classInfo?.level || ''; // e.g., "primary", "jhs"
     const className = classInfo?.class_name || ''; // e.g., "Grade 1"
     
+    console.log('Calculator Debug:', {
+      selectedClass,
+      classInfo,
+      educationLevel,
+      className,
+      yearFilter,
+      selectedTerm,
+      totalRules: feeRules.length,
+      feeGroups: feeGroups.map(g => g.group_name)
+    });
+    
     // Find the fee group that matches this class name
     const matchingGroup = feeGroups.find(g => 
       g.group_name?.toLowerCase() === className?.toLowerCase() ||
       g.group_code?.toLowerCase() === className?.toLowerCase()
     );
     
+    console.log('Matching group:', matchingGroup);
+    
     const applicableRules = feeRules.filter(r => {
+      const ruleLevel = (r.level || '').toLowerCase().trim();
+      
       // Must be active and match academic year
-      if (r.is_active != 1 || r.academic_year !== yearFilter) return false;
+      if (r.is_active != 1) {
+        console.log(`Rule ${r.item_name} excluded: not active`);
+        return false;
+      }
+      if (r.academic_year !== yearFilter) {
+        console.log(`Rule ${r.item_name} excluded: year mismatch (${r.academic_year} vs ${yearFilter})`);
+        return false;
+      }
       
       // Check term match
-      if (r.term_id && selectedTerm && r.term_id != selectedTerm) return false;
+      if (r.term_id && selectedTerm && r.term_id != selectedTerm) {
+        console.log(`Rule ${r.item_name} excluded: term mismatch`);
+        return false;
+      }
       
       // Check class match - if rule has specific class, it must match
-      if (r.class_id && r.class_id != selectedClass) return false;
+      if (r.class_id && r.class_id != selectedClass) {
+        console.log(`Rule ${r.item_name} excluded: class mismatch (${r.class_id} vs ${selectedClass})`);
+        return false;
+      }
       
-      // Check level match - level can be:
-      // 1. Empty or "All Levels" - applies to all
-      // 2. Education level like "primary", "jhs" - match class's education level
-      // 3. Class/group name like "Grade 1" - match class name or fee group
-      const ruleLevel = (r.level || '').toLowerCase().trim();
+      // Check level match
       if (!ruleLevel || ruleLevel === 'all levels' || ruleLevel === 'all') {
-        return true; // Applies to all
+        console.log(`Rule ${r.item_name} included: applies to all levels`);
+        return true;
       }
       
       // Match against education level
-      if (ruleLevel === educationLevel?.toLowerCase()) return true;
+      if (ruleLevel === educationLevel?.toLowerCase()) {
+        console.log(`Rule ${r.item_name} included: education level match`);
+        return true;
+      }
       
       // Match against class name
-      if (ruleLevel === className?.toLowerCase()) return true;
+      if (ruleLevel === className?.toLowerCase()) {
+        console.log(`Rule ${r.item_name} included: class name match`);
+        return true;
+      }
       
       // Match against fee group name/code
       if (matchingGroup && (
         ruleLevel === matchingGroup.group_name?.toLowerCase() ||
         ruleLevel === matchingGroup.group_code?.toLowerCase()
-      )) return true;
+      )) {
+        console.log(`Rule ${r.item_name} included: fee group match`);
+        return true;
+      }
       
+      console.log(`Rule ${r.item_name} excluded: level "${ruleLevel}" doesn't match class "${className}" or education level "${educationLevel}"`);
       return false;
     });
+    
+    console.log('Applicable rules:', applicableRules);
     
     const fees = applicableRules.map(r => ({
       item_name: r.item_name,
@@ -1122,7 +1156,14 @@ export default function FeeStructure() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Level</label>
+                    <label className="block text-sm font-medium mb-2">Class</label>
+                    <select value={ruleForm.class_id || ''} onChange={(e) => setRuleForm({...ruleForm, class_id: e.target.value})} className="input">
+                      <option value="">All Classes</option>
+                      {classes.map(c => <option key={c.id} value={c.id}>{c.class_name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Level (Education)</label>
                     <select value={ruleForm.level} onChange={(e) => setRuleForm({...ruleForm, level: e.target.value})} className="input">
                       <option value="">All Levels</option>
                       {educationLevels.map(l => <option key={l.id} value={l.level_code}>{l.level_name}</option>)}
@@ -1135,6 +1176,13 @@ export default function FeeStructure() {
                   <div>
                     <label className="block text-sm font-medium mb-2">Academic Year</label>
                     <input type="text" value={ruleForm.academic_year} onChange={(e) => setRuleForm({...ruleForm, academic_year: e.target.value})} className="input" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Term</label>
+                    <select value={ruleForm.term_id || ''} onChange={(e) => setRuleForm({...ruleForm, term_id: e.target.value})} className="input">
+                      <option value="">All Terms</option>
+                      {terms.map(t => <option key={t.id} value={t.id}>{t.term_name}</option>)}
+                    </select>
                   </div>
                 </div>
                 <div className="flex justify-end gap-4 pt-4 border-t">
