@@ -7,10 +7,12 @@ import {
 import { subjectsAPI } from '../../services/api';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import { useEducationLevels } from '../../hooks/useEducationLevels';
 
 export default function Subjects() {
   const [subjects, setSubjects] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const { educationLevels } = useEducationLevels();
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
@@ -489,9 +491,9 @@ export default function Subjects() {
             </select>
             <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="input w-auto">
               <option value="">All Levels</option>
-              <option value="primary">Primary</option>
-              <option value="jhs">JHS</option>
-              <option value="shs">SHS</option>
+              {educationLevels.map(level => (
+                <option key={level.id} value={level.level_code}>{level.level_name}</option>
+              ))}
             </select>
             <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="input w-auto">
               <option value="">All Status</option>
@@ -708,9 +710,9 @@ export default function Subjects() {
                     className="input"
                   >
                     <option value="all">All Levels</option>
-                    <option value="primary">Primary</option>
-                    <option value="jhs">JHS</option>
-                    <option value="shs">SHS</option>
+                    {educationLevels.map(level => (
+                      <option key={level.id} value={level.level_code}>{level.level_name}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
