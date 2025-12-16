@@ -584,18 +584,39 @@ try {
     }
 
     elseif ($action === 'monthly_trend') {
-        $stmt = $pdo->query("
-            SELECT 
-                DATE_FORMAT(payment_date, '%b') as month,
-                DATE_FORMAT(payment_date, '%Y-%m') as month_key,
-                SUM(amount) as collected,
-                COUNT(*) as payment_count
-            FROM payments
-            WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
-            GROUP BY month_key
-            ORDER BY month_key
-        ");
-        echo json_encode(['success' => true, 'trend' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+        try {
+            // Generate last 12 months with data
+            $stmt = $pdo->query("
+                SELECT 
+                    DATE_FORMAT(payment_date, '%b') as month,
+                    DATE_FORMAT(payment_date, '%Y-%m') as month_key,
+                    COALESCE(SUM(amount), 0) as collected,
+                    COUNT(*) as payment_count
+                FROM payments
+                WHERE payment_date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH)
+                GROUP BY month_key
+                ORDER BY month_key
+            ");
+            $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // If no data, generate empty months for the last 6 months
+            if (empty($data)) {
+                $data = [];
+                for ($i = 5; $i >= 0; $i--) {
+                    $date = date('Y-m', strtotime("-{$i} months"));
+                    $data[] = [
+                        'month' => date('M', strtotime("-{$i} months")),
+                        'month_key' => $date,
+                        'collected' => '0',
+                        'payment_count' => 0
+                    ];
+                }
+            }
+            
+            echo json_encode(['success' => true, 'trend' => $data]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => true, 'trend' => [], 'error' => $e->getMessage()]);
+        }
     }
 
     elseif ($action === 'overdue') {

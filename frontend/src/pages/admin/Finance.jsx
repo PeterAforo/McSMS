@@ -550,15 +550,45 @@ export default function Finance() {
             {monthlyTrend.length === 0 ? (
               <p className="text-gray-500 text-center py-8">No trend data available</p>
             ) : (
-              <div className="flex items-end gap-2 h-48">
-                {monthlyTrend.map((month, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center">
-                    <div className="w-full bg-blue-500 rounded-t transition-all hover:bg-blue-600"
-                      style={{ height: `${(month.collected / maxTrendValue) * 100}%`, minHeight: '4px' }}
-                      title={formatCurrency(month.collected)} />
-                    <span className="text-xs text-gray-500 mt-2">{month.month}</span>
+              <div className="relative">
+                {/* Y-axis labels */}
+                <div className="absolute left-0 top-0 bottom-8 w-16 flex flex-col justify-between text-xs text-gray-400">
+                  <span>{formatCurrency(maxTrendValue)}</span>
+                  <span>{formatCurrency(maxTrendValue / 2)}</span>
+                  <span>GHS 0</span>
+                </div>
+                {/* Chart area */}
+                <div className="ml-16">
+                  <div className="flex items-end gap-3 h-48 border-b border-l border-gray-200 pb-2 pl-2">
+                    {monthlyTrend.map((month, idx) => {
+                      const collected = parseFloat(month.collected) || 0;
+                      const heightPercent = maxTrendValue > 0 ? (collected / maxTrendValue) * 100 : 0;
+                      return (
+                        <div key={idx} className="flex-1 flex flex-col items-center group">
+                          <div className="relative w-full">
+                            {/* Tooltip */}
+                            <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                              {formatCurrency(collected)}
+                            </div>
+                            {/* Bar */}
+                            <div 
+                              className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t transition-all hover:from-blue-700 hover:to-blue-500 cursor-pointer"
+                              style={{ height: `${Math.max(heightPercent, 2)}%`, minHeight: collected > 0 ? '8px' : '2px' }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                ))}
+                  {/* X-axis labels */}
+                  <div className="flex gap-3 mt-2">
+                    {monthlyTrend.map((month, idx) => (
+                      <div key={idx} className="flex-1 text-center text-xs text-gray-500 font-medium">
+                        {month.month}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
           </div>
