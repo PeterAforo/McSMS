@@ -471,24 +471,65 @@ export default function FeeStructure() {
         return true;
       }
       
-      // Match against education level
+      // Match against education level (e.g., "primary", "jhs")
       if (ruleLevel === educationLevel?.toLowerCase()) {
         console.log(`Rule ${r.item_name} included: education level match`);
         return true;
       }
       
-      // Match against class name
+      // Match against class name (e.g., "Grade 1")
       if (ruleLevel === className?.toLowerCase()) {
         console.log(`Rule ${r.item_name} included: class name match`);
         return true;
       }
       
-      // Match against fee group name/code
+      // Match against fee group name/code (e.g., "Grade 1" or "G1")
       if (matchingGroup && (
         ruleLevel === matchingGroup.group_name?.toLowerCase() ||
         ruleLevel === matchingGroup.group_code?.toLowerCase()
       )) {
         console.log(`Rule ${r.item_name} included: fee group match`);
+        return true;
+      }
+      
+      // Match against education level codes from the levels array
+      // Find the education level that matches this class and check if rule level matches its code
+      const matchingEducationLevel = educationLevels.find(l => 
+        l.level_code?.toLowerCase() === educationLevel?.toLowerCase() ||
+        l.level_name?.toLowerCase() === educationLevel?.toLowerCase()
+      );
+      if (matchingEducationLevel) {
+        // Check if rule level matches any variant of this education level
+        const levelCode = matchingEducationLevel.level_code?.toLowerCase();
+        const levelName = matchingEducationLevel.level_name?.toLowerCase();
+        
+        // Also check if the rule level code matches the class's education level code
+        // e.g., rule has "g1" and class is in "primary" level, but we need to check
+        // if "g1" is a valid level code that should apply to this class
+        const ruleLevelInfo = educationLevels.find(l => l.level_code?.toLowerCase() === ruleLevel);
+        if (ruleLevelInfo && ruleLevelInfo.level_code?.toLowerCase() === ruleLevel) {
+          // The rule has a specific education level code like "g1"
+          // Check if this matches the class's education level
+          if (ruleLevelInfo.level_code?.toLowerCase() === educationLevel?.toLowerCase() ||
+              ruleLevelInfo.level_name?.toLowerCase() === educationLevel?.toLowerCase()) {
+            console.log(`Rule ${r.item_name} included: education level code match`);
+            return true;
+          }
+        }
+      }
+      
+      // Special case: if rule level looks like a class code (g1, g2, etc.), 
+      // try to match it against the class name pattern
+      const classMatch = className?.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const ruleLevelClean = ruleLevel.replace(/[^a-z0-9]/g, '');
+      if (classMatch && ruleLevelClean && (
+        classMatch.includes(ruleLevelClean) || 
+        ruleLevelClean.includes(classMatch) ||
+        // Match "g1" to "grade1" or "grade 1"
+        classMatch === `grade${ruleLevelClean.replace('g', '')}` ||
+        ruleLevelClean === `g${classMatch.replace('grade', '')}`
+      )) {
+        console.log(`Rule ${r.item_name} included: class code pattern match (${ruleLevel} ~ ${className})`);
         return true;
       }
       
