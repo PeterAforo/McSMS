@@ -500,16 +500,15 @@ try {
     // ============================================
     elseif ($action === 'recent_payments') {
         try {
-            $limit = $_GET['limit'] ?? 5;
-            $stmt = $pdo->prepare("
+            $limit = (int)($_GET['limit'] ?? 5);
+            $stmt = $pdo->query("
                 SELECT p.*, CONCAT(s.first_name, ' ', s.last_name) as student_name, i.invoice_number
                 FROM payments p
                 LEFT JOIN invoices i ON p.invoice_id = i.id
                 LEFT JOIN students s ON p.student_id = s.id
                 ORDER BY p.payment_date DESC, p.id DESC
-                LIMIT ?
+                LIMIT {$limit}
             ");
-            $stmt->execute([(int)$limit]);
             echo json_encode(['success' => true, 'payments' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
         } catch (Exception $e) {
             echo json_encode(['success' => true, 'payments' => [], 'error' => $e->getMessage()]);
@@ -518,15 +517,14 @@ try {
 
     elseif ($action === 'recent_invoices') {
         try {
-            $limit = $_GET['limit'] ?? 5;
-            $stmt = $pdo->prepare("
+            $limit = (int)($_GET['limit'] ?? 5);
+            $stmt = $pdo->query("
                 SELECT i.*, CONCAT(s.first_name, ' ', s.last_name) as student_name
                 FROM invoices i
                 LEFT JOIN students s ON i.student_id = s.id
                 ORDER BY i.created_at DESC
-                LIMIT ?
+                LIMIT {$limit}
             ");
-            $stmt->execute([(int)$limit]);
             echo json_encode(['success' => true, 'invoices' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
         } catch (Exception $e) {
             echo json_encode(['success' => true, 'invoices' => [], 'error' => $e->getMessage()]);
@@ -602,8 +600,8 @@ try {
 
     elseif ($action === 'overdue') {
         try {
-            $limit = $_GET['limit'] ?? 10;
-            $stmt = $pdo->prepare("
+            $limit = (int)($_GET['limit'] ?? 10);
+            $stmt = $pdo->query("
                 SELECT 
                     i.id,
                     i.invoice_number,
@@ -619,9 +617,8 @@ try {
                   AND i.due_date < CURDATE()
                   AND i.balance > 0
                 ORDER BY days_overdue DESC
-                LIMIT ?
+                LIMIT {$limit}
             ");
-            $stmt->execute([(int)$limit]);
             echo json_encode(['success' => true, 'overdue' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
         } catch (Exception $e) {
             echo json_encode(['success' => true, 'overdue' => [], 'error' => $e->getMessage()]);
@@ -630,8 +627,8 @@ try {
 
     elseif ($action === 'top_debtors') {
         try {
-            $limit = $_GET['limit'] ?? 10;
-            $stmt = $pdo->prepare("
+            $limit = (int)($_GET['limit'] ?? 10);
+            $stmt = $pdo->query("
                 SELECT 
                     s.id as student_id,
                     CONCAT(s.first_name, ' ', s.last_name) as student_name,
@@ -644,9 +641,8 @@ try {
                 WHERE i.balance > 0
                 GROUP BY s.id
                 ORDER BY outstanding DESC
-                LIMIT ?
+                LIMIT {$limit}
             ");
-            $stmt->execute([(int)$limit]);
             echo json_encode(['success' => true, 'debtors' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
         } catch (Exception $e) {
             echo json_encode(['success' => true, 'debtors' => [], 'error' => $e->getMessage()]);
