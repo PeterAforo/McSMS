@@ -33,6 +33,24 @@ if (isset($_GET['version'])) {
     exit;
 }
 
+// Debug endpoint to check table structure
+if (isset($_GET['debug_table'])) {
+    try {
+        $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+        $stmt = $pdo->query("DESCRIBE fee_item_rules");
+        $columns = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Also get a sample row
+        $stmt2 = $pdo->query("SELECT * FROM fee_item_rules LIMIT 1");
+        $sample = $stmt2->fetch(PDO::FETCH_ASSOC);
+        
+        echo json_encode(['columns' => $columns, 'sample_row' => $sample]);
+    } catch (Exception $e) {
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    exit;
+}
+
 try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
