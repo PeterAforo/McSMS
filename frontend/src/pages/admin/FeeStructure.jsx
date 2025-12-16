@@ -1216,7 +1216,9 @@ export default function FeeStructure() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Academic Year</label>
-                    <input type="text" value={ruleForm.academic_year} onChange={(e) => setRuleForm({...ruleForm, academic_year: e.target.value})} className="input" />
+                    <select value={ruleForm.academic_year} onChange={(e) => setRuleForm({...ruleForm, academic_year: e.target.value})} className="input">
+                      {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Term</label>
