@@ -14,6 +14,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
+// Debug endpoint
+if (isset($_GET['debug']) && $_GET['action'] === 'profile' && isset($_GET['id'])) {
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
+    
+    require_once __DIR__ . '/../../config/database.php';
+    
+    try {
+        $pdo = new PDO(
+            "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+            DB_USER,
+            DB_PASS,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+        
+        $id = $_GET['id'];
+        
+        // Test basic student query
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE id = ?");
+        $stmt->execute([$id]);
+        $student = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Check which tables exist
+        $tables = [];
+        $checkTables = ['student_documents', 'student_timeline', 'student_awards', 'student_discipline', 'student_notes', 'student_id_cards', 'attendance', 'exam_results', 'invoices'];
+        foreach ($checkTables as $table) {
+            try {
+                $pdo->query("SELECT 1 FROM {$table} LIMIT 1");
+                $tables[$table] = 'exists';
+            } catch (Exception $e) {
+                $tables[$table] = 'missing: ' . $e->getMessage();
+            }
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'student' => $student,
+            'tables' => $tables,
+            'version' => '2024-12-16-v3'
+        ], JSON_PRETTY_PRINT);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+        exit;
+    }
+}
+
 require_once __DIR__ . '/../../config/database.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
