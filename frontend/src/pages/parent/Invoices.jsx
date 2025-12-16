@@ -225,12 +225,10 @@ export default function ParentInvoices() {
   });
 
   const totalAmount = filteredInvoices.reduce((sum, inv) => sum + parseFloat(inv.total_amount || 0), 0);
-  const paidAmount = filteredInvoices
-    .filter(inv => inv.status === 'paid')
-    .reduce((sum, inv) => sum + parseFloat(inv.total_amount || 0), 0);
-  const pendingAmount = filteredInvoices
-    .filter(inv => inv.status !== 'paid')
-    .reduce((sum, inv) => sum + parseFloat(inv.balance || 0), 0);
+  // Sum paid_amount from ALL invoices (not just fully paid ones)
+  const paidAmount = filteredInvoices.reduce((sum, inv) => sum + parseFloat(inv.paid_amount || 0), 0);
+  // Sum balance from all invoices that aren't fully paid
+  const pendingAmount = filteredInvoices.reduce((sum, inv) => sum + parseFloat(inv.balance || 0), 0);
 
   const getStatusColor = (status) => {
     const colors = {
