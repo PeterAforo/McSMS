@@ -94,11 +94,14 @@ export default function WelcomeModal({ isOpen, onClose, onStart, onSkip }) {
   const fetchExistingData = async () => {
     try {
       setLoading(true);
-      const [settingsRes, classesRes, subjectsRes] = await Promise.all([
+      const [settingsRes, classesRes, subjectsRes, termsRes] = await Promise.all([
         axios.get(`${API_BASE_URL}/system_config.php`).catch(() => null),
         axios.get(`${API_BASE_URL}/classes.php`).catch(() => null),
-        axios.get(`${API_BASE_URL}/subjects.php`).catch(() => null)
+        axios.get(`${API_BASE_URL}/subjects.php`).catch(() => null),
+        axios.get(`${API_BASE_URL}/terms.php`).catch(() => null)
       ]);
+      
+      const newCompletedSteps = new Set();
       
       if (settingsRes?.data?.config) {
         const config = settingsRes.data.config;
@@ -111,17 +114,38 @@ export default function WelcomeModal({ isOpen, onClose, onStart, onSkip }) {
           school_address: config.school_address || '',
           logoPreview: config.school_logo || null
         }));
-        if (config.school_name) {
-          setCompletedSteps(prev => new Set([...prev, 1]));
+        // Mark school info as complete if school_name exists
+        if (config.school_name && config.school_name.trim()) {
+          newCompletedSteps.add(1);
+        }
+        // Mark academic year as complete if set
+        if (config.current_academic_year && config.current_academic_year.trim()) {
+          setAcademicData(prev => ({
+            ...prev,
+            academic_year: config.current_academic_year
+          }));
+          newCompletedSteps.add(2);
         }
       }
       
+      // Check terms
+      if (termsRes?.data?.terms?.length > 0) {
+        newCompletedSteps.add(2);
+      }
+      
       if (classesRes?.data?.classes?.length > 0) {
-        setCompletedSteps(prev => new Set([...prev, 3]));
+        newCompletedSteps.add(3);
       }
       
       if (subjectsRes?.data?.subjects?.length > 0) {
-        setCompletedSteps(prev => new Set([...prev, 4]));
+        newCompletedSteps.add(4);
+      }
+      
+      setCompletedSteps(newCompletedSteps);
+      
+      // If all steps are complete, close the wizard
+      if (newCompletedSteps.has(1) && newCompletedSteps.has(2) && newCompletedSteps.has(3) && newCompletedSteps.has(4)) {
+        onClose?.();
       }
     } catch (error) {
       console.error('Error fetching existing data:', error);

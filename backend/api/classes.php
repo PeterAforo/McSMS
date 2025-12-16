@@ -97,34 +97,47 @@ try {
                 }
             }
             
-            $stmt = $pdo->prepare("
-                INSERT INTO classes (
-                    class_name, class_code, level, grade, section, capacity, 
-                    class_teacher_id, room_number, academic_year, status, description
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ");
+            // Check if class_code already exists
+            $checkStmt = $pdo->prepare("SELECT id FROM classes WHERE class_code = ?");
+            $checkStmt->execute([$data['class_code']]);
+            $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
             
-            $stmt->execute([
-                $data['class_name'],
-                $data['class_code'],
-                $data['level'],
-                $data['grade'] ?? null,
-                $data['section'] ?? null,
-                $data['capacity'] ?? 30,
-                $data['class_teacher_id'] ?? null,
-                $data['room_number'] ?? null,
-                $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
-                $data['status'] ?? 'active',
-                $data['description'] ?? null
-            ]);
-            
-            $classId = $pdo->lastInsertId();
-            $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
-            $stmt->execute([$classId]);
-            $class = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            http_response_code(201);
-            echo json_encode(['success' => true, 'message' => 'Class created successfully', 'class' => $class]);
+            if ($existing) {
+                // Class already exists, return success without inserting
+                $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
+                $stmt->execute([$existing['id']]);
+                $class = $stmt->fetch(PDO::FETCH_ASSOC);
+                echo json_encode(['success' => true, 'message' => 'Class already exists', 'class' => $class, 'existing' => true]);
+            } else {
+                $stmt = $pdo->prepare("
+                    INSERT INTO classes (
+                        class_name, class_code, level, grade, section, capacity, 
+                        class_teacher_id, room_number, academic_year, status, description
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ");
+                
+                $stmt->execute([
+                    $data['class_name'],
+                    $data['class_code'],
+                    $data['level'],
+                    $data['grade'] ?? null,
+                    $data['section'] ?? null,
+                    $data['capacity'] ?? 30,
+                    $data['class_teacher_id'] ?? null,
+                    $data['room_number'] ?? null,
+                    $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
+                    $data['status'] ?? 'active',
+                    $data['description'] ?? null
+                ]);
+                
+                $classId = $pdo->lastInsertId();
+                $stmt = $pdo->prepare("SELECT * FROM classes WHERE id = ?");
+                $stmt->execute([$classId]);
+                $class = $stmt->fetch(PDO::FETCH_ASSOC);
+                
+                http_response_code(201);
+                echo json_encode(['success' => true, 'message' => 'Class created successfully', 'class' => $class]);
+            }
             break;
 
         case 'PUT':

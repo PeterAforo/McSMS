@@ -80,22 +80,47 @@ try {
                 echo json_encode(['success' => true, 'message' => 'Term activated']);
             } else {
                 $data = json_decode(file_get_contents('php://input'), true);
-                $stmt = $pdo->prepare("INSERT INTO academic_terms (term_name, term_code, academic_year, term_number, start_date, end_date, is_active, status, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([
-                    $data['term_name'], 
-                    $data['term_code'], 
-                    $data['academic_year'], 
-                    $data['term_number'], 
-                    $data['start_date'], 
-                    $data['end_date'], 
-                    $data['is_active'] ?? 0, 
-                    $data['status'] ?? 'upcoming', 
-                    $data['description'] ?? null
-                ]);
-                $id = $pdo->lastInsertId();
-                $stmt = $pdo->prepare("SELECT * FROM academic_terms WHERE id = ?");
-                $stmt->execute([$id]);
-                echo json_encode(['success' => true, 'term' => $stmt->fetch(PDO::FETCH_ASSOC)]);
+                
+                // Check if term_code already exists
+                $checkStmt = $pdo->prepare("SELECT id FROM academic_terms WHERE term_code = ?");
+                $checkStmt->execute([$data['term_code']]);
+                $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($existing) {
+                    // Update existing term instead of inserting
+                    $stmt = $pdo->prepare("UPDATE academic_terms SET term_name=?, academic_year=?, term_number=?, start_date=?, end_date=?, is_active=?, status=? WHERE term_code=?");
+                    $stmt->execute([
+                        $data['term_name'], 
+                        $data['academic_year'], 
+                        $data['term_number'], 
+                        $data['start_date'], 
+                        $data['end_date'], 
+                        $data['is_active'] ?? 0, 
+                        $data['status'] ?? 'upcoming',
+                        $data['term_code']
+                    ]);
+                    $stmt = $pdo->prepare("SELECT * FROM academic_terms WHERE id = ?");
+                    $stmt->execute([$existing['id']]);
+                    echo json_encode(['success' => true, 'term' => $stmt->fetch(PDO::FETCH_ASSOC), 'updated' => true]);
+                } else {
+                    // Insert new term
+                    $stmt = $pdo->prepare("INSERT INTO academic_terms (term_name, term_code, academic_year, term_number, start_date, end_date, is_active, status, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([
+                        $data['term_name'], 
+                        $data['term_code'], 
+                        $data['academic_year'], 
+                        $data['term_number'], 
+                        $data['start_date'], 
+                        $data['end_date'], 
+                        $data['is_active'] ?? 0, 
+                        $data['status'] ?? 'upcoming', 
+                        $data['description'] ?? null
+                    ]);
+                    $id = $pdo->lastInsertId();
+                    $stmt = $pdo->prepare("SELECT * FROM academic_terms WHERE id = ?");
+                    $stmt->execute([$id]);
+                    echo json_encode(['success' => true, 'term' => $stmt->fetch(PDO::FETCH_ASSOC)]);
+                }
             }
             break;
 
