@@ -141,6 +141,10 @@ try {
         -- Maintenance
         maintenance_mode TINYINT(1) DEFAULT 0,
         maintenance_message TEXT,
+        -- Debug Mode
+        debug_mode TINYINT(1) DEFAULT 0,
+        debug_log_api_requests TINYINT(1) DEFAULT 0,
+        debug_show_sql_errors TINYINT(1) DEFAULT 0,
         -- Integrations
         google_calendar_enabled TINYINT(1) DEFAULT 0,
         google_client_id VARCHAR(255) DEFAULT '',

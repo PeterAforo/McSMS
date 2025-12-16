@@ -49,7 +49,12 @@ export default function Settings() {
     session_timeout: '30',
     password_min_length: '8',
     require_password_change: false,
-    two_factor_auth: false
+    two_factor_auth: false,
+    
+    // Debug Settings
+    debug_mode: false,
+    debug_log_api_requests: false,
+    debug_show_sql_errors: false
   });
 
   useEffect(() => {
@@ -145,7 +150,8 @@ export default function Settings() {
     { id: 'finance', label: 'Finance', icon: DollarSign },
     { id: 'system', label: 'System', icon: SettingsIcon },
     { id: 'notifications', label: 'Notifications', icon: Mail },
-    { id: 'security', label: 'Security', icon: Globe }
+    { id: 'security', label: 'Security', icon: Globe },
+    { id: 'debug', label: 'Debug', icon: SettingsIcon }
   ];
 
   if (loading) {
@@ -617,6 +623,74 @@ export default function Settings() {
                   <p className="text-sm text-gray-600">Enable 2FA for enhanced security</p>
                 </div>
               </label>
+            </div>
+          </div>
+        )}
+
+        {/* Debug Settings */}
+        {activeTab === 'debug' && (
+          <div className="space-y-6">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="flex items-start gap-3">
+                <span className="text-yellow-600 text-xl">⚠️</span>
+                <div>
+                  <h3 className="font-semibold text-yellow-800">Developer Mode</h3>
+                  <p className="text-sm text-yellow-700">
+                    Debug mode should only be enabled during development or troubleshooting. 
+                    Disable it in production to prevent exposing sensitive error information.
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <h2 className="text-lg font-semibold text-gray-900">Debug Settings</h2>
+            <div className="space-y-4">
+              <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={settings.debug_mode}
+                  onChange={(e) => handleChange('debug_mode', e.target.checked)}
+                  className="rounded"
+                />
+                <div>
+                  <p className="font-medium">Enable Debug Mode</p>
+                  <p className="text-sm text-gray-600">Show detailed error messages in API responses</p>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={settings.debug_log_api_requests}
+                  onChange={(e) => handleChange('debug_log_api_requests', e.target.checked)}
+                  className="rounded"
+                />
+                <div>
+                  <p className="font-medium">Log API Requests</p>
+                  <p className="text-sm text-gray-600">Log all API requests to the server error log</p>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                <input
+                  type="checkbox"
+                  checked={settings.debug_show_sql_errors}
+                  onChange={(e) => handleChange('debug_show_sql_errors', e.target.checked)}
+                  className="rounded"
+                />
+                <div>
+                  <p className="font-medium">Show SQL Errors</p>
+                  <p className="text-sm text-gray-600">Include SQL error details in debug output</p>
+                </div>
+              </label>
+            </div>
+            
+            <div className="mt-6 p-4 bg-gray-100 rounded-lg">
+              <h3 className="font-medium text-gray-900 mb-2">Debug Status</h3>
+              <div className="flex items-center gap-2">
+                <span className={`w-3 h-3 rounded-full ${settings.debug_mode ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                <span className="text-sm text-gray-700">
+                  Debug mode is currently <strong>{settings.debug_mode ? 'ENABLED' : 'DISABLED'}</strong>
+                </span>
+              </div>
             </div>
           </div>
         )}

@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once dirname(dirname(__DIR__)) . '/config/database.php';
+require_once __DIR__ . '/debug_helper.php';
 
 try {
     $pdo = new PDO(
@@ -30,6 +31,9 @@ try {
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
 
+    // Enable debug error reporting if debug mode is on
+    enableDebugErrorReporting($pdo);
+    
     $role = $_GET['role'] ?? 'admin';
     $userId = $_GET['user_id'] ?? null;
     $action = $_GET['action'] ?? 'overview';
@@ -61,8 +65,7 @@ try {
     }
 
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+    handleApiError($pdo ?? null, $e, 'Dashboard API');
 }
 
 // ============================================
