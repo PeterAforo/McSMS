@@ -54,6 +54,13 @@ if (isset($_GET['debug_table'])) {
 try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
+    // Fix fee_item_rules level column - change from ENUM to VARCHAR to support custom education levels
+    try {
+        $pdo->exec("ALTER TABLE fee_item_rules MODIFY COLUMN level VARCHAR(50) NULL");
+    } catch (Exception $e) {
+        // Column might already be VARCHAR, ignore error
+    }
+    
     // Ensure payments table exists with correct structure
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS payments (
