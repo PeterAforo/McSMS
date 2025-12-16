@@ -99,19 +99,26 @@ try {
 
             case 'PUT':
                 $data = json_decode(file_get_contents('php://input'), true);
+                
+                // Log what we're receiving for debugging
+                error_log("Fee rule PUT - ID: $id, Level: " . ($data['level'] ?? 'NULL') . ", Data: " . json_encode($data));
+                
                 $stmt = $pdo->prepare("UPDATE fee_item_rules SET fee_item_id=?, class_id=?, term_id=?, level=?, amount=?, currency=?, academic_year=?, is_active=? WHERE id=?");
-                $stmt->execute([
+                $result = $stmt->execute([
                     $data['fee_item_id'],
                     $data['class_id'] ?? null,
                     $data['term_id'] ?? null,
-                    $data['level'] ?? null,
+                    $data['level'] ?: null,  // Use ?: to convert empty string to null
                     $data['amount'],
                     $data['currency'] ?? 'GHS',
                     $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
                     $data['is_active'] ?? 1,
                     $id
                 ]);
-                echo json_encode(['success' => true]);
+                
+                error_log("Fee rule PUT result: " . ($result ? 'success' : 'failed') . ", Rows affected: " . $stmt->rowCount());
+                
+                echo json_encode(['success' => true, 'updated' => $stmt->rowCount()]);
                 break;
 
             case 'DELETE':
