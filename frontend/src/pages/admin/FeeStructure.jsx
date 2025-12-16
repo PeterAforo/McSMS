@@ -671,6 +671,14 @@ export default function FeeStructure() {
                   <span className={feeItems.length > 0 ? 'text-green-600 font-medium' : 'text-orange-600'}>
                     {feeItems.length > 0 ? `✓ ${feeItems.length} items created` : '⚠ No items yet'}
                   </span>
+                  {(() => {
+                    const groupsWithoutItems = feeGroups.filter(g => !feeItems.some(i => i.fee_group_id == g.id));
+                    return groupsWithoutItems.length > 0 && (
+                      <div className="mt-1 text-orange-600">
+                        ⚠ Groups without items: {groupsWithoutItems.map(g => g.group_name).join(', ')}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -687,6 +695,14 @@ export default function FeeStructure() {
                   <span className={feeRules.length > 0 ? 'text-green-600 font-medium' : 'text-orange-600'}>
                     {feeRules.length > 0 ? `✓ ${feeRules.length} rules configured` : '⚠ No rules yet'}
                   </span>
+                  {(() => {
+                    const itemsWithoutRules = feeItems.filter(i => !feeRules.some(r => r.fee_item_id == i.id && r.academic_year === yearFilter));
+                    return itemsWithoutRules.length > 0 && (
+                      <div className="mt-1 text-orange-600">
+                        ⚠ Items without rules for {yearFilter}: {itemsWithoutRules.map(i => i.item_name).join(', ')}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

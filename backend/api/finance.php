@@ -102,10 +102,12 @@ try {
                     echo json_encode(['success' => true, 'fee_rule' => $stmt->fetch(PDO::FETCH_ASSOC)]);
                 } else {
                     $stmt = $pdo->query("
-                        SELECT fr.*, fi.item_name, fi.item_code, fg.group_name 
+                        SELECT fr.*, fi.item_name, fi.item_code, fg.group_name, c.class_name, t.term_name
                         FROM fee_item_rules fr
                         LEFT JOIN fee_items fi ON fr.fee_item_id = fi.id
                         LEFT JOIN fee_groups fg ON fi.fee_group_id = fg.id
+                        LEFT JOIN classes c ON fr.class_id = c.id
+                        LEFT JOIN terms t ON fr.term_id = t.id
                         ORDER BY fg.group_name, fi.item_name
                     ");
                     echo json_encode(['success' => true, 'fee_rules' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
