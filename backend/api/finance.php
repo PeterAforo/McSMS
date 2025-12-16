@@ -122,17 +122,19 @@ try {
                 break;
 
             case 'PUT':
-                $data = json_decode(file_get_contents('php://input'), true);
+                $rawInput = file_get_contents('php://input');
+                $data = json_decode($rawInput, true);
                 
-                // Log what we're receiving for debugging
-                error_log("Fee rule PUT - ID: $id, Level: " . ($data['level'] ?? 'NULL') . ", Data: " . json_encode($data));
+                // Return debug info in response
+                $levelValue = isset($data['level']) ? $data['level'] : 'NOT_SET';
+                $levelToSave = !empty($data['level']) ? $data['level'] : null;
                 
                 $stmt = $pdo->prepare("UPDATE fee_item_rules SET fee_item_id=?, class_id=?, term_id=?, level=?, amount=?, currency=?, academic_year=?, is_active=? WHERE id=?");
                 $result = $stmt->execute([
                     $data['fee_item_id'],
                     $data['class_id'] ?? null,
                     $data['term_id'] ?? null,
-                    $data['level'] ?: null,  // Use ?: to convert empty string to null
+                    $levelToSave,
                     $data['amount'],
                     $data['currency'] ?? 'GHS',
                     $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
@@ -140,9 +142,16 @@ try {
                     $id
                 ]);
                 
-                error_log("Fee rule PUT result: " . ($result ? 'success' : 'failed') . ", Rows affected: " . $stmt->rowCount());
-                
-                echo json_encode(['success' => true, 'updated' => $stmt->rowCount()]);
+                echo json_encode([
+                    'success' => true, 
+                    'updated' => $stmt->rowCount(),
+                    'debug' => [
+                        'id' => $id,
+                        'level_received' => $levelValue,
+                        'level_saved' => $levelToSave,
+                        'raw_input_length' => strlen($rawInput)
+                    ]
+                ]);
                 break;
 
             case 'DELETE':
