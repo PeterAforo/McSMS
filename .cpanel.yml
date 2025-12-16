@@ -17,14 +17,11 @@ deployment:
     # Copy frontend icons folder
     - /bin/cp -R frontend_dist/icons $DEPLOYPATH
     
-    # Deploy backend API folder
-    - /bin/cp -R backend/api $DEPLOYPATH
-    
-    # Deploy backend src folder
-    - /bin/cp -R backend/src $DEPLOYPATH
-    
-    # Deploy backend vendor folder (composer dependencies)
-    - /bin/cp -R backend/vendor $DEPLOYPATH
+    # Deploy backend folder (api, src, vendor)
+    - /bin/mkdir -p $DEPLOYPATH/backend
+    - /bin/cp -R backend/api $DEPLOYPATH/backend/
+    - /bin/cp -R backend/src $DEPLOYPATH/backend/
+    - /bin/cp -R backend/vendor $DEPLOYPATH/backend/
     
     # Deploy root .htaccess (includes SPA routing + backend rules)
     - /bin/cp frontend_dist/.htaccess $DEPLOYPATH
