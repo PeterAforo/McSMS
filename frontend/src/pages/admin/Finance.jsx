@@ -349,7 +349,7 @@ export default function Finance() {
     return Math.min(((stats?.total_collected || 0) / collectionTarget) * 100, 100);
   };
 
-  const maxTrendValue = Math.max(...monthlyTrend.map(m => m.collected || 0), 1);
+  const maxTrendValue = Math.max(...monthlyTrend.map(m => parseFloat(m.collected) || 0), 1);
 
   if (loading) {
     return (
@@ -552,36 +552,37 @@ export default function Finance() {
             ) : (
               <div className="relative">
                 {/* Y-axis labels */}
-                <div className="absolute left-0 top-0 bottom-8 w-16 flex flex-col justify-between text-xs text-gray-400">
+                <div className="absolute left-0 top-0 h-48 w-20 flex flex-col justify-between text-xs text-gray-400 pr-2 text-right">
                   <span>{formatCurrency(maxTrendValue)}</span>
                   <span>{formatCurrency(maxTrendValue / 2)}</span>
                   <span>GHS 0</span>
                 </div>
                 {/* Chart area */}
-                <div className="ml-16">
-                  <div className="flex items-end gap-3 h-48 border-b border-l border-gray-200 pb-2 pl-2">
+                <div className="ml-20">
+                  <div className="flex items-end gap-2 h-48 border-b border-l border-gray-200 p-2">
                     {monthlyTrend.map((month, idx) => {
                       const collected = parseFloat(month.collected) || 0;
                       const heightPercent = maxTrendValue > 0 ? (collected / maxTrendValue) * 100 : 0;
+                      const barHeight = Math.max((heightPercent / 100) * 176, collected > 0 ? 8 : 2); // 176px = 11rem - padding
                       return (
-                        <div key={idx} className="flex-1 flex flex-col items-center group">
-                          <div className="relative w-full">
-                            {/* Tooltip */}
+                        <div key={idx} className="flex-1 flex flex-col justify-end items-center group h-full">
+                          {/* Tooltip */}
+                          <div className="relative">
                             <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                               {formatCurrency(collected)}
                             </div>
-                            {/* Bar */}
-                            <div 
-                              className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t transition-all hover:from-blue-700 hover:to-blue-500 cursor-pointer"
-                              style={{ height: `${Math.max(heightPercent, 2)}%`, minHeight: collected > 0 ? '8px' : '2px' }}
-                            />
                           </div>
+                          {/* Bar */}
+                          <div 
+                            className="w-full max-w-12 bg-gradient-to-t from-blue-600 to-blue-400 rounded-t transition-all hover:from-blue-700 hover:to-blue-500 cursor-pointer"
+                            style={{ height: `${barHeight}px` }}
+                          />
                         </div>
                       );
                     })}
                   </div>
                   {/* X-axis labels */}
-                  <div className="flex gap-3 mt-2">
+                  <div className="flex gap-2 mt-2">
                     {monthlyTrend.map((month, idx) => (
                       <div key={idx} className="flex-1 text-center text-xs text-gray-500 font-medium">
                         {month.month}
