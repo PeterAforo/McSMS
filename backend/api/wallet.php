@@ -231,8 +231,8 @@ switch ($action) {
             
             // If invoice_id provided, also record in payments table and update invoice
             if ($invoiceId) {
-                // Get invoice details
-                $stmt = $pdo->prepare("SELECT student_id, amount_paid, balance as invoice_balance, total_amount FROM invoices WHERE id = ?");
+                // Get invoice details - use paid_amount (correct column name)
+                $stmt = $pdo->prepare("SELECT student_id, COALESCE(paid_amount, 0) as paid_amount, COALESCE(balance, total_amount) as invoice_balance, total_amount FROM invoices WHERE id = ?");
                 $stmt->execute([$invoiceId]);
                 $invoice = $stmt->fetch(PDO::FETCH_ASSOC);
                 
@@ -249,13 +249,13 @@ switch ($action) {
                     ");
                     $stmt->execute([$paymentNumber, $invoiceId, $invoice['student_id'], $amount, $reference]);
                     
-                    // Update invoice
-                    $newAmountPaid = floatval($invoice['amount_paid']) + $amount;
-                    $newBalance = floatval($invoice['total_amount']) - $newAmountPaid;
-                    $newStatus = $newBalance <= 0 ? 'paid' : ($newAmountPaid > 0 ? 'partial' : 'unpaid');
+                    // Update invoice - use paid_amount (correct column name)
+                    $newPaidAmount = floatval($invoice['paid_amount']) + $amount;
+                    $newBalance = floatval($invoice['total_amount']) - $newPaidAmount;
+                    $newStatus = $newBalance <= 0 ? 'paid' : ($newPaidAmount > 0 ? 'partial' : 'unpaid');
                     
-                    $stmt = $pdo->prepare("UPDATE invoices SET amount_paid = ?, balance = ?, status = ? WHERE id = ?");
-                    $stmt->execute([$newAmountPaid, max(0, $newBalance), $newStatus, $invoiceId]);
+                    $stmt = $pdo->prepare("UPDATE invoices SET paid_amount = ?, balance = ?, status = ? WHERE id = ?");
+                    $stmt->execute([$newPaidAmount, max(0, $newBalance), $newStatus, $invoiceId]);
                 }
             }
             
