@@ -37,7 +37,7 @@ export const useSettingsStore = create(
           const response = await axios.get(`${API_BASE_URL}/public_settings.php?_t=${now}`);
           if (response.data.success && response.data.settings) {
             const newSettings = response.data.settings;
-            console.log('Fetched settings:', newSettings); // Debug log
+            // Settings fetched successfully
             set({ 
               settings: newSettings,
               lastFetched: now,
@@ -55,7 +55,7 @@ export const useSettingsStore = create(
 
       // Update settings locally (after saving to API)
       updateSettings: (newSettings) => {
-        console.log('Updating settings locally:', newSettings); // Debug log
+        // Settings updated locally
         set((state) => ({
           settings: { ...state.settings, ...newSettings },
           lastFetched: Date.now()
@@ -64,7 +64,7 @@ export const useSettingsStore = create(
 
       // Force refresh settings - clears cache and fetches fresh
       refreshSettings: async () => {
-        console.log('Force refreshing settings...'); // Debug log
+        // Force refresh triggered
         // Clear the lastFetched to force a fresh fetch
         set({ lastFetched: null });
         return get().fetchSettings(true);
