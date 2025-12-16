@@ -56,6 +56,10 @@ try {
                 handleRegister($pdo);
             } elseif ($action === 'logout') {
                 handleLogout($pdo);
+            } elseif ($action === 'forgot_password') {
+                handleForgotPassword($pdo);
+            } elseif ($action === 'reset_password') {
+                handleResetPassword($pdo);
             } else {
                 handleLogin($pdo);
             }
@@ -395,6 +399,145 @@ function logLoginAttempt($pdo, $userId, $status, $failureReason = null) {
         // Silently fail - don't break login if logging fails
         error_log("Login history error: " . $e->getMessage());
     }
+}
+
+function handleForgotPassword($pdo) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$data || !isset($data['email']) || empty(trim($data['email']))) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Email address is required']);
+        return;
+    }
+    
+    $email = trim($data['email']);
+    
+    // Find user by email
+    $stmt = $pdo->prepare("SELECT id, name, email FROM users WHERE email = ?");
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Always return success to prevent email enumeration
+    if (!$user) {
+        echo json_encode(['success' => true, 'message' => 'If an account exists with this email, a password reset link has been sent.']);
+        return;
+    }
+    
+    // Create password_resets table if not exists
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token VARCHAR(100) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used TINYINT(1) DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_token (token),
+            INDEX idx_user_id (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    ");
+    
+    // Generate reset token
+    $token = bin2hex(random_bytes(32));
+    $expiresAt = date('Y-m-d H:i:s', strtotime('+1 hour'));
+    
+    // Invalidate any existing tokens for this user
+    $stmt = $pdo->prepare("UPDATE password_resets SET used = 1 WHERE user_id = ? AND used = 0");
+    $stmt->execute([$user['id']]);
+    
+    // Store new token
+    $stmt = $pdo->prepare("INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)");
+    $stmt->execute([$user['id'], $token, $expiresAt]);
+    
+    // Get school settings for email
+    $schoolName = 'School Management System';
+    try {
+        $stmt = $pdo->query("SELECT school_name FROM system_config WHERE id = 1");
+        $config = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($config && !empty($config['school_name'])) {
+            $schoolName = $config['school_name'];
+        }
+    } catch (Exception $e) {}
+    
+    // Build reset URL
+    $resetUrl = "https://eea.mcaforo.com/reset-password?token=" . $token;
+    
+    // Try to send email
+    $emailSent = false;
+    try {
+        // Get SMTP settings
+        $stmt = $pdo->query("SELECT smtp_host, smtp_port, smtp_username, smtp_password, smtp_from_email, smtp_from_name, smtp_enabled FROM system_config WHERE id = 1");
+        $smtpConfig = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($smtpConfig && $smtpConfig['smtp_enabled']) {
+            // TODO: Implement actual SMTP email sending
+            // For now, log the reset link
+            error_log("Password reset link for {$email}: {$resetUrl}");
+        }
+        
+        // For development/testing, just log it
+        error_log("Password reset requested for: {$email}, Token: {$token}");
+        $emailSent = true;
+    } catch (Exception $e) {
+        error_log("Email sending error: " . $e->getMessage());
+    }
+    
+    echo json_encode([
+        'success' => true, 
+        'message' => 'If an account exists with this email, a password reset link has been sent.',
+        // Include token in dev mode for testing (remove in production)
+        'debug_token' => $token,
+        'debug_url' => $resetUrl
+    ]);
+}
+
+function handleResetPassword($pdo) {
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (!$data || !isset($data['token']) || !isset($data['password'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Token and new password are required']);
+        return;
+    }
+    
+    $token = trim($data['token']);
+    $password = $data['password'];
+    
+    if (strlen($password) < 6) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Password must be at least 6 characters']);
+        return;
+    }
+    
+    // Find valid token
+    $stmt = $pdo->prepare("
+        SELECT pr.*, u.email, u.name 
+        FROM password_resets pr
+        JOIN users u ON pr.user_id = u.id
+        WHERE pr.token = ? AND pr.used = 0 AND pr.expires_at > NOW()
+    ");
+    $stmt->execute([$token]);
+    $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$reset) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Invalid or expired reset token']);
+        return;
+    }
+    
+    // Update password
+    $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+    $stmt = $pdo->prepare("UPDATE users SET password = ? WHERE id = ?");
+    $stmt->execute([$hashedPassword, $reset['user_id']]);
+    
+    // Mark token as used
+    $stmt = $pdo->prepare("UPDATE password_resets SET used = 1 WHERE id = ?");
+    $stmt->execute([$reset['id']]);
+    
+    // Log activity
+    logActivity($pdo, $reset['user_id'], 'password_reset', 'auth', 'Password reset completed');
+    
+    echo json_encode(['success' => true, 'message' => 'Password has been reset successfully. You can now login with your new password.']);
 }
 
 function logActivity($pdo, $userId, $actionType, $module, $description) {
