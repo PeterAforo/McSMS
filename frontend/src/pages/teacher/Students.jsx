@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Users, Mail, Phone, Calendar, MapPin, ArrowLeft, X, Eye, User, Home, FileText } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 export default function TeacherStudents() {
   const [searchParams] = useSearchParams();
@@ -181,7 +182,7 @@ export default function TeacherStudents() {
                 <div className="flex items-center gap-3">
                   {student.photo ? (
                     <img
-                      src={`http://localhost/McSMS/public/assets/uploads/${student.photo}`}
+                      src={`${API_BASE_URL}/${student.photo.replace(/^\//, '')}`}
                       alt={`${student.first_name} ${student.last_name}`}
                       className="w-16 h-16 rounded-full object-cover"
                     />
@@ -279,7 +280,7 @@ export default function TeacherStudents() {
               <div className="flex items-start gap-6 pb-6 border-b">
                 {selectedStudent.photo ? (
                   <img
-                    src={`http://localhost/McSMS/public/assets/uploads/${selectedStudent.photo}`}
+                    src={`${API_BASE_URL}/${selectedStudent.photo.replace(/^\//, '')}`}
                     alt={`${selectedStudent.first_name} ${selectedStudent.last_name}`}
                     className="w-32 h-32 rounded-full object-cover"
                   />

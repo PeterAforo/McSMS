@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Camera, Upload, X, User } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 export default function ProfilePictureUpload({ 
   type, // 'user' or 'teacher'
@@ -78,7 +79,7 @@ export default function ProfilePictureUpload({
   const getPictureUrl = (picture) => {
     if (!picture) return null;
     if (picture.startsWith('http')) return picture;
-    return `http://localhost/McSMS/backend/uploads/profiles/${picture}`;
+    return `${API_BASE_URL.replace('/backend/api', '')}/${picture.replace(/^\//, '')}`;
   };
 
   const displayPicture = getPictureUrl(preview || currentPicture);
