@@ -72,11 +72,11 @@ try {
 }
 
 function createTables($pdo) {
-    // Student Guardians table
+    // Student Guardians table - uses student_id to link to students table
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS student_guardians (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            child_id INT NOT NULL,
+            student_id INT NOT NULL,
             parent_id INT NOT NULL,
             relationship ENUM('father', 'mother', 'guardian', 'grandparent', 'step_parent', 'other') NOT NULL,
             is_primary BOOLEAN DEFAULT FALSE,
@@ -88,17 +88,17 @@ function createTables($pdo) {
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_guardian (child_id, parent_id),
+            UNIQUE KEY unique_guardian (student_id, parent_id),
             INDEX idx_parent (parent_id),
-            INDEX idx_child (child_id)
+            INDEX idx_student (student_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     ");
 
-    // Family Link Codes table
+    // Family Link Codes table - uses student_id
     $pdo->exec("
         CREATE TABLE IF NOT EXISTS family_link_codes (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            child_id INT NOT NULL,
+            student_id INT NOT NULL,
             link_code VARCHAR(20) NOT NULL UNIQUE,
             created_by INT NOT NULL,
             expires_at DATETIME NOT NULL,
@@ -338,21 +338,21 @@ function getDashboard($pdo, $parentId) {
     ];
 
     try {
-        // Get children (from both children table and student_guardians)
+        // Get children - students table has parent_id directly
         $stmt = $pdo->prepare("
-            SELECT DISTINCT c.id as child_id, c.full_name, c.gender, c.date_of_birth, c.photo,
+            SELECT s.id as child_id, 
+                   CONCAT(s.first_name, ' ', s.last_name) as full_name, 
+                   s.gender, s.date_of_birth, s.photo,
                    s.id as student_id, s.student_id as admission_no, s.status as student_status,
-                   cl.id as class_id, cl.class_name, sec.section_name,
-                   sg.relationship, sg.is_primary
-            FROM children c
-            LEFT JOIN student_guardians sg ON c.id = sg.child_id
-            LEFT JOIN students s ON c.id = s.child_id
+                   s.class_id, cl.class_name, NULL as section_name,
+                   'guardian' as relationship, 1 as is_primary,
+                   (SELECT COUNT(*) FROM student_guardians WHERE student_id = s.id) as guardian_count
+            FROM students s
             LEFT JOIN classes cl ON s.class_id = cl.id
-            LEFT JOIN sections sec ON s.section_id = sec.id
-            WHERE c.parent_id = ? OR sg.parent_id = ?
-            ORDER BY c.full_name
+            WHERE s.parent_id = ?
+            ORDER BY s.first_name
         ");
-        $stmt->execute([$parentId, $parentId]);
+        $stmt->execute([$parentId]);
         $dashboard['children'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get upcoming events (next 30 days)
@@ -389,11 +389,9 @@ function getDashboard($pdo, $parentId) {
                 SELECT COALESCE(SUM(i.amount - COALESCE(i.paid_amount, 0)), 0) as pending
                 FROM invoices i
                 JOIN students s ON i.student_id = s.id
-                JOIN children c ON s.child_id = c.id
-                LEFT JOIN student_guardians sg ON c.id = sg.child_id
-                WHERE (c.parent_id = ? OR sg.parent_id = ?) AND i.status != 'paid'
+                WHERE s.parent_id = ? AND i.status != 'paid'
             ");
-            $stmt->execute([$parentId, $parentId]);
+            $stmt->execute([$parentId]);
             $dashboard['pending_fees'] = $stmt->fetch(PDO::FETCH_ASSOC)['pending'] ?? 0;
         } catch (Exception $e) {
             $dashboard['pending_fees'] = 0;
@@ -470,21 +468,21 @@ function getChildren($pdo, $parentId) {
     }
 
     try {
+        // Students table has parent_id directly
         $stmt = $pdo->prepare("
-            SELECT DISTINCT c.id as child_id, c.full_name, c.gender, c.date_of_birth, c.photo, c.previous_school,
-                   s.id as student_id, s.student_id as admission_no, s.enrollment_date, s.status as student_status,
-                   cl.id as class_id, cl.class_name, sec.section_name,
-                   sg.relationship, sg.is_primary, sg.can_pickup, sg.emergency_contact,
-                   (SELECT COUNT(*) FROM student_guardians WHERE child_id = c.id) as guardian_count
-            FROM children c
-            LEFT JOIN student_guardians sg ON c.id = sg.child_id AND sg.parent_id = ?
-            LEFT JOIN students s ON c.id = s.child_id
+            SELECT s.id as child_id, 
+                   CONCAT(s.first_name, ' ', s.last_name) as full_name, 
+                   s.gender, s.date_of_birth, s.photo, s.previous_school,
+                   s.id as student_id, s.student_id as admission_no, s.admission_date as enrollment_date, s.status as student_status,
+                   s.class_id, cl.class_name, NULL as section_name,
+                   'guardian' as relationship, 1 as is_primary, 1 as can_pickup, 1 as emergency_contact,
+                   (SELECT COUNT(*) FROM student_guardians WHERE student_id = s.id) as guardian_count
+            FROM students s
             LEFT JOIN classes cl ON s.class_id = cl.id
-            LEFT JOIN sections sec ON s.section_id = sec.id
-            WHERE c.parent_id = ? OR sg.parent_id = ?
-            ORDER BY c.full_name
+            WHERE s.parent_id = ?
+            ORDER BY s.first_name
         ");
-        $stmt->execute([$parentId, $parentId, $parentId]);
+        $stmt->execute([$parentId]);
         $children = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['success' => true, 'children' => $children]);
@@ -501,18 +499,21 @@ function getChildDetails($pdo, $childId) {
     }
 
     try {
-        // Get child info
+        // Get student info (childId is actually student_id in production schema)
         $stmt = $pdo->prepare("
-            SELECT c.*, s.id as student_id, s.student_id as admission_no, s.enrollment_date, s.status,
-                   cl.class_name, sec.section_name, t.id as class_teacher_id,
+            SELECT s.id, s.id as student_id, s.student_id as admission_no, 
+                   CONCAT(s.first_name, ' ', s.last_name) as full_name,
+                   s.first_name, s.last_name, s.gender, s.date_of_birth, s.photo,
+                   s.admission_date as enrollment_date, s.status, s.previous_school,
+                   s.email, s.phone, s.address,
+                   cl.id as class_id, cl.class_name, NULL as section_name, 
+                   t.id as class_teacher_id,
                    CONCAT(u.first_name, ' ', u.last_name) as class_teacher_name
-            FROM children c
-            LEFT JOIN students s ON c.id = s.child_id
+            FROM students s
             LEFT JOIN classes cl ON s.class_id = cl.id
-            LEFT JOIN sections sec ON s.section_id = sec.id
             LEFT JOIN teachers t ON cl.class_teacher_id = t.id
             LEFT JOIN users u ON t.user_id = u.id
-            WHERE c.id = ?
+            WHERE s.id = ?
         ");
         $stmt->execute([$childId]);
         $child = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -522,16 +523,20 @@ function getChildDetails($pdo, $childId) {
             return;
         }
 
-        // Get guardians
-        $stmt = $pdo->prepare("
-            SELECT sg.*, p.id as parent_id, u.first_name, u.last_name, u.email, u.phone
-            FROM student_guardians sg
-            JOIN parents p ON sg.parent_id = p.id
-            JOIN users u ON p.user_id = u.id
-            WHERE sg.child_id = ?
-        ");
-        $stmt->execute([$childId]);
-        $child['guardians'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Get guardians from student_guardians table
+        try {
+            $stmt = $pdo->prepare("
+                SELECT sg.*, p.id as parent_id, u.first_name, u.last_name, u.email, u.phone
+                FROM student_guardians sg
+                JOIN parents p ON sg.parent_id = p.id
+                JOIN users u ON p.user_id = u.id
+                WHERE sg.student_id = ?
+            ");
+            $stmt->execute([$childId]);
+            $child['guardians'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $child['guardians'] = [];
+        }
 
         // Get recent grades if student
         if ($child['student_id']) {
@@ -769,17 +774,16 @@ function getHomework($pdo, $studentId) {
 function getFees($pdo, $parentId, $studentId = null) {
     try {
         $query = "
-            SELECT i.*, s.student_id as admission_no, c.full_name as student_name,
+            SELECT i.*, s.student_id as admission_no, 
+                   CONCAT(s.first_name, ' ', s.last_name) as student_name,
                    ft.name as fee_type_name
             FROM invoices i
             JOIN students s ON i.student_id = s.id
-            JOIN children c ON s.child_id = c.id
-            LEFT JOIN student_guardians sg ON c.id = sg.child_id
             LEFT JOIN fee_types ft ON i.fee_type_id = ft.id
-            WHERE (c.parent_id = ? OR sg.parent_id = ?)
+            WHERE s.parent_id = ?
         ";
         
-        $params = [$parentId, $parentId];
+        $params = [$parentId];
         
         if ($studentId) {
             $query .= " AND s.id = ?";
@@ -806,19 +810,21 @@ function getFees($pdo, $parentId, $studentId = null) {
         }
 
         // Get payment history
-        $stmt = $pdo->prepare("
-            SELECT p.*, i.invoice_number, c.full_name as student_name
-            FROM payments p
-            JOIN invoices i ON p.invoice_id = i.id
-            JOIN students s ON i.student_id = s.id
-            JOIN children c ON s.child_id = c.id
-            LEFT JOIN student_guardians sg ON c.id = sg.child_id
-            WHERE (c.parent_id = ? OR sg.parent_id = ?)
-            ORDER BY p.payment_date DESC
-            LIMIT 20
-        ");
-        $stmt->execute([$parentId, $parentId]);
-        $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = $pdo->prepare("
+                SELECT p.*, i.invoice_number, CONCAT(s.first_name, ' ', s.last_name) as student_name
+                FROM payments p
+                JOIN invoices i ON p.invoice_id = i.id
+                JOIN students s ON i.student_id = s.id
+                WHERE s.parent_id = ?
+                ORDER BY p.payment_date DESC
+                LIMIT 20
+            ");
+            $stmt->execute([$parentId]);
+            $payments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $payments = [];
+        }
 
         echo json_encode([
             'success' => true,
@@ -866,12 +872,11 @@ function getMeetings($pdo, $parentId) {
         $stmt = $pdo->prepare("
             SELECT mr.*, 
                    CONCAT(u.first_name, ' ', u.last_name) as teacher_name,
-                   c.full_name as student_name
+                   CONCAT(s.first_name, ' ', s.last_name) as student_name
             FROM meeting_requests mr
             JOIN teachers t ON mr.teacher_id = t.id
             JOIN users u ON t.user_id = u.id
             JOIN students s ON mr.student_id = s.id
-            JOIN children c ON s.child_id = c.id
             WHERE mr.parent_id = ?
             ORDER BY mr.created_at DESC
         ");
@@ -1058,12 +1063,13 @@ function getGuardians($pdo, $childId) {
     }
 
     try {
+        // childId is actually student_id in production schema
         $stmt = $pdo->prepare("
             SELECT sg.*, u.first_name, u.last_name, u.email, u.phone
             FROM student_guardians sg
             JOIN parents p ON sg.parent_id = p.id
             JOIN users u ON p.user_id = u.id
-            WHERE sg.child_id = ?
+            WHERE sg.student_id = ?
             ORDER BY sg.is_primary DESC, sg.created_at
         ");
         $stmt->execute([$childId]);
@@ -1078,12 +1084,13 @@ function getGuardians($pdo, $childId) {
 
 function addGuardian($pdo, $data) {
     try {
+        // Use student_id instead of child_id for production schema
         $stmt = $pdo->prepare("
-            INSERT INTO student_guardians (child_id, parent_id, relationship, is_primary, can_pickup, emergency_contact, receives_notifications, receives_reports, receives_fee_alerts, notes)
+            INSERT INTO student_guardians (student_id, parent_id, relationship, is_primary, can_pickup, emergency_contact, receives_notifications, receives_reports, receives_fee_alerts, notes)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ");
         $stmt->execute([
-            $data['child_id'],
+            $data['child_id'] ?? $data['student_id'],
             $data['parent_id'],
             $data['relationship'],
             $data['is_primary'] ?? false,
@@ -1133,7 +1140,7 @@ function removeGuardian($pdo, $id) {
     try {
         // Check if this is the only guardian
         $stmt = $pdo->prepare("
-            SELECT child_id, (SELECT COUNT(*) FROM student_guardians WHERE child_id = sg.child_id) as count
+            SELECT student_id, (SELECT COUNT(*) FROM student_guardians WHERE student_id = sg.student_id) as count
             FROM student_guardians sg WHERE id = ?
         ");
         $stmt->execute([$id]);
@@ -1165,11 +1172,11 @@ function generateLinkCode($pdo, $data) {
         $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
 
         $stmt = $pdo->prepare("
-            INSERT INTO family_link_codes (child_id, link_code, created_by, expires_at)
+            INSERT INTO family_link_codes (student_id, link_code, created_by, expires_at)
             VALUES (?, ?, ?, ?)
         ");
         $stmt->execute([
-            $data['child_id'],
+            $data['child_id'] ?? $data['student_id'],
             $code,
             $data['parent_id'],
             $expiresAt
@@ -1203,9 +1210,9 @@ function useLinkCode($pdo, $data) {
 
         // Check if parent is already linked
         $stmt = $pdo->prepare("
-            SELECT id FROM student_guardians WHERE child_id = ? AND parent_id = ?
+            SELECT id FROM student_guardians WHERE student_id = ? AND parent_id = ?
         ");
-        $stmt->execute([$linkCode['child_id'], $data['parent_id']]);
+        $stmt->execute([$linkCode['student_id'], $data['parent_id']]);
         if ($stmt->fetch()) {
             echo json_encode(['success' => false, 'error' => 'You are already linked to this child']);
             return;
@@ -1213,11 +1220,11 @@ function useLinkCode($pdo, $data) {
 
         // Add guardian link
         $stmt = $pdo->prepare("
-            INSERT INTO student_guardians (child_id, parent_id, relationship, is_primary, can_pickup, emergency_contact, receives_notifications, receives_reports, receives_fee_alerts)
+            INSERT INTO student_guardians (student_id, parent_id, relationship, is_primary, can_pickup, emergency_contact, receives_notifications, receives_reports, receives_fee_alerts)
             VALUES (?, ?, ?, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE)
         ");
         $stmt->execute([
-            $linkCode['child_id'],
+            $linkCode['student_id'],
             $data['parent_id'],
             $data['relationship'] ?? 'guardian'
         ]);
@@ -1228,15 +1235,15 @@ function useLinkCode($pdo, $data) {
         ");
         $stmt->execute([$data['parent_id'], $linkCode['id']]);
 
-        // Get child info
-        $stmt = $pdo->prepare("SELECT full_name FROM children WHERE id = ?");
-        $stmt->execute([$linkCode['child_id']]);
+        // Get student info
+        $stmt = $pdo->prepare("SELECT CONCAT(first_name, ' ', last_name) as full_name FROM students WHERE id = ?");
+        $stmt->execute([$linkCode['student_id']]);
         $child = $stmt->fetch(PDO::FETCH_ASSOC);
 
         echo json_encode([
             'success' => true, 
             'message' => "Successfully linked to {$child['full_name']}",
-            'child_id' => $linkCode['child_id']
+            'child_id' => $linkCode['student_id']
         ]);
 
     } catch (Exception $e) {
