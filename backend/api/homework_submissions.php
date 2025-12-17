@@ -18,12 +18,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Try multiple config paths for compatibility
-$configPaths = [
+// Try multiple config paths for compatibility (PHP 5.6 compatible)
+$configPaths = array(
     __DIR__ . '/../../config/database.php',
     $_SERVER['DOCUMENT_ROOT'] . '/config/database.php',
-    dirname(__DIR__, 2) . '/config/database.php'
-];
+    dirname(dirname(__DIR__)) . '/config/database.php'
+);
 $configLoaded = false;
 foreach ($configPaths as $path) {
     if (file_exists($path)) {
