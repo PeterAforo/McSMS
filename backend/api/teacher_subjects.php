@@ -14,7 +14,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once __DIR__ . '/../../config/database.php';
+// Try multiple config paths for compatibility
+$configPaths = [
+    __DIR__ . '/../../config/database.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/config/database.php',
+    dirname(__DIR__, 2) . '/config/database.php'
+];
+$configLoaded = false;
+foreach ($configPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $configLoaded = true;
+        break;
+    }
+}
+if (!$configLoaded) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Config file not found']);
+    exit();
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $teacher_id = $_GET['teacher_id'] ?? null;
