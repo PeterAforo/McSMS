@@ -338,6 +338,14 @@ function getDashboard($pdo, $parentId) {
     ];
 
     try {
+        // First, check if parentId is a user_id and get the actual parent_id
+        $stmt = $pdo->prepare("SELECT id FROM parents WHERE user_id = ?");
+        $stmt->execute([$parentId]);
+        $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Use the actual parent_id if found, otherwise use the provided ID
+        $actualParentId = $parent ? $parent['id'] : $parentId;
+
         // Get children - students table has parent_id directly
         $stmt = $pdo->prepare("
             SELECT s.id as child_id, 
@@ -352,7 +360,7 @@ function getDashboard($pdo, $parentId) {
             WHERE s.parent_id = ?
             ORDER BY s.first_name
         ");
-        $stmt->execute([$parentId]);
+        $stmt->execute([$actualParentId]);
         $dashboard['children'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get upcoming events (next 30 days)
@@ -377,7 +385,7 @@ function getDashboard($pdo, $parentId) {
                 ORDER BY created_at DESC
                 LIMIT 5
             ");
-            $stmt->execute([$parentId]);
+            $stmt->execute([$actualParentId]);
             $dashboard['recent_notifications'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (Exception $e) {
             $dashboard['recent_notifications'] = [];
@@ -391,7 +399,7 @@ function getDashboard($pdo, $parentId) {
                 JOIN students s ON i.student_id = s.id
                 WHERE s.parent_id = ? AND i.status != 'paid'
             ");
-            $stmt->execute([$parentId]);
+            $stmt->execute([$actualParentId]);
             $dashboard['pending_fees'] = $stmt->fetch(PDO::FETCH_ASSOC)['pending'] ?? 0;
         } catch (Exception $e) {
             $dashboard['pending_fees'] = 0;
@@ -404,7 +412,7 @@ function getDashboard($pdo, $parentId) {
                 WHERE recipient_id = (SELECT user_id FROM parents WHERE id = ?)
                 AND is_read = 0
             ");
-            $stmt->execute([$parentId]);
+            $stmt->execute([$actualParentId]);
             $dashboard['unread_messages'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'] ?? 0;
         } catch (Exception $e) {
             $dashboard['unread_messages'] = 0;
@@ -468,6 +476,14 @@ function getChildren($pdo, $parentId) {
     }
 
     try {
+        // First, check if parentId is a user_id and get the actual parent_id
+        $stmt = $pdo->prepare("SELECT id FROM parents WHERE user_id = ?");
+        $stmt->execute([$parentId]);
+        $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Use the actual parent_id if found, otherwise use the provided ID
+        $actualParentId = $parent ? $parent['id'] : $parentId;
+
         // Students table has parent_id directly
         $stmt = $pdo->prepare("
             SELECT s.id as child_id, 
@@ -482,7 +498,7 @@ function getChildren($pdo, $parentId) {
             WHERE s.parent_id = ?
             ORDER BY s.first_name
         ");
-        $stmt->execute([$parentId]);
+        $stmt->execute([$actualParentId]);
         $children = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         echo json_encode(['success' => true, 'children' => $children]);
