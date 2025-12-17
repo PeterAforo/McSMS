@@ -136,6 +136,35 @@ export default function AIInsights() {
     navigate(`/teacher/student-progress?student=${studentId}`);
   };
 
+  const handleDismissRecommendation = (recId) => {
+    // Remove recommendation from the list
+    setInsights(prev => ({
+      ...prev,
+      insights: {
+        ...prev.insights,
+        recommendations: prev.insights?.recommendations?.filter(r => r.id !== recId) || []
+      }
+    }));
+    // In a real app, this would also save the dismissal to the backend
+  };
+
+  const handleApplyRecommendation = (rec) => {
+    // Navigate to relevant page based on category
+    switch (rec.category) {
+      case 'Teaching':
+        navigate('/teacher/lesson-planning');
+        break;
+      case 'Assessment':
+        navigate('/teacher/grades');
+        break;
+      case 'Engagement':
+        navigate('/teacher/behavior-tracking');
+        break;
+      default:
+        alert(`Recommendation "${rec.title}" has been marked as applied. Check your dashboard for progress.`);
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'at_risk': return 'text-red-600 bg-red-50';
@@ -498,8 +527,14 @@ export default function AIInsights() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <button className="btn btn-sm bg-gray-100 hover:bg-gray-200">Dismiss</button>
-                  <button className="btn btn-sm btn-primary">Apply</button>
+                  <button 
+                    onClick={() => handleDismissRecommendation(rec.id)}
+                    className="btn btn-sm bg-gray-100 hover:bg-gray-200"
+                  >Dismiss</button>
+                  <button 
+                    onClick={() => handleApplyRecommendation(rec)}
+                    className="btn btn-sm btn-primary"
+                  >Apply</button>
                 </div>
               </div>
             </div>
