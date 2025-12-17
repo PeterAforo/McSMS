@@ -97,15 +97,18 @@ try {
     }
 
     // 8. Get parents and their children
-    $stmt = $pdo->query("
-        SELECT p.id as parent_id, p.user_id, u.first_name as parent_first_name, u.last_name as parent_last_name,
-               s.id as student_id, CONCAT(s.first_name, ' ', s.last_name) as student_name, s.class_id
-        FROM parents p
-        JOIN users u ON p.user_id = u.id
-        LEFT JOIN students s ON s.parent_id = p.id
-        LIMIT 20
-    ");
-    $debug['parents_and_children'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->query("
+            SELECT p.id as parent_id, p.user_id,
+                   s.id as student_id, CONCAT(s.first_name, ' ', s.last_name) as student_name, s.class_id
+            FROM parents p
+            LEFT JOIN students s ON s.parent_id = p.id
+            LIMIT 20
+        ");
+        $debug['parents_and_children'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $debug['parents_and_children'] = 'Error: ' . $e->getMessage();
+    }
 
     // 9. Check specific student_id if provided
     $studentId = $_GET['student_id'] ?? null;
