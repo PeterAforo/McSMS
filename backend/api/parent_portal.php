@@ -1172,7 +1172,7 @@ function generateLinkCode($pdo, $data) {
         $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
 
         $stmt = $pdo->prepare("
-            INSERT INTO family_link_codes (student_id, link_code, created_by, expires_at, status)
+            INSERT INTO family_link_codes (child_id, link_code, created_by, expires_at, status)
             VALUES (?, ?, ?, ?, 'active')
         ");
         $stmt->execute([
