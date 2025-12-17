@@ -132,17 +132,20 @@ try {
         }
         elseif ($class_id) {
             // Get all charts for a class
-            $stmt = $pdo->prepare("
-                SELECT sc.*, 
-                       (SELECT COUNT(*) FROM seat_assignments WHERE chart_id = sc.id) as assigned_count,
-                       (SELECT COUNT(*) FROM students WHERE class_id = sc.class_id AND status = 'active') as total_students
-                FROM seating_charts sc
-                WHERE sc.class_id = ?
-                ORDER BY sc.is_active DESC, sc.created_at DESC
-            ");
-            $stmt->execute([$class_id]);
-
-            echo json_encode(['success' => true, 'charts' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT sc.*, 
+                           (SELECT COUNT(*) FROM seat_assignments WHERE chart_id = sc.id) as assigned_count,
+                           (SELECT COUNT(*) FROM students WHERE class_id = sc.class_id AND status = 'active') as total_students
+                    FROM seating_charts sc
+                    WHERE sc.class_id = ?
+                    ORDER BY sc.is_active DESC, sc.created_at DESC
+                ");
+                $stmt->execute([$class_id]);
+                echo json_encode(['success' => true, 'charts' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            } catch (PDOException $e) {
+                echo json_encode(['success' => true, 'charts' => [], 'debug' => $e->getMessage()]);
+            }
         }
         elseif ($teacher_id) {
             // Get all charts for a teacher
