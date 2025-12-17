@@ -43,6 +43,56 @@ export default function ParentDashboard() {
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      // Try parent_portal.php first with user.id as parent_id
+      const portalResponse = await axios.get(
+        `${API_BASE_URL}/parent_portal.php?resource=dashboard&parent_id=${user.id}`
+      );
+      
+      if (portalResponse.data.success && portalResponse.data.dashboard?.children?.length > 0) {
+        // Transform portal data to match expected format
+        const portalData = portalResponse.data.dashboard;
+        setDashboardData({
+          success: true,
+          parent: { id: user.id, name: user.name },
+          children: portalData.children.map(c => ({
+            id: c.child_id || c.student_id,
+            student_id: c.student_id,
+            full_name: c.full_name,
+            first_name: c.full_name?.split(' ')[0],
+            last_name: c.full_name?.split(' ').slice(1).join(' '),
+            class_name: c.class_name,
+            status: c.student_status || 'active',
+            photo: c.photo,
+            admission_no: c.admission_no
+          })),
+          children_summary: portalData.children.map(c => ({
+            student: { id: c.student_id },
+            attendance_rate: portalData.attendance_summary?.total > 0 
+              ? Math.round((portalData.attendance_summary.present / portalData.attendance_summary.total) * 100) 
+              : 0,
+            average_score: 0
+          })),
+          applications: [],
+          insights: [],
+          total_fee_balance: portalData.pending_fees || 0,
+          notifications: portalData.recent_notifications || [],
+          upcoming_events: portalData.upcoming_events || [],
+          attendance_summary: portalData.attendance_summary
+        });
+        if (portalData.children?.length > 0) {
+          setSelectedChild({
+            id: portalData.children[0].child_id || portalData.children[0].student_id,
+            student_id: portalData.children[0].student_id,
+            full_name: portalData.children[0].full_name,
+            class_name: portalData.children[0].class_name,
+            status: portalData.children[0].student_status || 'active',
+            photo: portalData.children[0].photo
+          });
+        }
+        return;
+      }
+      
+      // Fallback to old dashboard.php API
       const response = await axios.get(
         `${API_BASE_URL}/dashboard.php?role=parent&user_id=${user.id}`
       );

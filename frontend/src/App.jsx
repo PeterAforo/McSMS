@@ -88,7 +88,7 @@ import ParentMessages from './pages/parent/Messages';
 import ParentSettings from './pages/parent/Settings';
 import ChildHomework from './pages/parent/ChildHomework';
 import ChildResults from './pages/parent/ChildResults';
-import ParentDashboardPro from './pages/parent/ParentDashboardPro';
+// ParentDashboardPro removed - using ParentDashboard instead
 import ChildAttendance from './pages/parent/ChildAttendance';
 import ChildGrades from './pages/parent/ChildGrades';
 import ChildHomeworkView from './pages/parent/ChildHomeworkView';
@@ -309,7 +309,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="dashboard" element={<ParentDashboardPro />} />
+          <Route path="dashboard" element={<ParentComprehensiveDashboard />} />
           <Route path="dashboard-old" element={<ParentComprehensiveDashboard />} />
           <Route path="apply" element={<ApplyForAdmission />} />
           <Route path="child/:childId" element={<ChildDetails />} />
