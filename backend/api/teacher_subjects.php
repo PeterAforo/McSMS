@@ -47,19 +47,40 @@ try {
             exit();
         }
 
-        // Get all subjects taught by this teacher via class_subjects
-        $stmt = $pdo->prepare("
-            SELECT cs.id, cs.class_id, cs.subject_id, cs.teacher_id, cs.periods_per_week, cs.is_mandatory,
-                   c.class_name, c.education_level,
-                   s.subject_name, s.subject_code, s.category
-            FROM class_subjects cs
-            LEFT JOIN classes c ON cs.class_id = c.id
-            LEFT JOIN subjects s ON cs.subject_id = s.id
-            WHERE cs.teacher_id = ?
-            ORDER BY c.class_name, s.subject_name
-        ");
-        $stmt->execute([$teacher_id]);
-        $teacherSubjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $teacherSubjects = [];
+        
+        // Try to get subjects via class_subjects table
+        try {
+            $stmt = $pdo->prepare("
+                SELECT cs.id, cs.class_id, cs.subject_id, cs.teacher_id, cs.periods_per_week, cs.is_mandatory,
+                       c.class_name, c.education_level,
+                       s.subject_name, s.subject_code, s.category
+                FROM class_subjects cs
+                LEFT JOIN classes c ON cs.class_id = c.id
+                LEFT JOIN subjects s ON cs.subject_id = s.id
+                WHERE cs.teacher_id = ?
+                ORDER BY c.class_name, s.subject_name
+            ");
+            $stmt->execute([$teacher_id]);
+            $teacherSubjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // class_subjects table might not exist, try teacher_subjects table
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT ts.id, ts.subject_id, ts.teacher_id,
+                           s.subject_name, s.subject_code, s.category
+                    FROM teacher_subjects ts
+                    LEFT JOIN subjects s ON ts.subject_id = s.id
+                    WHERE ts.teacher_id = ?
+                    ORDER BY s.subject_name
+                ");
+                $stmt->execute([$teacher_id]);
+                $teacherSubjects = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $e2) {
+                // Neither table exists, return empty
+                $teacherSubjects = [];
+            }
+        }
 
         echo json_encode([
             'success' => true,
