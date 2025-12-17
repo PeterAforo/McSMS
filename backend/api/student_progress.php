@@ -91,100 +91,128 @@ try {
             $response = ['success' => true];
 
             // Student info
-            $stmt = $pdo->prepare("
-                SELECT s.*, c.class_name 
-                FROM students s 
-                LEFT JOIN classes c ON s.class_id = c.id 
-                WHERE s.id = ?
-            ");
-            $stmt->execute([$student_id]);
-            $response['student'] = $stmt->fetch(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT s.*, c.class_name 
+                    FROM students s 
+                    LEFT JOIN classes c ON s.class_id = c.id 
+                    WHERE s.id = ?
+                ");
+                $stmt->execute([$student_id]);
+                $response['student'] = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $response['student'] = null;
+            }
 
             // Attendance stats
-            $stmt = $pdo->prepare("
-                SELECT 
-                    COUNT(*) as total_days,
-                    SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-                    SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-                    SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
-                FROM attendance WHERE student_id = ?
-            ");
-            $stmt->execute([$student_id]);
-            $response['attendance'] = $stmt->fetch(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT 
+                        COUNT(*) as total_days,
+                        SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+                        SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+                        SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
+                    FROM attendance WHERE student_id = ?
+                ");
+                $stmt->execute([$student_id]);
+                $response['attendance'] = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $response['attendance'] = ['total_days' => 0, 'present' => 0, 'absent' => 0, 'late' => 0];
+            }
 
             // Grade averages by subject
-            $stmt = $pdo->prepare("
-                SELECT s.subject_name, s.id as subject_id,
-                       AVG(g.marks_obtained) as average,
-                       COUNT(g.id) as assessments_count,
-                       MAX(g.marks_obtained) as highest,
-                       MIN(g.marks_obtained) as lowest
-                FROM grades g
-                INNER JOIN assessments a ON g.assessment_id = a.id
-                INNER JOIN subjects s ON a.subject_id = s.id
-                WHERE g.student_id = ?
-                GROUP BY s.id
-                ORDER BY s.subject_name
-            ");
-            $stmt->execute([$student_id]);
-            $response['grades_by_subject'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT s.subject_name, s.id as subject_id,
+                           AVG(g.marks_obtained) as average,
+                           COUNT(g.id) as assessments_count,
+                           MAX(g.marks_obtained) as highest,
+                           MIN(g.marks_obtained) as lowest
+                    FROM grades g
+                    INNER JOIN assessments a ON g.assessment_id = a.id
+                    INNER JOIN subjects s ON a.subject_id = s.id
+                    WHERE g.student_id = ?
+                    GROUP BY s.id
+                    ORDER BY s.subject_name
+                ");
+                $stmt->execute([$student_id]);
+                $response['grades_by_subject'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $response['grades_by_subject'] = [];
+            }
 
             // Recent grades (last 10)
-            $stmt = $pdo->prepare("
-                SELECT g.*, a.title as assessment_title, a.max_marks, s.subject_name
-                FROM grades g
-                INNER JOIN assessments a ON g.assessment_id = a.id
-                INNER JOIN subjects s ON a.subject_id = s.id
-                WHERE g.student_id = ?
-                ORDER BY g.created_at DESC
-                LIMIT 10
-            ");
-            $stmt->execute([$student_id]);
-            $response['recent_grades'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT g.*, a.title as assessment_title, a.max_marks, s.subject_name
+                    FROM grades g
+                    INNER JOIN assessments a ON g.assessment_id = a.id
+                    INNER JOIN subjects s ON a.subject_id = s.id
+                    WHERE g.student_id = ?
+                    ORDER BY g.created_at DESC
+                    LIMIT 10
+                ");
+                $stmt->execute([$student_id]);
+                $response['recent_grades'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $response['recent_grades'] = [];
+            }
 
             // Active goals
-            $stmt = $pdo->prepare("
-                SELECT sg.*, s.subject_name, CONCAT(t.first_name, ' ', t.last_name) as teacher_name
-                FROM student_goals sg
-                LEFT JOIN subjects s ON sg.subject_id = s.id
-                LEFT JOIN teachers t ON sg.teacher_id = t.id
-                WHERE sg.student_id = ? AND sg.status = 'active'
-                ORDER BY sg.target_date
-            ");
-            $stmt->execute([$student_id]);
-            $response['active_goals'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT sg.*, s.subject_name, CONCAT(t.first_name, ' ', t.last_name) as teacher_name
+                    FROM student_goals sg
+                    LEFT JOIN subjects s ON sg.subject_id = s.id
+                    LEFT JOIN teachers t ON sg.teacher_id = t.id
+                    WHERE sg.student_id = ? AND sg.status = 'active'
+                    ORDER BY sg.target_date
+                ");
+                $stmt->execute([$student_id]);
+                $response['active_goals'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $response['active_goals'] = [];
+            }
 
             // Progress notes (non-private or by requesting teacher)
-            $noteSql = "
-                SELECT spn.*, s.subject_name, CONCAT(t.first_name, ' ', t.last_name) as teacher_name
-                FROM student_progress_notes spn
-                LEFT JOIN subjects s ON spn.subject_id = s.id
-                LEFT JOIN teachers t ON spn.teacher_id = t.id
-                WHERE spn.student_id = ?
-            ";
-            if ($teacher_id) {
-                $noteSql .= " AND (spn.is_private = 0 OR spn.teacher_id = ?)";
-                $stmt = $pdo->prepare($noteSql . " ORDER BY spn.created_at DESC LIMIT 10");
-                $stmt->execute([$student_id, $teacher_id]);
-            } else {
-                $noteSql .= " AND spn.is_private = 0";
-                $stmt = $pdo->prepare($noteSql . " ORDER BY spn.created_at DESC LIMIT 10");
-                $stmt->execute([$student_id]);
+            try {
+                $noteSql = "
+                    SELECT spn.*, s.subject_name, CONCAT(t.first_name, ' ', t.last_name) as teacher_name
+                    FROM student_progress_notes spn
+                    LEFT JOIN subjects s ON spn.subject_id = s.id
+                    LEFT JOIN teachers t ON spn.teacher_id = t.id
+                    WHERE spn.student_id = ?
+                ";
+                if ($teacher_id) {
+                    $noteSql .= " AND (spn.is_private = 0 OR spn.teacher_id = ?)";
+                    $stmt = $pdo->prepare($noteSql . " ORDER BY spn.created_at DESC LIMIT 10");
+                    $stmt->execute([$student_id, $teacher_id]);
+                } else {
+                    $noteSql .= " AND spn.is_private = 0";
+                    $stmt = $pdo->prepare($noteSql . " ORDER BY spn.created_at DESC LIMIT 10");
+                    $stmt->execute([$student_id]);
+                }
+                $response['progress_notes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $response['progress_notes'] = [];
             }
-            $response['progress_notes'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Grade trend (monthly averages)
-            $stmt = $pdo->prepare("
-                SELECT DATE_FORMAT(g.created_at, '%Y-%m') as month,
-                       AVG(g.marks_obtained) as average
-                FROM grades g
-                WHERE g.student_id = ?
-                GROUP BY DATE_FORMAT(g.created_at, '%Y-%m')
-                ORDER BY month DESC
-                LIMIT 12
-            ");
-            $stmt->execute([$student_id]);
-            $response['grade_trend'] = array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT DATE_FORMAT(g.created_at, '%Y-%m') as month,
+                           AVG(g.marks_obtained) as average
+                    FROM grades g
+                    WHERE g.student_id = ?
+                    GROUP BY DATE_FORMAT(g.created_at, '%Y-%m')
+                    ORDER BY month DESC
+                    LIMIT 12
+                ");
+                $stmt->execute([$student_id]);
+                $response['grade_trend'] = array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
+            } catch (PDOException $e) {
+                $response['grade_trend'] = [];
+            }
 
             echo json_encode($response);
         }
