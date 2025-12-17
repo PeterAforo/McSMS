@@ -179,37 +179,37 @@ function submitHomework($pdo) {
         $hasSubmissionText = in_array('submission_text', $columns);
         
         if ($existing) {
-            // Update existing submission
+            // Update existing submission - use only columns that exist
             if ($hasSubmissionText) {
                 $stmt = $pdo->prepare("
                     UPDATE homework_submissions 
-                    SET submission_text = ?, file = ?, status = ?, submitted_at = NOW()
+                    SET submission_text = ?, status = ?, submitted_at = NOW()
                     WHERE homework_id = ? AND student_id = ?
                 ");
-                $stmt->execute([$submissionText, $file, $status, $homeworkId, $studentId]);
+                $stmt->execute([$submissionText, $status, $homeworkId, $studentId]);
             } else {
                 $stmt = $pdo->prepare("
                     UPDATE homework_submissions 
-                    SET file = ?, status = ?, submitted_at = NOW()
+                    SET status = ?, submitted_at = NOW()
                     WHERE homework_id = ? AND student_id = ?
                 ");
-                $stmt->execute([$submissionText, $status, $homeworkId, $studentId]); // Use file column for text
+                $stmt->execute([$status, $homeworkId, $studentId]);
             }
             $submissionId = $existing['id'];
         } else {
-            // Create new submission
+            // Create new submission - use only columns that exist
             if ($hasSubmissionText) {
                 $stmt = $pdo->prepare("
-                    INSERT INTO homework_submissions (homework_id, student_id, submission_text, file, status, submitted_at)
-                    VALUES (?, ?, ?, ?, ?, NOW())
-                ");
-                $stmt->execute([$homeworkId, $studentId, $submissionText, $file, $status]);
-            } else {
-                $stmt = $pdo->prepare("
-                    INSERT INTO homework_submissions (homework_id, student_id, file, status, submitted_at)
+                    INSERT INTO homework_submissions (homework_id, student_id, submission_text, status, submitted_at)
                     VALUES (?, ?, ?, ?, NOW())
                 ");
-                $stmt->execute([$homeworkId, $studentId, $submissionText, $status]); // Use file column for text
+                $stmt->execute([$homeworkId, $studentId, $submissionText, $status]);
+            } else {
+                $stmt = $pdo->prepare("
+                    INSERT INTO homework_submissions (homework_id, student_id, status, submitted_at)
+                    VALUES (?, ?, ?, NOW())
+                ");
+                $stmt->execute([$homeworkId, $studentId, $status]);
             }
             $submissionId = $pdo->lastInsertId();
         }
