@@ -115,62 +115,90 @@ function ensureTableStructure($pdo) {
 }
 
 function submitHomework($pdo) {
-    $data = json_decode(file_get_contents('php://input'), true);
-    
-    $homeworkId = $data['homework_id'] ?? $_POST['homework_id'] ?? null;
-    $studentId = $data['student_id'] ?? $_POST['student_id'] ?? null;
-    $submissionText = $data['submission_text'] ?? $_POST['submission_text'] ?? null;
-    $file = $data['file'] ?? $_POST['file'] ?? null;
-    
-    if (!$homeworkId || !$studentId) {
-        echo json_encode(['success' => false, 'error' => 'Homework ID and Student ID are required']);
-        return;
+    try {
+        $data = json_decode(file_get_contents('php://input'), true);
+        
+        $homeworkId = $data['homework_id'] ?? $_POST['homework_id'] ?? null;
+        $studentId = $data['student_id'] ?? $_POST['student_id'] ?? null;
+        $submissionText = $data['submission_text'] ?? $_POST['submission_text'] ?? null;
+        $file = $data['file'] ?? $_POST['file'] ?? null;
+        
+        if (!$homeworkId || !$studentId) {
+            echo json_encode(['success' => false, 'error' => 'Homework ID and Student ID are required']);
+            return;
+        }
+        
+        // Check if homework exists and get due date
+        $stmt = $pdo->prepare("SELECT * FROM homework WHERE id = ?");
+        $stmt->execute([$homeworkId]);
+        $homework = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$homework) {
+            echo json_encode(['success' => false, 'error' => 'Homework not found']);
+            return;
+        }
+        
+        // Check if already submitted
+        $stmt = $pdo->prepare("SELECT id FROM homework_submissions WHERE homework_id = ? AND student_id = ?");
+        $stmt->execute([$homeworkId, $studentId]);
+        $existing = $stmt->fetch();
+        
+        // Determine if late
+        $isLate = strtotime($homework['due_date']) < time();
+        $status = $isLate ? 'late' : 'submitted';
+        
+        // Check which columns exist in homework_submissions
+        $columns = $pdo->query("SHOW COLUMNS FROM homework_submissions")->fetchAll(PDO::FETCH_COLUMN);
+        $hasSubmissionText = in_array('submission_text', $columns);
+        
+        if ($existing) {
+            // Update existing submission
+            if ($hasSubmissionText) {
+                $stmt = $pdo->prepare("
+                    UPDATE homework_submissions 
+                    SET submission_text = ?, file = ?, status = ?, submitted_at = NOW()
+                    WHERE homework_id = ? AND student_id = ?
+                ");
+                $stmt->execute([$submissionText, $file, $status, $homeworkId, $studentId]);
+            } else {
+                $stmt = $pdo->prepare("
+                    UPDATE homework_submissions 
+                    SET file = ?, status = ?, submitted_at = NOW()
+                    WHERE homework_id = ? AND student_id = ?
+                ");
+                $stmt->execute([$submissionText, $status, $homeworkId, $studentId]); // Use file column for text
+            }
+            $submissionId = $existing['id'];
+        } else {
+            // Create new submission
+            if ($hasSubmissionText) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO homework_submissions (homework_id, student_id, submission_text, file, status, submitted_at)
+                    VALUES (?, ?, ?, ?, ?, NOW())
+                ");
+                $stmt->execute([$homeworkId, $studentId, $submissionText, $file, $status]);
+            } else {
+                $stmt = $pdo->prepare("
+                    INSERT INTO homework_submissions (homework_id, student_id, file, status, submitted_at)
+                    VALUES (?, ?, ?, ?, NOW())
+                ");
+                $stmt->execute([$homeworkId, $studentId, $submissionText, $status]); // Use file column for text
+            }
+            $submissionId = $pdo->lastInsertId();
+        }
+        
+        echo json_encode([
+            'success' => true,
+            'message' => $isLate ? 'Homework submitted (late)' : 'Homework submitted successfully',
+            'submission_id' => $submissionId,
+            'is_late' => $isLate
+        ]);
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'error' => $e->getMessage()
+        ]);
     }
-    
-    // Check if homework exists and get due date
-    $stmt = $pdo->prepare("SELECT * FROM homework WHERE id = ?");
-    $stmt->execute([$homeworkId]);
-    $homework = $stmt->fetch(PDO::FETCH_ASSOC);
-    
-    if (!$homework) {
-        echo json_encode(['success' => false, 'error' => 'Homework not found']);
-        return;
-    }
-    
-    // Check if already submitted
-    $stmt = $pdo->prepare("SELECT id FROM homework_submissions WHERE homework_id = ? AND student_id = ?");
-    $stmt->execute([$homeworkId, $studentId]);
-    $existing = $stmt->fetch();
-    
-    // Determine if late
-    $isLate = strtotime($homework['due_date']) < time();
-    $status = $isLate ? 'late' : 'submitted';
-    
-    if ($existing) {
-        // Update existing submission
-        $stmt = $pdo->prepare("
-            UPDATE homework_submissions 
-            SET submission_text = ?, file = ?, status = ?, submitted_at = NOW()
-            WHERE homework_id = ? AND student_id = ?
-        ");
-        $stmt->execute([$submissionText, $file, $status, $homeworkId, $studentId]);
-        $submissionId = $existing['id'];
-    } else {
-        // Create new submission
-        $stmt = $pdo->prepare("
-            INSERT INTO homework_submissions (homework_id, student_id, submission_text, file, status, submitted_at)
-            VALUES (?, ?, ?, ?, ?, NOW())
-        ");
-        $stmt->execute([$homeworkId, $studentId, $submissionText, $file, $status]);
-        $submissionId = $pdo->lastInsertId();
-    }
-    
-    echo json_encode([
-        'success' => true,
-        'message' => $isLate ? 'Homework submitted (late)' : 'Homework submitted successfully',
-        'submission_id' => $submissionId,
-        'is_late' => $isLate
-    ]);
 }
 
 function gradeSubmission($pdo) {
