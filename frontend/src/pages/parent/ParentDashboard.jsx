@@ -615,6 +615,54 @@ export default function ParentDashboard() {
                   </div>
                 </div>
               </div>
+
+              {/* Pro Features Section */}
+              <div className="mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-100">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold text-gray-800 flex items-center gap-2">
+                    <Zap size={18} className="text-purple-600" />
+                    Pro Features
+                  </h4>
+                  <button
+                    onClick={() => navigate('/parent/dashboard-pro')}
+                    className="text-purple-600 hover:text-purple-800 text-sm font-medium flex items-center gap-1"
+                  >
+                    View All <ChevronRight size={16} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                  <ProFeatureCard
+                    icon={<BookOpen size={20} />}
+                    label="Homework"
+                    description="Track assignments"
+                    onClick={() => navigate(`/parent/child/${selectedChild.id}/homework`)}
+                  />
+                  <ProFeatureCard
+                    icon={<Calendar size={20} />}
+                    label="Attendance"
+                    description="View calendar"
+                    onClick={() => navigate(`/parent/child/${selectedChild.id}/attendance`)}
+                  />
+                  <ProFeatureCard
+                    icon={<BarChart3 size={20} />}
+                    label="Grades"
+                    description="Performance"
+                    onClick={() => navigate(`/parent/child/${selectedChild.id}/grades`)}
+                  />
+                  <ProFeatureCard
+                    icon={<Users size={20} />}
+                    label="Meetings"
+                    description="Schedule"
+                    onClick={() => navigate('/parent/meetings')}
+                  />
+                  <ProFeatureCard
+                    icon={<FileText size={20} />}
+                    label="Reports"
+                    description="Report cards"
+                    onClick={() => navigate(`/parent/child/${selectedChild.id}/report-cards`)}
+                  />
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -672,6 +720,8 @@ function QuickActionCard({ icon, label, description, color, onClick }) {
     emerald: 'bg-emerald-50 hover:bg-emerald-100 border-emerald-100 text-emerald-600',
     orange: 'bg-orange-50 hover:bg-orange-100 border-orange-100 text-orange-600',
     pink: 'bg-pink-50 hover:bg-pink-100 border-pink-100 text-pink-600',
+    indigo: 'bg-indigo-50 hover:bg-indigo-100 border-indigo-100 text-indigo-600',
+    cyan: 'bg-cyan-50 hover:bg-cyan-100 border-cyan-100 text-cyan-600',
   };
 
   return (
@@ -680,6 +730,19 @@ function QuickActionCard({ icon, label, description, color, onClick }) {
       className={`${colorClasses[color]} p-4 rounded-xl border transition-all flex flex-col items-center gap-2 hover:shadow-md cursor-pointer`}
     >
       {icon}
+      <span className="text-sm font-medium text-gray-800">{label}</span>
+      <span className="text-xs text-gray-500">{description}</span>
+    </button>
+  );
+}
+
+function ProFeatureCard({ icon, label, description, onClick }) {
+  return (
+    <button 
+      onClick={onClick}
+      className="bg-white hover:bg-purple-50 p-4 rounded-xl border border-purple-100 transition-all flex flex-col items-center gap-2 hover:shadow-md cursor-pointer hover:border-purple-300"
+    >
+      <span className="text-purple-600">{icon}</span>
       <span className="text-sm font-medium text-gray-800">{label}</span>
       <span className="text-xs text-gray-500">{description}</span>
     </button>
