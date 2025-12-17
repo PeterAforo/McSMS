@@ -747,19 +747,15 @@ function getHomework($pdo, $studentId) {
 
         $stmt = $pdo->prepare("
             SELECT h.*, sub.subject_name, sub.subject_code,
-                   u.name as teacher_name,
-                   hs.id as submission_id, 
-                   CASE WHEN hs.id IS NOT NULL THEN 'submitted' ELSE 'pending' END as submission_status,
-                   hs.submitted_at, hs.file as submission_file
+                   u.name as teacher_name
             FROM homework h
             LEFT JOIN subjects sub ON h.subject_id = sub.id
             LEFT JOIN teachers t ON h.teacher_id = t.id
             LEFT JOIN users u ON t.user_id = u.id
-            LEFT JOIN homework_submissions hs ON h.id = hs.homework_id AND hs.student_id = ?
             WHERE h.class_id = ?
             ORDER BY h.due_date DESC
         ");
-        $stmt->execute([$studentId, $student['class_id']]);
+        $stmt->execute([$student['class_id']]);
         $homework = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Categorize homework
@@ -769,11 +765,8 @@ function getHomework($pdo, $studentId) {
         $graded = [];
 
         foreach ($homework as $hw) {
-            if ($hw['submission_status'] === 'graded') {
-                $graded[] = $hw;
-            } elseif ($hw['submission_status'] === 'submitted') {
-                $submitted[] = $hw;
-            } elseif (strtotime($hw['due_date']) < time() && !$hw['submission_id']) {
+            // Simple categorization based on due date since we don't have submission tracking
+            if (strtotime($hw['due_date']) < time()) {
                 $overdue[] = $hw;
             } else {
                 $pending[] = $hw;
