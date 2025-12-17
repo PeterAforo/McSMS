@@ -10,9 +10,14 @@ if (!file_exists($configPath)) {
 
 require_once $configPath;
 
-// Step 2: Test database connection
+// Step 2: Test database connection (create PDO directly like parent_portal.php)
 try {
-    $pdo = getConnection();
+    $pdo = new PDO(
+        "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+        DB_USER,
+        DB_PASS,
+        array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
+    );
     
     // Step 3: Test homework_submissions table
     $stmt = $pdo->query("SELECT COUNT(*) as cnt FROM homework_submissions");

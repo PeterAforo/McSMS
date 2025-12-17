@@ -39,12 +39,12 @@ if (!$configLoaded) {
 }
 
 try {
-    $pdo = getConnection();
-    
-    if (!$pdo) {
-        echo json_encode(['success' => false, 'error' => 'Database connection failed']);
-        exit();
-    }
+    $pdo = new PDO(
+        "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+        DB_USER,
+        DB_PASS,
+        array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
+    );
     
     // Ensure required columns exist
     ensureTableStructure($pdo);
