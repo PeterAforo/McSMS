@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, BookOpen, Clock, CheckCircle, XCircle, AlertTriangle,
-  Loader2, Calendar, FileText, Download, ExternalLink
+  Loader2, Calendar, FileText, Download, ExternalLink, Upload, Send, X
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
@@ -23,6 +23,12 @@ export default function ChildHomeworkView() {
   });
   const [activeFilter, setActiveFilter] = useState('all');
   const [parentId, setParentId] = useState(null);
+  
+  // Submission modal state
+  const [showSubmitModal, setShowSubmitModal] = useState(false);
+  const [selectedHomework, setSelectedHomework] = useState(null);
+  const [submissionText, setSubmissionText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchParentId();
@@ -69,25 +75,73 @@ export default function ChildHomeworkView() {
 
   const fetchHomework = async () => {
     try {
-      // Use child.id (numeric) not child.student_id (admission number string like STU2025002)
-      console.log('Fetching homework for child:', child);
-      console.log('Using student_id:', child.id);
       const response = await axios.get(
         `${API_BASE_URL}/parent_portal.php?resource=homework&student_id=${child.id}`
       );
-      console.log('Homework API response:', response.data);
       if (response.data.success) {
-        setHomework(response.data.homework || []);
-        setCategorized(response.data.categorized || {
-          pending: [],
-          submitted: [],
-          overdue: [],
-          graded: []
+        const homeworkList = response.data.homework || [];
+        setHomework(homeworkList);
+        
+        // Categorize homework with submission status
+        const pending = [];
+        const submitted = [];
+        const overdue = [];
+        const graded = [];
+        
+        homeworkList.forEach(hw => {
+          if (hw.submission_status === 'graded') {
+            graded.push(hw);
+          } else if (hw.submission_status === 'submitted' || hw.submission_status === 'late') {
+            submitted.push(hw);
+          } else if (new Date(hw.due_date) < new Date()) {
+            overdue.push(hw);
+          } else {
+            pending.push(hw);
+          }
         });
+        
+        setCategorized({ pending, submitted, overdue, graded });
       }
     } catch (error) {
       console.error('Error fetching homework:', error);
     }
+  };
+
+  const handleSubmitHomework = async () => {
+    if (!selectedHomework || !submissionText.trim()) {
+      alert('Please enter your homework response');
+      return;
+    }
+    
+    try {
+      setSubmitting(true);
+      const response = await axios.post(`${API_BASE_URL}/homework_submissions.php?action=submit`, {
+        homework_id: selectedHomework.id,
+        student_id: child.id,
+        submission_text: submissionText
+      });
+      
+      if (response.data.success) {
+        alert(response.data.message || 'Homework submitted successfully!');
+        setShowSubmitModal(false);
+        setSubmissionText('');
+        setSelectedHomework(null);
+        fetchHomework(); // Refresh the list
+      } else {
+        alert(response.data.error || 'Failed to submit homework');
+      }
+    } catch (error) {
+      console.error('Error submitting homework:', error);
+      alert('Failed to submit homework. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openSubmitModal = (hw) => {
+    setSelectedHomework(hw);
+    setSubmissionText('');
+    setShowSubmitModal(true);
   };
 
   const getFilteredHomework = () => {
@@ -242,7 +296,7 @@ export default function ChildHomeworkView() {
                         Due: {new Date(hw.due_date).toLocaleDateString()}
                       </span>
                       <span className={`font-medium ${
-                        new Date(hw.due_date) < new Date() && !hw.submission_id
+                        new Date(hw.due_date) < new Date() && !hw.submission_status
                           ? 'text-red-600'
                           : 'text-gray-600'
                       }`}>
@@ -253,10 +307,10 @@ export default function ChildHomeworkView() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
-                    {hw.submission_status === 'graded' && hw.grade && (
+                  <div className="text-right space-y-2">
+                    {hw.submission_status === 'graded' && hw.score && (
                       <div className="mb-2">
-                        <span className="text-2xl font-bold text-green-600">{hw.grade}%</span>
+                        <span className="text-2xl font-bold text-green-600">{hw.score}/{hw.total_marks || 100}</span>
                       </div>
                     )}
                     {hw.attachment && (
@@ -264,6 +318,20 @@ export default function ChildHomeworkView() {
                         <Download className="w-3 h-3" />
                         Attachment
                       </button>
+                    )}
+                    {/* Submit button - show for pending/overdue homework */}
+                    {(!hw.submission_status || hw.submission_status === 'pending') && (
+                      <button 
+                        onClick={() => openSubmitModal(hw)}
+                        className="btn btn-sm bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1"
+                      >
+                        <Upload className="w-3 h-3" />
+                        Submit
+                      </button>
+                    )}
+                    {/* View/Edit submission button */}
+                    {(hw.submission_status === 'submitted' || hw.submission_status === 'late') && (
+                      <span className="text-xs text-blue-600">✓ Submitted</span>
                     )}
                   </div>
                 </div>
@@ -286,6 +354,86 @@ export default function ChildHomeworkView() {
           </div>
         )}
       </div>
+
+      {/* Submit Homework Modal */}
+      {showSubmitModal && selectedHomework && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex items-center justify-between">
+              <h3 className="font-semibold text-lg">Submit Homework</h3>
+              <button 
+                onClick={() => setShowSubmitModal(false)}
+                className="p-1 hover:bg-gray-100 rounded"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              {/* Homework Details */}
+              <div className="bg-gray-50 p-3 rounded-lg">
+                <h4 className="font-semibold text-gray-900">{selectedHomework.title}</h4>
+                <p className="text-sm text-gray-600">{selectedHomework.subject_name || 'General'}</p>
+                {selectedHomework.description && (
+                  <p className="text-sm text-gray-700 mt-2">{selectedHomework.description}</p>
+                )}
+                <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
+                  <Calendar className="w-3 h-3" />
+                  <span>Due: {new Date(selectedHomework.due_date).toLocaleDateString()}</span>
+                  {new Date(selectedHomework.due_date) < new Date() && (
+                    <span className="text-red-600 font-medium">(Overdue - will be marked as late)</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Submission Form */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Your Answer / Response
+                </label>
+                <textarea
+                  value={submissionText}
+                  onChange={(e) => setSubmissionText(e.target.value)}
+                  placeholder="Type your homework answer here..."
+                  className="w-full border rounded-lg p-3 h-40 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              {/* Note for parents */}
+              <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
+                <strong>Note:</strong> As a parent, you can submit homework on behalf of your child. 
+                The teacher will be able to see this submission and provide feedback.
+              </div>
+            </div>
+
+            <div className="p-4 border-t flex justify-end gap-3">
+              <button
+                onClick={() => setShowSubmitModal(false)}
+                className="btn bg-gray-100 hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSubmitHomework}
+                disabled={submitting || !submissionText.trim()}
+                className="btn bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 disabled:opacity-50"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Submitting...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Submit Homework
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

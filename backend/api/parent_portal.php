@@ -745,18 +745,38 @@ function getHomework($pdo, $studentId) {
             return;
         }
 
-        $stmt = $pdo->prepare("
-            SELECT h.*, sub.subject_name, sub.subject_code,
-                   u.name as teacher_name
-            FROM homework h
-            LEFT JOIN subjects sub ON h.subject_id = sub.id
-            LEFT JOIN teachers t ON h.teacher_id = t.id
-            LEFT JOIN users u ON t.user_id = u.id
-            WHERE h.class_id = ?
-            ORDER BY h.due_date DESC
-        ");
-        $stmt->execute([$student['class_id']]);
-        $homework = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Try to get homework with submission status
+        try {
+            $stmt = $pdo->prepare("
+                SELECT h.*, sub.subject_name, sub.subject_code,
+                       u.name as teacher_name,
+                       hs.id as submission_id, hs.status as submission_status,
+                       hs.submitted_at, hs.score, hs.feedback, hs.submission_text
+                FROM homework h
+                LEFT JOIN subjects sub ON h.subject_id = sub.id
+                LEFT JOIN teachers t ON h.teacher_id = t.id
+                LEFT JOIN users u ON t.user_id = u.id
+                LEFT JOIN homework_submissions hs ON h.id = hs.homework_id AND hs.student_id = ?
+                WHERE h.class_id = ?
+                ORDER BY h.due_date DESC
+            ");
+            $stmt->execute([$studentId, $student['class_id']]);
+            $homework = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // Fallback without submissions if table structure differs
+            $stmt = $pdo->prepare("
+                SELECT h.*, sub.subject_name, sub.subject_code,
+                       u.name as teacher_name
+                FROM homework h
+                LEFT JOIN subjects sub ON h.subject_id = sub.id
+                LEFT JOIN teachers t ON h.teacher_id = t.id
+                LEFT JOIN users u ON t.user_id = u.id
+                WHERE h.class_id = ?
+                ORDER BY h.due_date DESC
+            ");
+            $stmt->execute([$student['class_id']]);
+            $homework = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
 
         // Categorize homework
         $pending = [];
@@ -764,9 +784,17 @@ function getHomework($pdo, $studentId) {
         $overdue = [];
         $graded = [];
 
-        foreach ($homework as $hw) {
-            // Simple categorization based on due date since we don't have submission tracking
-            if (strtotime($hw['due_date']) < time()) {
+        foreach ($homework as &$hw) {
+            // Add submission status if not present
+            if (!isset($hw['submission_status'])) {
+                $hw['submission_status'] = null;
+            }
+            
+            if ($hw['submission_status'] === 'graded') {
+                $graded[] = $hw;
+            } elseif ($hw['submission_status'] === 'submitted' || $hw['submission_status'] === 'late') {
+                $submitted[] = $hw;
+            } elseif (strtotime($hw['due_date']) < time() && !$hw['submission_id']) {
                 $overdue[] = $hw;
             } else {
                 $pending[] = $hw;
