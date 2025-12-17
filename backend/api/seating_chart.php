@@ -48,8 +48,8 @@ try {
                 teacher_id INT NOT NULL,
                 name VARCHAR(100) DEFAULT 'Default Layout',
                 layout_type ENUM('grid', 'rows', 'groups', 'u_shape', 'custom') DEFAULT 'grid',
-                rows INT DEFAULT 5,
-                columns INT DEFAULT 6,
+                `rows` INT DEFAULT 5,
+                `columns` INT DEFAULT 6,
                 room_name VARCHAR(100),
                 notes TEXT,
                 is_active TINYINT(1) DEFAULT 1,
@@ -176,7 +176,7 @@ try {
             }
 
             $stmt = $pdo->prepare("
-                INSERT INTO seating_charts (class_id, teacher_id, name, layout_type, rows, columns, room_name, notes)
+                INSERT INTO seating_charts (class_id, teacher_id, name, layout_type, `rows`, `columns`, room_name, notes)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
@@ -303,7 +303,7 @@ try {
             $students = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
             // Get chart dimensions
-            $stmt = $pdo->prepare("SELECT rows, columns FROM seating_charts WHERE id = ?");
+            $stmt = $pdo->prepare("SELECT `rows`, `columns` FROM seating_charts WHERE id = ?");
             $stmt->execute([$data['chart_id']]);
             $chart = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -342,8 +342,8 @@ try {
             UPDATE seating_charts SET
                 name = COALESCE(?, name),
                 layout_type = COALESCE(?, layout_type),
-                rows = COALESCE(?, rows),
-                columns = COALESCE(?, columns),
+                `rows` = COALESCE(?, `rows`),
+                `columns` = COALESCE(?, `columns`),
                 room_name = ?,
                 notes = ?,
                 is_active = COALESCE(?, is_active)
