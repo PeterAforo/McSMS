@@ -28,9 +28,7 @@ export default function FamilyLinkCode({ parentId, children, onLinkSuccess }) {
     setGeneratedCode(null);
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/parent_portal.php`, {
-        resource: 'link_code',
-        action: 'generate',
+      const response = await axios.post(`${API_BASE_URL}/parent_portal.php?resource=generate_link_code`, {
         parent_id: parentId,
         student_id: selectedChild
       });
@@ -62,9 +60,7 @@ export default function FamilyLinkCode({ parentId, children, onLinkSuccess }) {
     setSuccess('');
 
     try {
-      const response = await axios.post(`${API_BASE_URL}/parent_portal.php`, {
-        resource: 'link_code',
-        action: 'use',
+      const response = await axios.post(`${API_BASE_URL}/parent_portal.php?resource=use_link_code`, {
         parent_id: parentId,
         link_code: linkCode.trim().toUpperCase(),
         relationship: relationship
