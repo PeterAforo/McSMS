@@ -35,7 +35,7 @@ export default function ChildHomeworkView() {
   }, [parentId, childId]);
 
   useEffect(() => {
-    if (child?.student_id) {
+    if (child?.id) {
       fetchHomework();
     }
   }, [child]);
@@ -66,8 +66,9 @@ export default function ChildHomeworkView() {
 
   const fetchHomework = async () => {
     try {
+      // Use child.id (numeric) not child.student_id (admission number string like STU2025002)
       const response = await axios.get(
-        `${API_BASE_URL}/parent_portal.php?resource=homework&student_id=${child.student_id}`
+        `${API_BASE_URL}/parent_portal.php?resource=homework&student_id=${child.id}`
       );
       console.log('Homework API response:', response.data);
       if (response.data.success) {
