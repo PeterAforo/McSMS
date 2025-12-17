@@ -69,6 +69,7 @@ export default function ChildHomeworkView() {
       const response = await axios.get(
         `${API_BASE_URL}/parent_portal.php?resource=homework&student_id=${child.student_id}`
       );
+      console.log('Homework API response:', response.data);
       if (response.data.success) {
         setHomework(response.data.homework || []);
         setCategorized(response.data.categorized || {

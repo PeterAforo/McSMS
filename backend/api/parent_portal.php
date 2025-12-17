@@ -710,12 +710,22 @@ function getHomework($pdo, $studentId) {
 
     try {
         // Get student's class
-        $stmt = $pdo->prepare("SELECT class_id FROM students WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, class_id, first_name, last_name FROM students WHERE id = ?");
         $stmt->execute([$studentId]);
         $student = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$student) {
-            echo json_encode(['success' => false, 'error' => 'Student not found']);
+            echo json_encode(['success' => false, 'error' => 'Student not found', 'student_id_searched' => $studentId]);
+            return;
+        }
+
+        if (!$student['class_id']) {
+            echo json_encode([
+                'success' => true, 
+                'homework' => [], 
+                'categorized' => ['pending' => [], 'submitted' => [], 'overdue' => [], 'graded' => []],
+                'debug' => ['message' => 'Student has no class assigned', 'student' => $student]
+            ]);
             return;
         }
 
@@ -761,6 +771,12 @@ function getHomework($pdo, $studentId) {
                 'submitted' => $submitted,
                 'overdue' => $overdue,
                 'graded' => $graded
+            ],
+            'debug' => [
+                'student_id' => $studentId,
+                'class_id' => $student['class_id'],
+                'student_name' => $student['first_name'] . ' ' . $student['last_name'],
+                'homework_count' => count($homework)
             ]
         ]);
 
