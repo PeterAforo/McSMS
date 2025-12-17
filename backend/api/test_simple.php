@@ -19,18 +19,61 @@ try {
         array(PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION)
     );
     
-    // Step 3: Test homework_submissions table
-    $stmt = $pdo->query("SELECT COUNT(*) as cnt FROM homework_submissions");
-    $count = $stmt->fetch(PDO::FETCH_ASSOC);
+    // Get homework_submissions table structure
+    $columns = $pdo->query("SHOW COLUMNS FROM homework_submissions")->fetchAll(PDO::FETCH_ASSOC);
+    $columnNames = array_column($columns, 'Field');
+    
+    // Required columns for submission workflow
+    $requiredColumns = array('id', 'homework_id', 'student_id', 'status', 'submitted_at', 'submission_text', 'score', 'feedback', 'graded_at', 'graded_by');
+    
+    $missingColumns = array();
+    foreach ($requiredColumns as $col) {
+        if (!in_array($col, $columnNames)) {
+            $missingColumns[] = $col;
+        }
+    }
+    
+    // Get homework table structure too
+    $hwColumns = $pdo->query("SHOW COLUMNS FROM homework")->fetchAll(PDO::FETCH_ASSOC);
+    $hwColumnNames = array_column($hwColumns, 'Field');
     
     echo json_encode(array(
-        'success' => true, 
-        'message' => 'All working',
-        'submission_count' => $count['cnt']
+        'success' => true,
+        'homework_submissions_columns' => $columnNames,
+        'missing_columns' => $missingColumns,
+        'homework_columns' => $hwColumnNames,
+        'add_missing_sql' => generateMissingColumnSQL($missingColumns)
     ));
 } catch (Exception $e) {
     echo json_encode(array(
         'success' => false,
         'error' => $e->getMessage()
     ));
+}
+
+function generateMissingColumnSQL($missing) {
+    $sql = array();
+    foreach ($missing as $col) {
+        switch ($col) {
+            case 'status':
+                $sql[] = "ALTER TABLE homework_submissions ADD COLUMN status VARCHAR(20) DEFAULT 'submitted';";
+                break;
+            case 'submission_text':
+                $sql[] = "ALTER TABLE homework_submissions ADD COLUMN submission_text TEXT;";
+                break;
+            case 'score':
+                $sql[] = "ALTER TABLE homework_submissions ADD COLUMN score DECIMAL(5,2);";
+                break;
+            case 'feedback':
+                $sql[] = "ALTER TABLE homework_submissions ADD COLUMN feedback TEXT;";
+                break;
+            case 'graded_at':
+                $sql[] = "ALTER TABLE homework_submissions ADD COLUMN graded_at TIMESTAMP NULL;";
+                break;
+            case 'graded_by':
+                $sql[] = "ALTER TABLE homework_submissions ADD COLUMN graded_by INT;";
+                break;
+        }
+    }
+    return $sql;
 }
