@@ -106,8 +106,8 @@ function getHomework($pdo) {
             c.name as class_name,
             sub.name as subject_name,
             sub.code as subject_code,
-            t.first_name as teacher_first_name,
-            t.last_name as teacher_last_name,
+            u.first_name as teacher_first_name,
+            u.last_name as teacher_last_name,
             (SELECT COUNT(*) FROM homework_submissions WHERE homework_id = h.id) as total_submissions,
             (SELECT COUNT(*) FROM homework_submissions WHERE homework_id = h.id AND status = 'submitted') as submitted_count,
             (SELECT COUNT(*) FROM homework_submissions WHERE homework_id = h.id AND status = 'graded') as graded_count
@@ -115,6 +115,7 @@ function getHomework($pdo) {
         LEFT JOIN classes c ON h.class_id = c.id
         LEFT JOIN subjects sub ON h.subject_id = sub.id
         LEFT JOIN teachers t ON h.teacher_id = t.id
+        LEFT JOIN users u ON t.user_id = u.id
         WHERE 1=1
     ";
 
@@ -252,8 +253,8 @@ function getStudentHomework($pdo) {
             h.*,
             sub.subject_name,
             sub.subject_code,
-            t.first_name as teacher_first_name,
-            t.last_name as teacher_last_name,
+            u.first_name as teacher_first_name,
+            u.last_name as teacher_last_name,
             hs.id as submission_id,
             hs.status as submission_status,
             hs.submitted_at,
@@ -263,6 +264,7 @@ function getStudentHomework($pdo) {
         FROM homework h
         LEFT JOIN subjects sub ON h.subject_id = sub.id
         LEFT JOIN teachers t ON h.teacher_id = t.id
+        LEFT JOIN users u ON t.user_id = u.id
         LEFT JOIN homework_submissions hs ON h.id = hs.homework_id AND hs.student_id = ?
         WHERE h.class_id = ?
     ";
