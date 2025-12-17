@@ -749,7 +749,7 @@ function getHomework($pdo, $studentId) {
             SELECT h.*, sub.subject_name, sub.subject_code,
                    u.name as teacher_name,
                    hs.id as submission_id, hs.status as submission_status, 
-                   hs.submitted_at, hs.grade, hs.feedback
+                   hs.submitted_at, hs.score, hs.feedback
             FROM homework h
             LEFT JOIN subjects sub ON h.subject_id = sub.id
             LEFT JOIN teachers t ON h.teacher_id = t.id
