@@ -73,6 +73,12 @@ import TeacherSettings from './pages/teacher/Settings';
 import TeacherStudentReports from './pages/teacher/StudentReports';
 import AIInsights from './pages/teacher/AIInsights';
 import HRPortal from './pages/teacher/HRPortal';
+import LessonPlanning from './pages/teacher/LessonPlanning';
+import StudentProgress from './pages/teacher/StudentProgress';
+import BehaviorTracking from './pages/teacher/BehaviorTracking';
+import ResourceLibrary from './pages/teacher/ResourceLibrary';
+import SeatingChart from './pages/teacher/SeatingChart';
+import SubstituteMode from './pages/teacher/SubstituteMode';
 import ApplyForAdmission from './pages/parent/ApplyForAdmission';
 import ChildDetails from './pages/parent/ChildDetails';
 import TermEnrollment from './pages/parent/TermEnrollment';
@@ -274,6 +280,12 @@ function App() {
           <Route path="messages" element={<TeacherMessages />} />
           <Route path="ai-insights" element={<AIInsights />} />
           <Route path="hr-portal" element={<HRPortal />} />
+          <Route path="lesson-planning" element={<LessonPlanning />} />
+          <Route path="student-progress" element={<StudentProgress />} />
+          <Route path="behavior" element={<BehaviorTracking />} />
+          <Route path="resources" element={<ResourceLibrary />} />
+          <Route path="seating" element={<SeatingChart />} />
+          <Route path="substitute" element={<SubstituteMode />} />
           <Route path="settings" element={<TeacherSettings />} />
           <Route path="profile" element={<Profile />} />
           <Route path="notifications" element={<Notifications />} />

@@ -209,6 +209,26 @@ export default function Sidebar() {
         { icon: BookOpen, label: 'Homework', path: '/teacher/homework' },
         { icon: Award, label: 'Grading', path: '/teacher/grading' },
         { icon: FileText, label: 'Student Reports', path: '/teacher/reports' },
+        { icon: Calendar, label: 'Lesson Planning', path: '/teacher/lesson-planning' },
+      ]
+    },
+    {
+      id: 'students',
+      label: 'Student Tools',
+      icon: Users,
+      items: [
+        { icon: TrendingUp, label: 'Progress Tracking', path: '/teacher/student-progress' },
+        { icon: Heart, label: 'Behavior Tracking', path: '/teacher/behavior' },
+        { icon: Users, label: 'Seating Chart', path: '/teacher/seating' },
+      ]
+    },
+    {
+      id: 'resources',
+      label: 'Resources',
+      icon: BookOpen,
+      items: [
+        { icon: BookOpen, label: 'Resource Library', path: '/teacher/resources' },
+        { icon: Clock, label: 'Substitute Mode', path: '/teacher/substitute' },
       ]
     },
     {
