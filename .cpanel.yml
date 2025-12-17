@@ -36,6 +36,6 @@ deployment:
     - /bin/mkdir -p $DEPLOYPATH/uploads
     
     # Set proper permissions
-    - /bin/chmod -R 755 $DEPLOYPATH/api
+    - /bin/chmod -R 755 $DEPLOYPATH/backend/api
     - /bin/chmod -R 755 $DEPLOYPATH/assets
     - /bin/chmod -R 777 $DEPLOYPATH/uploads
