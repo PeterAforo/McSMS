@@ -4,6 +4,10 @@
  * Handles student homework submissions and teacher grading
  */
 
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't display, but log
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -14,10 +18,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once __DIR__ . '/../../config/database.php';
+// Try multiple config paths for compatibility
+$configPaths = [
+    __DIR__ . '/../../config/database.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/config/database.php',
+    dirname(__DIR__, 2) . '/config/database.php'
+];
+$configLoaded = false;
+foreach ($configPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $configLoaded = true;
+        break;
+    }
+}
+
+if (!$configLoaded) {
+    echo json_encode(['success' => false, 'error' => 'Database config not found']);
+    exit();
+}
 
 try {
     $pdo = getConnection();
+    
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'error' => 'Database connection failed']);
+        exit();
+    }
     
     // Ensure required columns exist
     ensureTableStructure($pdo);
