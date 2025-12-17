@@ -134,21 +134,22 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Alerts/Insights */}
-      {insights.length > 0 && (
+      {/* Student Alerts Banner */}
+      {studentAlerts.length > 0 && (
         <div className="space-y-3">
-          {insights.slice(0, 3).map((insight, index) => (
-            <div key={index} className={`p-4 rounded-lg border ${getInsightBg(insight.type)} flex items-start gap-3`}>
-              {getInsightIcon(insight.type)}
+          {studentAlerts.slice(0, 2).map((alert, index) => (
+            <div key={index} className={`p-4 rounded-lg border ${alert.severity === 'high' ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'} flex items-start gap-3`}>
+              {alert.severity === 'high' ? <AlertCircle className="w-5 h-5 text-red-500" /> : <AlertTriangle className="w-5 h-5 text-yellow-500" />}
               <div className="flex-1">
-                <h4 className="font-medium text-gray-900">{insight.title}</h4>
-                <p className="text-sm text-gray-600 mt-1">{insight.message}</p>
+                <h4 className="font-medium text-gray-900">{alert.student_name}</h4>
+                <p className="text-sm text-gray-600 mt-1">{alert.issue} - {alert.class_name}</p>
               </div>
-              {insight.action && (
-                <button className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                  {insight.action} <ArrowRight className="w-4 h-4" />
-                </button>
-              )}
+              <button 
+                onClick={() => navigate('/teacher/student-progress')}
+                className="text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              >
+                View <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
           ))}
         </div>

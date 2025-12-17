@@ -143,135 +143,172 @@ try {
 
     // Get homework submissions to review
     $homeworkToReview = 0;
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) FROM homework_submissions hs
-        INNER JOIN homework h ON hs.homework_id = h.id
-        WHERE h.teacher_id = ? AND hs.status = 'submitted'
-    ");
-    $stmt->execute([$teacher_id]);
-    $homeworkToReview = $stmt->fetchColumn();
+    try {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM homework_submissions hs
+            INNER JOIN homework h ON hs.homework_id = h.id
+            WHERE h.teacher_id = ? AND hs.status = 'submitted'
+        ");
+        $stmt->execute([$teacher_id]);
+        $homeworkToReview = $stmt->fetchColumn() ?: 0;
+    } catch (PDOException $e) {
+        // Table might not exist
+        $homeworkToReview = 0;
+    }
 
     // Get grades to enter (assessments without grades for teacher's classes)
     $pendingGrades = 0;
     if (!empty($classIds)) {
-        $placeholders = implode(',', array_fill(0, count($classIds), '?'));
-        $stmt = $pdo->prepare("
-            SELECT COUNT(DISTINCT a.id) FROM assessments a
-            LEFT JOIN grades g ON a.id = g.assessment_id
-            WHERE a.class_id IN ($placeholders)
-            AND g.id IS NULL
-            AND a.status = 'published'
-        ");
-        $stmt->execute($classIds);
-        $pendingGrades = $stmt->fetchColumn();
+        try {
+            $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+            $stmt = $pdo->prepare("
+                SELECT COUNT(DISTINCT a.id) FROM assessments a
+                LEFT JOIN grades g ON a.id = g.assessment_id
+                WHERE a.class_id IN ($placeholders)
+                AND g.id IS NULL
+                AND a.status = 'published'
+            ");
+            $stmt->execute($classIds);
+            $pendingGrades = $stmt->fetchColumn() ?: 0;
+        } catch (PDOException $e) {
+            $pendingGrades = 0;
+        }
     }
 
     // Get class performance (average grades per class)
     $classPerformance = [];
     foreach ($classes as $class) {
-        $stmt = $pdo->prepare("
-            SELECT AVG(g.marks_obtained) as avg_score, COUNT(DISTINCT g.student_id) as graded_students
-            FROM grades g
-            INNER JOIN assessments a ON g.assessment_id = a.id
-            WHERE a.class_id = ?
-        ");
-        $stmt->execute([$class['id']]);
-        $perf = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $classPerformance[] = [
-            'class_id' => $class['id'],
-            'class_name' => $class['class_name'],
-            'student_count' => $class['student_count'],
-            'average' => $perf['avg_score'] ? round($perf['avg_score'], 1) : null,
-            'graded_students' => $perf['graded_students'] ?? 0
-        ];
+        try {
+            $stmt = $pdo->prepare("
+                SELECT AVG(g.marks_obtained) as avg_score, COUNT(DISTINCT g.student_id) as graded_students
+                FROM grades g
+                INNER JOIN assessments a ON g.assessment_id = a.id
+                WHERE a.class_id = ?
+            ");
+            $stmt->execute([$class['id']]);
+            $perf = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $classPerformance[] = [
+                'class_id' => $class['id'],
+                'class_name' => $class['class_name'],
+                'student_count' => $class['student_count'],
+                'average' => $perf['avg_score'] ? round($perf['avg_score'], 1) : 'N/A',
+                'graded_students' => $perf['graded_students'] ?? 0
+            ];
+        } catch (PDOException $e) {
+            $classPerformance[] = [
+                'class_id' => $class['id'],
+                'class_name' => $class['class_name'],
+                'student_count' => $class['student_count'],
+                'average' => 'N/A',
+                'graded_students' => 0
+            ];
+        }
     }
 
     // Get student alerts (low attendance, failing grades)
     $studentAlerts = [];
     if (!empty($classIds)) {
-        // Students with low attendance this week
-        $placeholders = implode(',', array_fill(0, count($classIds), '?'));
-        $stmt = $pdo->prepare("
-            SELECT s.id, s.first_name, s.last_name, c.class_name,
-                   COUNT(CASE WHEN a.status = 'absent' THEN 1 END) as absences,
-                   COUNT(a.id) as total_records
-            FROM students s
-            INNER JOIN classes c ON s.class_id = c.id
-            LEFT JOIN attendance a ON s.id = a.student_id AND a.date BETWEEN ? AND ?
-            WHERE s.class_id IN ($placeholders) AND s.status = 'active'
-            GROUP BY s.id
-            HAVING absences >= 2
-            ORDER BY absences DESC
-            LIMIT 5
-        ");
-        $params = array_merge([$weekStart, $weekEnd], $classIds);
-        $stmt->execute($params);
-        $lowAttendance = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        foreach ($lowAttendance as $student) {
-            $studentAlerts[] = [
-                'student_id' => $student['id'],
-                'student_name' => $student['first_name'] . ' ' . $student['last_name'],
-                'class_name' => $student['class_name'],
-                'issue' => "Absent {$student['absences']} times this week",
-                'type' => 'attendance',
-                'severity' => $student['absences'] >= 3 ? 'high' : 'medium'
-            ];
+        try {
+            // Students with low attendance this week
+            $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+            $stmt = $pdo->prepare("
+                SELECT s.id, s.first_name, s.last_name, c.class_name,
+                       COUNT(CASE WHEN a.status = 'absent' THEN 1 END) as absences,
+                       COUNT(a.id) as total_records
+                FROM students s
+                INNER JOIN classes c ON s.class_id = c.id
+                LEFT JOIN attendance a ON s.id = a.student_id AND a.date BETWEEN ? AND ?
+                WHERE s.class_id IN ($placeholders) AND s.status = 'active'
+                GROUP BY s.id
+                HAVING absences >= 2
+                ORDER BY absences DESC
+                LIMIT 5
+            ");
+            $params = array_merge([$weekStart, $weekEnd], $classIds);
+            $stmt->execute($params);
+            $lowAttendance = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($lowAttendance as $student) {
+                $studentAlerts[] = [
+                    'student_id' => $student['id'],
+                    'student_name' => $student['first_name'] . ' ' . $student['last_name'],
+                    'class_name' => $student['class_name'],
+                    'issue' => "Absent {$student['absences']} times this week",
+                    'type' => 'attendance',
+                    'severity' => $student['absences'] >= 3 ? 'high' : 'medium'
+                ];
+            }
+        } catch (PDOException $e) {
+            // Attendance table might not exist
         }
 
-        // Students with low grades
-        $stmt = $pdo->prepare("
-            SELECT s.id, s.first_name, s.last_name, c.class_name,
-                   AVG(g.marks_obtained) as avg_grade
-            FROM students s
-            INNER JOIN classes c ON s.class_id = c.id
-            INNER JOIN grades g ON s.id = g.student_id
-            WHERE s.class_id IN ($placeholders) AND s.status = 'active'
-            GROUP BY s.id
-            HAVING avg_grade < 50
-            ORDER BY avg_grade ASC
-            LIMIT 5
-        ");
-        $stmt->execute($classIds);
-        $lowGrades = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        
-        foreach ($lowGrades as $student) {
-            $studentAlerts[] = [
-                'student_id' => $student['id'],
-                'student_name' => $student['first_name'] . ' ' . $student['last_name'],
-                'class_name' => $student['class_name'],
-                'issue' => "Average grade: " . round($student['avg_grade'], 1) . "%",
-                'type' => 'grades',
-                'severity' => $student['avg_grade'] < 40 ? 'high' : 'medium'
-            ];
+        try {
+            // Students with low grades
+            $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+            $stmt = $pdo->prepare("
+                SELECT s.id, s.first_name, s.last_name, c.class_name,
+                       AVG(g.marks_obtained) as avg_grade
+                FROM students s
+                INNER JOIN classes c ON s.class_id = c.id
+                INNER JOIN grades g ON s.id = g.student_id
+                WHERE s.class_id IN ($placeholders) AND s.status = 'active'
+                GROUP BY s.id
+                HAVING avg_grade < 50
+                ORDER BY avg_grade ASC
+                LIMIT 5
+            ");
+            $stmt->execute($classIds);
+            $lowGrades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($lowGrades as $student) {
+                $studentAlerts[] = [
+                    'student_id' => $student['id'],
+                    'student_name' => $student['first_name'] . ' ' . $student['last_name'],
+                    'class_name' => $student['class_name'],
+                    'issue' => "Average grade: " . round($student['avg_grade'], 1) . "%",
+                    'type' => 'grades',
+                    'severity' => $student['avg_grade'] < 40 ? 'high' : 'medium'
+                ];
+            }
+        } catch (PDOException $e) {
+            // Grades table might not exist
         }
     }
 
     // Get upcoming events
-    $stmt = $pdo->prepare("
-        SELECT * FROM events 
-        WHERE (start_date >= ? OR end_date >= ?)
-        AND status = 'active'
-        ORDER BY start_date ASC
-        LIMIT 5
-    ");
-    $stmt->execute([$today, $today]);
-    $upcomingEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $upcomingEvents = [];
+    try {
+        $stmt = $pdo->prepare("
+            SELECT * FROM events 
+            WHERE (start_date >= ? OR end_date >= ?)
+            AND status = 'active'
+            ORDER BY start_date ASC
+            LIMIT 5
+        ");
+        $stmt->execute([$today, $today]);
+        $upcomingEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Events table might not exist
+    }
 
     // Get recent messages
     $recentMessages = [];
-    if ($teacher['user_id']) {
-        $stmt = $pdo->prepare("
-            SELECT m.*, u.name as sender_name
-            FROM messages m
-            LEFT JOIN users u ON m.sender_id = u.id
-            WHERE m.recipient_id = ?
-            ORDER BY m.created_at DESC
-            LIMIT 5
-        ");
-        $stmt->execute([$teacher['user_id']]);
-        $recentMessages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($teacher && $teacher['user_id']) {
+        try {
+            $stmt = $pdo->prepare("
+                SELECT m.*, u.name as sender_name
+                FROM messages m
+                LEFT JOIN users u ON m.sender_id = u.id
+                WHERE m.recipient_id = ?
+                ORDER BY m.created_at DESC
+                LIMIT 5
+            ");
+            $stmt->execute([$teacher['user_id']]);
+            $recentMessages = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Messages table might not exist
+        }
     }
 
     // Get weekly stats
@@ -284,32 +321,44 @@ try {
 
     // Attendance records marked this week
     if (!empty($classIds)) {
-        $placeholders = implode(',', array_fill(0, count($classIds), '?'));
-        $stmt = $pdo->prepare("
-            SELECT COUNT(DISTINCT CONCAT(class_id, '-', date)) as days_marked
-            FROM attendance 
-            WHERE class_id IN ($placeholders) AND date BETWEEN ? AND ?
-        ");
-        $params = array_merge($classIds, [$weekStart, $weekEnd]);
-        $stmt->execute($params);
-        $weeklyStats['attendance_marked'] = $stmt->fetchColumn();
+        try {
+            $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+            $stmt = $pdo->prepare("
+                SELECT COUNT(DISTINCT CONCAT(class_id, '-', date)) as days_marked
+                FROM attendance 
+                WHERE class_id IN ($placeholders) AND date BETWEEN ? AND ?
+            ");
+            $params = array_merge($classIds, [$weekStart, $weekEnd]);
+            $stmt->execute($params);
+            $weeklyStats['attendance_marked'] = $stmt->fetchColumn() ?: 0;
+        } catch (PDOException $e) {
+            // Attendance table might not exist
+        }
     }
 
     // Homework assigned this week
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) FROM homework 
-        WHERE teacher_id = ? AND created_at BETWEEN ? AND ?
-    ");
-    $stmt->execute([$teacher_id, $weekStart . ' 00:00:00', $weekEnd . ' 23:59:59']);
-    $weeklyStats['homework_assigned'] = $stmt->fetchColumn();
+    try {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM homework 
+            WHERE teacher_id = ? AND created_at BETWEEN ? AND ?
+        ");
+        $stmt->execute([$teacher_id, $weekStart . ' 00:00:00', $weekEnd . ' 23:59:59']);
+        $weeklyStats['homework_assigned'] = $stmt->fetchColumn() ?: 0;
+    } catch (PDOException $e) {
+        // Homework table might not exist
+    }
 
     // Grades entered this week
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) FROM grades 
-        WHERE teacher_id = ? AND created_at BETWEEN ? AND ?
-    ");
-    $stmt->execute([$teacher_id, $weekStart . ' 00:00:00', $weekEnd . ' 23:59:59']);
-    $weeklyStats['grades_entered'] = $stmt->fetchColumn();
+    try {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM grades 
+            WHERE teacher_id = ? AND created_at BETWEEN ? AND ?
+        ");
+        $stmt->execute([$teacher_id, $weekStart . ' 00:00:00', $weekEnd . ' 23:59:59']);
+        $weeklyStats['grades_entered'] = $stmt->fetchColumn() ?: 0;
+    } catch (PDOException $e) {
+        // Grades table might not exist
+    }
 
     // Build response
     echo json_encode([
