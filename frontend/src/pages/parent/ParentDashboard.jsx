@@ -268,6 +268,13 @@ export default function ParentDashboard() {
           color="indigo"
           onClick={() => setShowFamilyLink(true)}
         />
+        <QuickActionCard
+          icon={<Zap size={24} />}
+          label="Pro Dashboard"
+          description="Advanced view"
+          color="cyan"
+          onClick={() => navigate('/parent/dashboard-pro')}
+        />
       </div>
 
       {/* Family Link Modal */}

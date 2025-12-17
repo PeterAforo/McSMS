@@ -254,17 +254,17 @@ export default function ParentProDashboard() {
             </div>
           </div>
           {children.length > 0 && (
-            <div className="flex gap-3 overflow-x-auto pb-2">
+            <div className="flex flex-wrap gap-2">
               {children.map((child) => (
                 <button key={child.child_id || child.student_id} onClick={() => setSelectedChild(child)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all whitespace-nowrap ${
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl transition-all ${
                     (selectedChild?.child_id || selectedChild?.student_id) === (child.child_id || child.student_id) ? 'bg-white text-purple-700 shadow-lg' : 'bg-white/20 hover:bg-white/30'
                   }`}>
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${
                     (selectedChild?.child_id || selectedChild?.student_id) === (child.child_id || child.student_id) ? 'bg-purple-100 text-purple-700' : 'bg-white/30'
                   }`}>{child.full_name?.charAt(0) || 'C'}</div>
                   <div className="text-left">
-                    <p className="font-semibold">{child.full_name}</p>
+                    <p className="font-medium text-sm">{child.full_name}</p>
                     <p className={`text-xs ${(selectedChild?.child_id || selectedChild?.student_id) === (child.child_id || child.student_id) ? 'text-purple-500' : 'text-purple-200'}`}>{child.class_name || 'No class'}</p>
                   </div>
                 </button>
@@ -286,16 +286,18 @@ export default function ParentProDashboard() {
 
       {/* Tabs */}
       <div className="max-w-7xl mx-auto px-4 mt-6">
-        <div className="bg-white rounded-xl shadow-sm p-1 flex gap-1 overflow-x-auto">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-purple-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
-                <Icon size={18} /><span className="hidden sm:inline">{tab.label}</span>
-              </button>
-            );
-          })}
+        <div className="bg-white rounded-xl shadow-sm p-2">
+          <div className="grid grid-cols-5 md:grid-cols-10 gap-1">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`flex flex-col md:flex-row items-center justify-center gap-1 px-2 py-2 rounded-lg font-medium transition-all text-xs md:text-sm ${activeTab === tab.id ? 'bg-purple-600 text-white shadow-md' : 'text-gray-600 hover:bg-gray-100'}`}>
+                  <Icon size={16} /><span className="truncate">{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

@@ -309,8 +309,7 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="dashboard" element={<ParentProDashboard />} />
-          <Route path="dashboard-old" element={<ParentComprehensiveDashboard />} />
+          <Route path="dashboard" element={<ParentComprehensiveDashboard />} />
           <Route path="dashboard-pro" element={<ParentProDashboard />} />
           <Route path="apply" element={<ApplyForAdmission />} />
           <Route path="child/:childId" element={<ChildDetails />} />
