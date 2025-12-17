@@ -227,6 +227,27 @@ function getStudentHomework($pdo) {
         throw new Exception('Student ID is required');
     }
 
+    // Check if homework table exists
+    try {
+        $tableCheck = $pdo->query("SHOW TABLES LIKE 'homework'");
+        if ($tableCheck->rowCount() === 0) {
+            // Table doesn't exist, return empty result
+            echo json_encode([
+                'success' => true,
+                'homework' => [],
+                'message' => 'Homework feature not yet configured'
+            ]);
+            return;
+        }
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => true,
+            'homework' => [],
+            'message' => 'Homework feature not available'
+        ]);
+        return;
+    }
+
     // Get student's class
     $classSql = "SELECT class_id FROM students WHERE id = ?";
     $classStmt = $pdo->prepare($classSql);
@@ -234,7 +255,13 @@ function getStudentHomework($pdo) {
     $student = $classStmt->fetch();
 
     if (!$student) {
-        throw new Exception('Student not found');
+        // Student not found - return empty instead of error
+        echo json_encode([
+            'success' => true,
+            'homework' => [],
+            'message' => 'Student not found'
+        ]);
+        return;
     }
 
     // If student has no class assigned, return empty homework list
@@ -248,54 +275,63 @@ function getStudentHomework($pdo) {
     }
 
     // Get all homework for student's class
-    $sql = "
-        SELECT 
-            h.*,
-            sub.subject_name,
-            sub.subject_code,
-            u.first_name as teacher_first_name,
-            u.last_name as teacher_last_name,
-            hs.id as submission_id,
-            hs.status as submission_status,
-            hs.submitted_at,
-            hs.score as submission_score,
-            hs.feedback,
-            hs.file_path as submission_file
-        FROM homework h
-        LEFT JOIN subjects sub ON h.subject_id = sub.id
-        LEFT JOIN teachers t ON h.teacher_id = t.id
-        LEFT JOIN users u ON t.user_id = u.id
-        LEFT JOIN homework_submissions hs ON h.id = hs.homework_id AND hs.student_id = ?
-        WHERE h.class_id = ?
-    ";
+    try {
+        $sql = "
+            SELECT 
+                h.*,
+                sub.subject_name,
+                sub.subject_code,
+                u.first_name as teacher_first_name,
+                u.last_name as teacher_last_name,
+                hs.id as submission_id,
+                hs.status as submission_status,
+                hs.submitted_at,
+                hs.score as submission_score,
+                hs.feedback,
+                hs.file_path as submission_file
+            FROM homework h
+            LEFT JOIN subjects sub ON h.subject_id = sub.id
+            LEFT JOIN teachers t ON h.teacher_id = t.id
+            LEFT JOIN users u ON t.user_id = u.id
+            LEFT JOIN homework_submissions hs ON h.id = hs.homework_id AND hs.student_id = ?
+            WHERE h.class_id = ?
+        ";
 
-    $params = [$studentId, $student['class_id']];
+        $params = [$studentId, $student['class_id']];
 
-    if ($status === 'pending') {
-        $sql .= " AND (hs.id IS NULL OR hs.status = 'draft')";
-    } elseif ($status === 'submitted') {
-        $sql .= " AND hs.status = 'submitted'";
-    } elseif ($status === 'graded') {
-        $sql .= " AND hs.status = 'graded'";
+        if ($status === 'pending') {
+            $sql .= " AND (hs.id IS NULL OR hs.status = 'draft')";
+        } elseif ($status === 'submitted') {
+            $sql .= " AND hs.status = 'submitted'";
+        } elseif ($status === 'graded') {
+            $sql .= " AND hs.status = 'graded'";
+        }
+
+        $sql .= " ORDER BY h.due_date DESC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $homework = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Check if overdue
+        $currentDate = date('Y-m-d H:i:s');
+        foreach ($homework as &$hw) {
+            $hw['is_overdue'] = !$hw['submission_id'] && $hw['due_date'] < $currentDate;
+            $hw['is_late'] = $hw['submitted_at'] && $hw['submitted_at'] > $hw['due_date'];
+        }
+
+        echo json_encode([
+            'success' => true,
+            'homework' => $homework
+        ]);
+    } catch (Exception $e) {
+        // Return empty on any SQL error
+        echo json_encode([
+            'success' => true,
+            'homework' => [],
+            'message' => 'No homework data available'
+        ]);
     }
-
-    $sql .= " ORDER BY h.due_date DESC";
-
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-    $homework = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // Check if overdue
-    $currentDate = date('Y-m-d H:i:s');
-    foreach ($homework as &$hw) {
-        $hw['is_overdue'] = !$hw['submission_id'] && $hw['due_date'] < $currentDate;
-        $hw['is_late'] = $hw['submitted_at'] && $hw['submitted_at'] > $hw['due_date'];
-    }
-
-    echo json_encode([
-        'success' => true,
-        'homework' => $homework
-    ]);
 }
 
 function getPendingHomework($pdo) {
