@@ -53,8 +53,11 @@ export default function ChildHomeworkView() {
 
   const fetchChildDetails = async () => {
     try {
+      console.log('Fetching child details for childId:', childId);
       const response = await axios.get(`${API_BASE_URL}/parent_portal.php?resource=child_details&child_id=${childId}`);
+      console.log('Child details response:', response.data);
       if (response.data.success) {
+        console.log('Setting child:', response.data.child);
         setChild(response.data.child);
       }
     } catch (error) {
@@ -67,6 +70,8 @@ export default function ChildHomeworkView() {
   const fetchHomework = async () => {
     try {
       // Use child.id (numeric) not child.student_id (admission number string like STU2025002)
+      console.log('Fetching homework for child:', child);
+      console.log('Using student_id:', child.id);
       const response = await axios.get(
         `${API_BASE_URL}/parent_portal.php?resource=homework&student_id=${child.id}`
       );
