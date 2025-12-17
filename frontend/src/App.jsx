@@ -88,6 +88,13 @@ import ParentMessages from './pages/parent/Messages';
 import ParentSettings from './pages/parent/Settings';
 import ChildHomework from './pages/parent/ChildHomework';
 import ChildResults from './pages/parent/ChildResults';
+import ParentDashboardPro from './pages/parent/ParentDashboardPro';
+import ChildAttendance from './pages/parent/ChildAttendance';
+import ChildGrades from './pages/parent/ChildGrades';
+import ChildHomeworkView from './pages/parent/ChildHomeworkView';
+import ChildTeachers from './pages/parent/ChildTeachers';
+import ChildReportCards from './pages/parent/ChildReportCards';
+import ParentMeetings from './pages/parent/ParentMeetings';
 import WhatsAppMessaging from './pages/admin/WhatsAppMessaging';
 import SMSMessaging from './pages/admin/SMSMessaging';
 import EmailMessaging from './pages/admin/EmailMessaging';
@@ -302,13 +309,20 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route path="dashboard" element={<ParentComprehensiveDashboard />} />
+          <Route path="dashboard" element={<ParentDashboardPro />} />
+          <Route path="dashboard-old" element={<ParentComprehensiveDashboard />} />
           <Route path="apply" element={<ApplyForAdmission />} />
-          <Route path="child/:studentId" element={<ChildDetails />} />
+          <Route path="child/:childId" element={<ChildDetails />} />
+          <Route path="child/:childId/attendance" element={<ChildAttendance />} />
+          <Route path="child/:childId/grades" element={<ChildGrades />} />
+          <Route path="child/:childId/homework" element={<ChildHomeworkView />} />
+          <Route path="child/:childId/teachers" element={<ChildTeachers />} />
+          <Route path="child/:childId/report-cards" element={<ChildReportCards />} />
           <Route path="enroll" element={<TermEnrollment />} />
           <Route path="invoices" element={<ParentInvoices />} />
           <Route path="payments" element={<ParentPayments />} />
           <Route path="messages" element={<ParentMessages />} />
+          <Route path="meetings" element={<ParentMeetings />} />
           <Route path="settings" element={<ParentSettings />} />
           <Route path="homework" element={<ChildHomework />} />
           <Route path="results" element={<ChildResults />} />
