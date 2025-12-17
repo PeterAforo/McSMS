@@ -4,7 +4,8 @@ import {
   BookOpen, Users, Calendar, FileText, Clock, Award, TrendingUp, Bell,
   CheckCircle, AlertTriangle, AlertCircle, MessageSquare, UserCheck,
   BarChart3, PieChart, ArrowRight, RefreshCw, Loader2, GraduationCap,
-  ClipboardCheck, TrendingDown, Mail, ChevronRight, Activity
+  ClipboardCheck, TrendingDown, Mail, ChevronRight, Activity, Eye,
+  Target, Zap, Star, BookMarked, UserX, TrendingDown as TrendDown
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
@@ -16,11 +17,7 @@ export default function TeacherDashboard() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
-  const [attendanceToday, setAttendanceToday] = useState({});
-  const [recentMessages, setRecentMessages] = useState([]);
-  const [upcomingEvents, setUpcomingEvents] = useState([]);
-  const [studentAlerts, setStudentAlerts] = useState([]);
-  const [classPerformance, setClassPerformance] = useState([]);
+  const [weeklyStats, setWeeklyStats] = useState(null);
 
   useEffect(() => {
     fetchDashboardData();
@@ -30,206 +27,34 @@ export default function TeacherDashboard() {
     try {
       setLoading(true);
       
-      // Use the comprehensive dashboard API
-      const response = await axios.get(`${API_BASE_URL}/dashboard.php?role=teacher&user_id=${user?.id}`);
+      // Use the new comprehensive teacher dashboard API
+      const response = await axios.get(`${API_BASE_URL}/teacher_dashboard.php?user_id=${user?.id}`);
       
       if (response.data.success) {
         setDashboardData(response.data);
-        
-        // Fetch additional data in parallel
-        await Promise.all([
-          fetchAttendanceStatus(response.data.teacher?.id, response.data.my_classes),
-          fetchRecentMessages(response.data.teacher?.id),
-          fetchUpcomingEvents(),
-          fetchStudentAlerts(response.data.my_classes),
-          fetchClassPerformance(response.data.my_classes)
-        ]);
+        setWeeklyStats(response.data.weekly_stats);
       } else {
-        // Fallback to direct API calls
-        await fetchFallbackData();
+        // Fallback to old API
+        const fallbackRes = await axios.get(`${API_BASE_URL}/dashboard.php?role=teacher&user_id=${user?.id}`);
+        if (fallbackRes.data.success) {
+          setDashboardData({
+            ...fallbackRes.data,
+            classes: fallbackRes.data.my_classes || [],
+            total_students: fallbackRes.data.my_classes?.reduce((sum, c) => sum + (parseInt(c.student_count) || 0), 0) || 0,
+            attendance_status: [],
+            student_alerts: [],
+            class_performance: [],
+            upcoming_events: [],
+            recent_messages: [],
+            weekly_stats: null
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      await fetchFallbackData();
+      setDashboardData(null);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchFallbackData = async () => {
-    try {
-      // Get teacher record first
-      const teacherResponse = await axios.get(`${API_BASE_URL}/teachers.php?user_id=${user?.id}`);
-      const teachers = teacherResponse.data.teachers || [];
-      
-      if (teachers.length === 0) {
-        console.error('No teacher record found');
-        return;
-      }
-      
-      const teacher = teachers[0];
-      const teacherId = teacher.id;
-      
-      // Fetch all dashboard data
-      const [classesRes, homeworkRes, assessmentsRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/classes.php?teacher_id=${teacherId}`),
-        axios.get(`${API_BASE_URL}/academic.php?resource=homework&teacher_id=${teacherId}`),
-        axios.get(`${API_BASE_URL}/academic.php?resource=assessments`)
-      ]);
-      
-      const classes = classesRes.data.classes || [];
-      const homework = homeworkRes.data.homework || [];
-      const allAssessments = assessmentsRes.data.assessments || [];
-      
-      // Get all students from teacher's classes
-      let totalStudents = 0;
-      for (const cls of classes) {
-        const studentsRes = await axios.get(`${API_BASE_URL}/students.php?class_id=${cls.id}`);
-        totalStudents += (studentsRes.data.students || []).length;
-      }
-      
-      setDashboardData({
-        success: true,
-        teacher,
-        my_classes: classes,
-        my_subjects: [],
-        todays_schedule: [],
-        pending_assignments: homework.filter(h => h.status === 'active').length,
-        pending_grades: 0,
-        insights: [],
-        totalStudents
-      });
-      
-      await Promise.all([
-        fetchAttendanceStatus(teacherId, classes),
-        fetchRecentMessages(teacherId),
-        fetchUpcomingEvents(),
-        fetchStudentAlerts(classes),
-        fetchClassPerformance(classes)
-      ]);
-    } catch (error) {
-      console.error('Error in fallback data fetch:', error);
-    }
-  };
-
-  const fetchAttendanceStatus = async (teacherId, classes) => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const attendanceStatus = {};
-      
-      for (const cls of (classes || [])) {
-        try {
-          const response = await axios.get(`${API_BASE_URL}/attendance.php?class_id=${cls.id}&date=${today}`);
-          const records = response.data.attendance || [];
-          attendanceStatus[cls.id] = {
-            marked: records.length > 0,
-            present: records.filter(r => r.status === 'present').length,
-            absent: records.filter(r => r.status === 'absent').length,
-            total: records.length
-          };
-        } catch (e) {
-          attendanceStatus[cls.id] = { marked: false, present: 0, absent: 0, total: 0 };
-        }
-      }
-      
-      setAttendanceToday(attendanceStatus);
-    } catch (error) {
-      console.error('Error fetching attendance:', error);
-    }
-  };
-
-  const fetchRecentMessages = async (teacherId) => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/messages.php?user_id=${user?.id}&limit=5`);
-      setRecentMessages(response.data.messages || []);
-    } catch (error) {
-      // Messages API might not exist, use empty array
-      setRecentMessages([]);
-    }
-  };
-
-  const fetchUpcomingEvents = async () => {
-    try {
-      const response = await axios.get(`${API_BASE_URL}/events.php?upcoming=true&limit=5`);
-      setUpcomingEvents(response.data.events || []);
-    } catch (error) {
-      setUpcomingEvents([]);
-    }
-  };
-
-  const fetchStudentAlerts = async (classes) => {
-    try {
-      const alerts = [];
-      
-      for (const cls of (classes || []).slice(0, 3)) {
-        // Get students with low attendance
-        try {
-          const studentsRes = await axios.get(`${API_BASE_URL}/students.php?class_id=${cls.id}`);
-          const students = studentsRes.data.students || [];
-          
-          // Check for students with issues (simplified check)
-          students.slice(0, 5).forEach(student => {
-            // This would ideally check actual attendance/grade data
-            if (Math.random() < 0.2) { // Placeholder - replace with real logic
-              alerts.push({
-                student_name: `${student.first_name} ${student.last_name}`,
-                class_name: cls.class_name,
-                issue: 'Low attendance',
-                type: 'attendance',
-                student_id: student.id
-              });
-            }
-          });
-        } catch (e) {
-          // Skip if error
-        }
-      }
-      
-      setStudentAlerts(alerts.slice(0, 5));
-    } catch (error) {
-      setStudentAlerts([]);
-    }
-  };
-
-  const fetchClassPerformance = async (classes) => {
-    try {
-      const performance = [];
-      
-      for (const cls of (classes || [])) {
-        try {
-          // Get grades for this class
-          const gradesRes = await axios.get(`${API_BASE_URL}/academic.php?resource=grades&class_id=${cls.id}`);
-          const grades = gradesRes.data.grades || [];
-          
-          if (grades.length > 0) {
-            const avgScore = grades.reduce((sum, g) => sum + (parseFloat(g.marks_obtained) || 0), 0) / grades.length;
-            performance.push({
-              class_id: cls.id,
-              class_name: cls.class_name,
-              average: avgScore.toFixed(1),
-              student_count: cls.student_count || 0
-            });
-          } else {
-            performance.push({
-              class_id: cls.id,
-              class_name: cls.class_name,
-              average: 'N/A',
-              student_count: cls.student_count || 0
-            });
-          }
-        } catch (e) {
-          performance.push({
-            class_id: cls.id,
-            class_name: cls.class_name,
-            average: 'N/A',
-            student_count: cls.student_count || 0
-          });
-        }
-      }
-      
-      setClassPerformance(performance);
-    } catch (error) {
-      setClassPerformance([]);
     }
   };
 
@@ -257,12 +82,23 @@ export default function TeacherDashboard() {
     }
   };
 
-  // Calculate total students across all classes
-  const totalStudents = dashboardData?.my_classes?.reduce((sum, cls) => sum + (parseInt(cls.student_count) || 0), 0) || dashboardData?.totalStudents || 0;
+  // Extract data from dashboard response
+  const teacher = dashboardData?.teacher;
+  const myClasses = dashboardData?.classes || dashboardData?.my_classes || [];
+  const totalStudents = dashboardData?.total_students || myClasses.reduce((sum, cls) => sum + (parseInt(cls.student_count) || 0), 0);
+  const todaysSchedule = dashboardData?.todays_schedule || [];
+  const attendanceStatus = dashboardData?.attendance_status || [];
+  const classPerformance = dashboardData?.class_performance || [];
+  const studentAlerts = dashboardData?.student_alerts || [];
+  const upcomingEvents = dashboardData?.upcoming_events || [];
+  const recentMessages = dashboardData?.recent_messages || [];
+  const pendingHomework = dashboardData?.pending_homework || 0;
+  const homeworkToReview = dashboardData?.homework_to_review || 0;
+  const pendingGrades = dashboardData?.pending_grades || 0;
   
   // Count classes with attendance marked today
-  const classesWithAttendance = Object.values(attendanceToday).filter(a => a.marked).length;
-  const totalClasses = dashboardData?.my_classes?.length || 0;
+  const classesWithAttendance = attendanceStatus.filter(a => a.marked).length;
+  const totalClasses = myClasses.length;
 
   if (loading) {
     return (
@@ -274,11 +110,6 @@ export default function TeacherDashboard() {
       </div>
     );
   }
-
-  const teacher = dashboardData?.teacher;
-  const myClasses = dashboardData?.my_classes || [];
-  const todaysSchedule = dashboardData?.todays_schedule || [];
-  const insights = dashboardData?.insights || [];
 
   return (
     <div className="space-y-6">
@@ -361,8 +192,11 @@ export default function TeacherDashboard() {
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-gray-600 text-sm mb-1">Pending Homework</p>
-              <p className="text-3xl font-bold text-gray-900">{dashboardData?.pending_assignments || 0}</p>
+              <p className="text-gray-600 text-sm mb-1">Homework to Review</p>
+              <p className="text-3xl font-bold text-gray-900">{homeworkToReview}</p>
+              {pendingHomework > 0 && (
+                <p className="text-xs text-orange-600 mt-1">{pendingHomework} active assignments</p>
+              )}
             </div>
             <div className="bg-orange-500 w-12 h-12 rounded-lg flex items-center justify-center">
               <FileText className="w-6 h-6 text-white" />
@@ -377,7 +211,7 @@ export default function TeacherDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-gray-600 text-sm mb-1">Grades to Enter</p>
-              <p className="text-3xl font-bold text-gray-900">{dashboardData?.pending_grades || 0}</p>
+              <p className="text-3xl font-bold text-gray-900">{pendingGrades}</p>
             </div>
             <div className="bg-purple-500 w-12 h-12 rounded-lg flex items-center justify-center">
               <Award className="w-6 h-6 text-white" />
@@ -385,6 +219,38 @@ export default function TeacherDashboard() {
           </div>
         </button>
       </div>
+
+      {/* Weekly Activity Stats */}
+      {weeklyStats && (
+        <div className="card p-6">
+          <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-blue-600" />
+            This Week's Activity
+          </h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-teal-50 rounded-lg p-4 text-center">
+              <ClipboardCheck className="w-6 h-6 text-teal-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-teal-700">{weeklyStats.attendance_marked || 0}</p>
+              <p className="text-xs text-gray-600">Attendance Records</p>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-4 text-center">
+              <FileText className="w-6 h-6 text-blue-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-blue-700">{weeklyStats.homework_assigned || 0}</p>
+              <p className="text-xs text-gray-600">Homework Assigned</p>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-4 text-center">
+              <Award className="w-6 h-6 text-purple-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-purple-700">{weeklyStats.grades_entered || 0}</p>
+              <p className="text-xs text-gray-600">Grades Entered</p>
+            </div>
+            <div className="bg-green-50 rounded-lg p-4 text-center">
+              <MessageSquare className="w-6 h-6 text-green-600 mx-auto mb-2" />
+              <p className="text-2xl font-bold text-green-700">{weeklyStats.messages_sent || 0}</p>
+              <p className="text-xs text-gray-600">Messages Sent</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Attendance Summary */}
       <div className="card p-6">
@@ -416,11 +282,12 @@ export default function TeacherDashboard() {
         </div>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {myClasses.slice(0, 4).map((cls) => {
-            const att = attendanceToday[cls.id] || { marked: false, present: 0, absent: 0 };
+          {(attendanceStatus.length > 0 ? attendanceStatus : myClasses).slice(0, 4).map((item) => {
+            const att = item.marked !== undefined ? item : { marked: false, present: 0, absent: 0 };
+            const className = item.class_name || myClasses.find(c => c.id === item.class_id)?.class_name || 'Class';
             return (
-              <div key={cls.id} className={`p-3 rounded-lg border ${att.marked ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                <p className="font-medium text-sm text-gray-900">{cls.class_name}</p>
+              <div key={item.class_id || item.id} className={`p-3 rounded-lg border ${att.marked ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                <p className="font-medium text-sm text-gray-900">{className}</p>
                 {att.marked ? (
                   <p className="text-xs text-green-600 flex items-center gap-1 mt-1">
                     <CheckCircle className="w-3 h-3" /> {att.present}P / {att.absent}A
