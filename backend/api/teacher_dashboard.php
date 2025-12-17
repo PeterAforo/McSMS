@@ -100,63 +100,85 @@ try {
     // Get today's schedule from timetable
     $todaysSchedule = [];
     if (!empty($classIds)) {
-        $placeholders = implode(',', array_fill(0, count($classIds), '?'));
-        $stmt = $pdo->prepare("
-            SELECT t.*, c.class_name, s.subject_name
-            FROM timetable t
-            LEFT JOIN classes c ON t.class_id = c.id
-            LEFT JOIN subjects s ON t.subject_id = s.id
-            WHERE t.class_id IN ($placeholders) 
-            AND t.teacher_id = ?
-            AND LOWER(t.day_of_week) = ?
-            ORDER BY t.start_time
-        ");
-        $params = array_merge($classIds, [$teacher_id, $dayOfWeek]);
-        $stmt->execute($params);
-        $todaysSchedule = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+            $stmt = $pdo->prepare("
+                SELECT t.*, c.class_name, s.subject_name
+                FROM timetable t
+                LEFT JOIN classes c ON t.class_id = c.id
+                LEFT JOIN subjects s ON t.subject_id = s.id
+                WHERE t.class_id IN ($placeholders) 
+                AND t.teacher_id = ?
+                AND LOWER(t.day_of_week) = ?
+                ORDER BY t.start_time
+            ");
+            $params = array_merge($classIds, [$teacher_id, $dayOfWeek]);
+            $stmt->execute($params);
+            $todaysSchedule = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Timetable table might not exist
+            $todaysSchedule = [];
+        }
     }
 
     // Get attendance status for today
     $attendanceStatus = [];
     foreach ($classes as $class) {
-        $stmt = $pdo->prepare("
-            SELECT 
-                COUNT(*) as total,
-                SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
-                SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
-                SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
-            FROM attendance 
-            WHERE class_id = ? AND date = ?
-        ");
-        $stmt->execute([$class['id'], $today]);
-        $att = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        $attendanceStatus[$class['id']] = [
-            'class_id' => $class['id'],
-            'class_name' => $class['class_name'],
-            'marked' => ($att['total'] ?? 0) > 0,
-            'total' => $att['total'] ?? 0,
-            'present' => $att['present'] ?? 0,
-            'absent' => $att['absent'] ?? 0,
-            'late' => $att['late'] ?? 0,
-            'student_count' => $class['student_count']
-        ];
+        try {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    COUNT(*) as total,
+                    SUM(CASE WHEN status = 'present' THEN 1 ELSE 0 END) as present,
+                    SUM(CASE WHEN status = 'absent' THEN 1 ELSE 0 END) as absent,
+                    SUM(CASE WHEN status = 'late' THEN 1 ELSE 0 END) as late
+                FROM attendance 
+                WHERE class_id = ? AND date = ?
+            ");
+            $stmt->execute([$class['id'], $today]);
+            $att = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            $attendanceStatus[$class['id']] = [
+                'class_id' => $class['id'],
+                'class_name' => $class['class_name'],
+                'marked' => ($att['total'] ?? 0) > 0,
+                'total' => $att['total'] ?? 0,
+                'present' => $att['present'] ?? 0,
+                'absent' => $att['absent'] ?? 0,
+                'late' => $att['late'] ?? 0,
+                'student_count' => $class['student_count']
+            ];
+        } catch (PDOException $e) {
+            $attendanceStatus[$class['id']] = [
+                'class_id' => $class['id'],
+                'class_name' => $class['class_name'],
+                'marked' => false,
+                'total' => 0,
+                'present' => 0,
+                'absent' => 0,
+                'late' => 0,
+                'student_count' => $class['student_count']
+            ];
+        }
     }
 
     // Get pending homework (active homework not yet due)
     $pendingHomework = 0;
     if (!empty($classIds)) {
-        $placeholders = implode(',', array_fill(0, count($classIds), '?'));
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) FROM homework 
-            WHERE class_id IN ($placeholders) 
-            AND teacher_id = ?
-            AND status = 'active'
-            AND due_date >= ?
-        ");
-        $params = array_merge($classIds, [$teacher_id, $today]);
-        $stmt->execute($params);
-        $pendingHomework = $stmt->fetchColumn();
+        try {
+            $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) FROM homework 
+                WHERE class_id IN ($placeholders) 
+                AND teacher_id = ?
+                AND status = 'active'
+                AND due_date >= ?
+            ");
+            $params = array_merge($classIds, [$teacher_id, $today]);
+            $stmt->execute($params);
+            $pendingHomework = $stmt->fetchColumn() ?: 0;
+        } catch (PDOException $e) {
+            $pendingHomework = 0;
+        }
     }
 
     // Get homework submissions to review
