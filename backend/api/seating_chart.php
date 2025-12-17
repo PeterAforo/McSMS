@@ -40,41 +40,48 @@ try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
 
     // Create seating charts table
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS seating_charts (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            class_id INT NOT NULL,
-            teacher_id INT NOT NULL,
-            name VARCHAR(100) DEFAULT 'Default Layout',
-            layout_type ENUM('grid', 'rows', 'groups', 'u_shape', 'custom') DEFAULT 'grid',
-            rows INT DEFAULT 5,
-            columns INT DEFAULT 6,
-            room_name VARCHAR(100),
-            notes TEXT,
-            is_active TINYINT(1) DEFAULT 1,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            INDEX idx_class (class_id),
-            INDEX idx_teacher (teacher_id)
-        )
-    ");
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS seating_charts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                class_id INT NOT NULL,
+                teacher_id INT NOT NULL,
+                name VARCHAR(100) DEFAULT 'Default Layout',
+                layout_type ENUM('grid', 'rows', 'groups', 'u_shape', 'custom') DEFAULT 'grid',
+                rows INT DEFAULT 5,
+                columns INT DEFAULT 6,
+                room_name VARCHAR(100),
+                notes TEXT,
+                is_active TINYINT(1) DEFAULT 1,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_class (class_id),
+                INDEX idx_teacher (teacher_id)
+            )
+        ");
+    } catch (PDOException $e) {
+        // Table might already exist
+    }
 
     // Create seat assignments table
-    $pdo->exec("
-        CREATE TABLE IF NOT EXISTS seat_assignments (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            chart_id INT NOT NULL,
-            student_id INT NOT NULL,
-            row_num INT NOT NULL,
-            col_num INT NOT NULL,
-            seat_label VARCHAR(20),
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE KEY unique_seat (chart_id, row_num, col_num),
-            UNIQUE KEY unique_student (chart_id, student_id),
-            FOREIGN KEY (chart_id) REFERENCES seating_charts(id) ON DELETE CASCADE
-        )
-    ");
+    try {
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS seat_assignments (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                chart_id INT NOT NULL,
+                student_id INT NOT NULL,
+                row_num INT NOT NULL,
+                col_num INT NOT NULL,
+                seat_label VARCHAR(20),
+                notes TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE KEY unique_seat (chart_id, row_num, col_num),
+                UNIQUE KEY unique_student (chart_id, student_id)
+            )
+        ");
+    } catch (PDOException $e) {
+        // Table might already exist
+    }
 
     // GET
     if ($method === 'GET') {
