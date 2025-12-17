@@ -524,7 +524,7 @@ function getChildDetails($pdo, $childId) {
                    s.email, s.phone, s.address,
                    cl.id as class_id, cl.class_name, NULL as section_name, 
                    t.id as class_teacher_id,
-                   CONCAT(u.first_name, ' ', u.last_name) as class_teacher_name
+                   u.name as class_teacher_name
             FROM students s
             LEFT JOIN classes cl ON s.class_id = cl.id
             LEFT JOIN teachers t ON cl.class_teacher_id = t.id
@@ -542,7 +542,7 @@ function getChildDetails($pdo, $childId) {
         // Get guardians from student_guardians table
         try {
             $stmt = $pdo->prepare("
-                SELECT sg.*, p.id as parent_id, u.first_name, u.last_name, u.email, u.phone
+                SELECT sg.*, p.id as parent_id, u.name, u.email, u.phone
                 FROM student_guardians sg
                 JOIN parents p ON sg.parent_id = p.id
                 JOIN users u ON p.user_id = u.id
