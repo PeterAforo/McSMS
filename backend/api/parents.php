@@ -32,8 +32,8 @@ try {
         case 'GET':
             if ($userId) {
                 // Get parent info by user_id
-                // First check if user is a parent
-                $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ? AND user_type = 'parent'");
+                // First get the user
+                $stmt = $pdo->prepare("SELECT * FROM users WHERE id = ?");
                 $stmt->execute([$userId]);
                 $user = $stmt->fetch(PDO::FETCH_ASSOC);
                 
@@ -42,24 +42,53 @@ try {
                     exit;
                 }
                 
-                // Get children linked to this parent by email or phone
+                // Check if user has students linked via students.parent_id (parent_id = user_id for parent users)
                 $children = [];
+                $parentId = null;
+                
+                // Method 1: Check if students.parent_id matches user_id directly
                 try {
                     $stmt = $pdo->prepare("
                         SELECT s.*, c.class_name 
                         FROM students s
                         LEFT JOIN classes c ON s.class_id = c.id
-                        WHERE s.guardian_email = ? OR s.guardian_phone = ?
+                        WHERE s.parent_id = ?
                     ");
-                    $stmt->execute([$user['email'], $user['phone']]);
+                    $stmt->execute([$userId]);
                     $children = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    if (!empty($children)) {
+                        $parentId = $userId;
+                    }
                 } catch (Exception $e) {}
+                
+                // Method 2: Check by guardian email or phone if no direct link
+                if (empty($children)) {
+                    try {
+                        $stmt = $pdo->prepare("
+                            SELECT s.*, c.class_name 
+                            FROM students s
+                            LEFT JOIN classes c ON s.class_id = c.id
+                            WHERE s.guardian_email = ? OR s.guardian_phone = ?
+                        ");
+                        $stmt->execute([$user['email'], $user['phone']]);
+                        $children = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                        if (!empty($children)) {
+                            $parentId = $userId;
+                        }
+                    } catch (Exception $e) {}
+                }
+                
+                // If no children found and user is not parent type, return empty
+                if (empty($children) && $user['user_type'] !== 'parent') {
+                    echo json_encode(['success' => true, 'parents' => []]);
+                    exit;
+                }
                 
                 // Build parent record
                 $parent = [
-                    'id' => $user['id'], // Use user_id as parent_id for consistency
+                    'id' => $parentId ?? $user['id'],
                     'user_id' => $user['id'],
-                    'name' => $user['name'],
+                    'name' => $user['name'] ?? ($user['first_name'] . ' ' . $user['last_name']),
                     'email' => $user['email'],
                     'phone' => $user['phone'],
                     'children' => $children
