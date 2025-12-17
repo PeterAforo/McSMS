@@ -88,7 +88,6 @@ import ParentMessages from './pages/parent/Messages';
 import ParentSettings from './pages/parent/Settings';
 import ChildHomework from './pages/parent/ChildHomework';
 import ChildResults from './pages/parent/ChildResults';
-import ParentProDashboard from './pages/parent/ParentProDashboard';
 import ChildAttendance from './pages/parent/ChildAttendance';
 import ChildGrades from './pages/parent/ChildGrades';
 import ChildHomeworkView from './pages/parent/ChildHomeworkView';
@@ -310,7 +309,6 @@ function App() {
           }
         >
           <Route path="dashboard" element={<ParentComprehensiveDashboard />} />
-          <Route path="dashboard-pro" element={<ParentProDashboard />} />
           <Route path="apply" element={<ApplyForAdmission />} />
           <Route path="child/:childId" element={<ChildDetails />} />
           <Route path="child/:childId/attendance" element={<ChildAttendance />} />

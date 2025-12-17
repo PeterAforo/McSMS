@@ -268,14 +268,7 @@ export default function ParentDashboard() {
           color="indigo"
           onClick={() => setShowFamilyLink(true)}
         />
-        <QuickActionCard
-          icon={<Zap size={24} />}
-          label="Pro Dashboard"
-          description="Advanced view"
-          color="cyan"
-          onClick={() => navigate('/parent/dashboard-pro')}
-        />
-      </div>
+              </div>
 
       {/* Family Link Modal */}
       {showFamilyLink && (
@@ -616,52 +609,43 @@ export default function ParentDashboard() {
                 </div>
               </div>
 
-              {/* Pro Features Section */}
-              <div className="mt-6 bg-gradient-to-r from-purple-50 to-indigo-50 rounded-xl p-6 border border-purple-100">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-semibold text-gray-800 flex items-center gap-2">
-                    <Zap size={18} className="text-purple-600" />
-                    Pro Features
-                  </h4>
-                  <button
-                    onClick={() => navigate('/parent/dashboard-pro')}
-                    className="text-purple-600 hover:text-purple-800 text-sm font-medium flex items-center gap-1"
-                  >
-                    View All <ChevronRight size={16} />
-                  </button>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                  <ProFeatureCard
-                    icon={<BookOpen size={20} />}
-                    label="Homework"
-                    description="Track assignments"
-                    onClick={() => navigate(`/parent/child/${selectedChild.id}/homework`)}
-                  />
-                  <ProFeatureCard
-                    icon={<Calendar size={20} />}
-                    label="Attendance"
-                    description="View calendar"
-                    onClick={() => navigate(`/parent/child/${selectedChild.id}/attendance`)}
-                  />
-                  <ProFeatureCard
-                    icon={<BarChart3 size={20} />}
-                    label="Grades"
-                    description="Performance"
-                    onClick={() => navigate(`/parent/child/${selectedChild.id}/grades`)}
-                  />
-                  <ProFeatureCard
-                    icon={<Users size={20} />}
-                    label="Meetings"
-                    description="Schedule"
-                    onClick={() => navigate('/parent/meetings')}
-                  />
-                  <ProFeatureCard
-                    icon={<FileText size={20} />}
-                    label="Reports"
-                    description="Report cards"
-                    onClick={() => navigate(`/parent/child/${selectedChild.id}/report-cards`)}
-                  />
-                </div>
+              {/* Pro Features Quick Access */}
+              <div className="mt-6 grid grid-cols-2 md:grid-cols-5 gap-3">
+                <button
+                  onClick={() => navigate(`/parent/child/${selectedChild.id}/homework`)}
+                  className="bg-blue-50 hover:bg-blue-100 border border-blue-100 p-4 rounded-xl transition-all flex flex-col items-center gap-2"
+                >
+                  <BookOpen size={24} className="text-blue-600" />
+                  <span className="text-sm font-medium text-gray-800">Homework</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/parent/child/${selectedChild.id}/attendance`)}
+                  className="bg-green-50 hover:bg-green-100 border border-green-100 p-4 rounded-xl transition-all flex flex-col items-center gap-2"
+                >
+                  <Calendar size={24} className="text-green-600" />
+                  <span className="text-sm font-medium text-gray-800">Attendance</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/parent/child/${selectedChild.id}/grades`)}
+                  className="bg-purple-50 hover:bg-purple-100 border border-purple-100 p-4 rounded-xl transition-all flex flex-col items-center gap-2"
+                >
+                  <BarChart3 size={24} className="text-purple-600" />
+                  <span className="text-sm font-medium text-gray-800">Grades</span>
+                </button>
+                <button
+                  onClick={() => navigate('/parent/meetings')}
+                  className="bg-orange-50 hover:bg-orange-100 border border-orange-100 p-4 rounded-xl transition-all flex flex-col items-center gap-2"
+                >
+                  <Users size={24} className="text-orange-600" />
+                  <span className="text-sm font-medium text-gray-800">Meetings</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/parent/child/${selectedChild.id}/report-cards`)}
+                  className="bg-pink-50 hover:bg-pink-100 border border-pink-100 p-4 rounded-xl transition-all flex flex-col items-center gap-2"
+                >
+                  <FileText size={24} className="text-pink-600" />
+                  <span className="text-sm font-medium text-gray-800">Reports</span>
+                </button>
               </div>
             </div>
           )}
