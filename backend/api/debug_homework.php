@@ -124,23 +124,43 @@ try {
         }
     }
 
-    // 10. Check parent_id if provided
+    // 10. Check parent_id if provided (this simulates what parent_portal does)
     $parentId = $_GET['parent_id'] ?? null;
     if ($parentId) {
+        $debug['input_parent_id'] = $parentId;
+        
         // Check if parent_id is user_id or parent table id
         $stmt = $pdo->prepare("SELECT * FROM parents WHERE id = ? OR user_id = ?");
         $stmt->execute([$parentId, $parentId]);
         $debug['parent_record'] = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        // Get children for this parent
+        // Simulate what parent_portal.php does - convert user_id to parent_id
+        $stmt = $pdo->prepare("SELECT id FROM parents WHERE user_id = ?");
+        $stmt->execute([$parentId]);
+        $parent = $stmt->fetch(PDO::FETCH_ASSOC);
+        $actualParentId = $parent ? $parent['id'] : $parentId;
+        $debug['converted_parent_id'] = $actualParentId;
+
+        // Get children for this parent using the converted ID
         $stmt = $pdo->prepare("
             SELECT s.*, c.class_name 
             FROM students s 
             LEFT JOIN classes c ON s.class_id = c.id
             WHERE s.parent_id = ?
         ");
-        $stmt->execute([$parentId]);
+        $stmt->execute([$actualParentId]);
         $debug['children_for_parent'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // If we found children, check homework for their classes
+        if (!empty($debug['children_for_parent'])) {
+            $childWithClass = array_filter($debug['children_for_parent'], fn($c) => $c['class_id']);
+            if (!empty($childWithClass)) {
+                $firstChild = reset($childWithClass);
+                $stmt = $pdo->prepare("SELECT * FROM homework WHERE class_id = ?");
+                $stmt->execute([$firstChild['class_id']]);
+                $debug['homework_for_child_class'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
     }
 
     echo json_encode([
