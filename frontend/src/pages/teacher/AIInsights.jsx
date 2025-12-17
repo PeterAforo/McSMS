@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Brain, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, 
   Users, BookOpen, Clock, Target, Lightbulb, BarChart3, 
@@ -12,6 +13,7 @@ import axios from 'axios';
 
 export default function AIInsights() {
   const { user } = useAuthStore();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
@@ -96,9 +98,42 @@ export default function AIInsights() {
     setRefreshing(false);
   };
 
-  const handleFeedback = (insightId, isPositive) => {
-    // In a real app, this would send feedback to improve AI
-    console.log(`Feedback for insight ${insightId}: ${isPositive ? 'positive' : 'negative'}`);
+  const handleFeedback = async (insightId, isPositive) => {
+    try {
+      await axios.post(`${API_BASE_URL}/ai_insights.php`, {
+        action: 'feedback',
+        teacher_id: teacherData?.id || user?.id,
+        insight_id: insightId,
+        is_positive: isPositive
+      });
+      // Show brief feedback confirmation
+      alert(isPositive ? 'Thanks for the positive feedback!' : 'Thanks for your feedback. We\'ll improve our insights.');
+    } catch (error) {
+      console.error('Error sending feedback:', error);
+    }
+  };
+
+  const handleAlertAction = (action) => {
+    switch (action) {
+      case 'Review Now':
+        navigate('/teacher/grades');
+        break;
+      case 'View Homework':
+        navigate('/teacher/homework');
+        break;
+      case 'Grade Now':
+        navigate('/teacher/grades');
+        break;
+      case 'Mark Attendance':
+        navigate('/teacher/attendance');
+        break;
+      default:
+        console.log('Action:', action);
+    }
+  };
+
+  const handleViewStudentProfile = (studentId) => {
+    navigate(`/teacher/student-progress?student=${studentId}`);
   };
 
   const getStatusColor = (status) => {
@@ -223,7 +258,10 @@ export default function AIInsights() {
                   <p className="text-sm text-gray-600">{alert.description}</p>
                 </div>
               </div>
-              <button className="btn btn-sm bg-white shadow-sm">{alert.action}</button>
+              <button 
+                onClick={() => handleAlertAction(alert.action)}
+                className="btn btn-sm bg-white shadow-sm"
+              >{alert.action}</button>
             </div>
           ))}
         </div>
@@ -401,7 +439,10 @@ export default function AIInsights() {
                     <td className="py-3 px-4 text-sm text-gray-600 max-w-xs">{student.reason}</td>
                     <td className="py-3 px-4 text-sm text-gray-600 max-w-xs">{student.recommendation}</td>
                     <td className="py-3 px-4">
-                      <button className="btn btn-sm bg-blue-100 text-blue-700 hover:bg-blue-200">
+                      <button 
+                        onClick={() => handleViewStudentProfile(student.id)}
+                        className="btn btn-sm bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      >
                         View Profile
                       </button>
                     </td>
