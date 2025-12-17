@@ -28,11 +28,20 @@ export default function ChildHomework() {
 
   const fetchChildren = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/students.php?parent_id=${user?.id}`);
-      const childrenData = response.data.students || [];
-      setChildren(childrenData);
-      if (childrenData.length > 0) {
-        setSelectedChild(childrenData[0]);
+      // Use parent_portal API which handles user_id to parent_id conversion
+      const response = await axios.get(`${API_BASE_URL}/parent_portal.php?resource=children&parent_id=${user?.id}`);
+      const childrenData = response.data.children || [];
+      // Map to expected format
+      const mappedChildren = childrenData.map(c => ({
+        id: c.child_id || c.student_id,
+        student_id: c.student_id,
+        full_name: c.full_name,
+        class_name: c.class_name,
+        class_id: c.class_id
+      }));
+      setChildren(mappedChildren);
+      if (mappedChildren.length > 0) {
+        setSelectedChild(mappedChildren[0]);
       }
     } catch (error) {
       console.error('Error fetching children:', error);
@@ -44,7 +53,8 @@ export default function ChildHomework() {
   const fetchHomework = async (studentId) => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/homework.php?action=student_homework&student_id=${studentId}`);
+      // Use parent_portal API which is already fixed for production schema
+      const response = await axios.get(`${API_BASE_URL}/parent_portal.php?resource=homework&student_id=${studentId}`);
       setHomework(response.data.homework || []);
     } catch (error) {
       console.error('Error fetching homework:', error);

@@ -281,31 +281,15 @@ function getStudentHomework($pdo) {
                 h.*,
                 sub.subject_name,
                 sub.subject_code,
-                u.first_name as teacher_first_name,
-                u.last_name as teacher_last_name,
-                hs.id as submission_id,
-                hs.status as submission_status,
-                hs.submitted_at,
-                hs.score as submission_score,
-                hs.feedback,
-                hs.file_path as submission_file
+                u.name as teacher_name
             FROM homework h
             LEFT JOIN subjects sub ON h.subject_id = sub.id
             LEFT JOIN teachers t ON h.teacher_id = t.id
             LEFT JOIN users u ON t.user_id = u.id
-            LEFT JOIN homework_submissions hs ON h.id = hs.homework_id AND hs.student_id = ?
             WHERE h.class_id = ?
         ";
 
-        $params = [$studentId, $student['class_id']];
-
-        if ($status === 'pending') {
-            $sql .= " AND (hs.id IS NULL OR hs.status = 'draft')";
-        } elseif ($status === 'submitted') {
-            $sql .= " AND hs.status = 'submitted'";
-        } elseif ($status === 'graded') {
-            $sql .= " AND hs.status = 'graded'";
-        }
+        $params = [$student['class_id']];
 
         $sql .= " ORDER BY h.due_date DESC";
 
@@ -313,11 +297,11 @@ function getStudentHomework($pdo) {
         $stmt->execute($params);
         $homework = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Check if overdue
+        // Check if overdue based on due date
         $currentDate = date('Y-m-d H:i:s');
         foreach ($homework as &$hw) {
-            $hw['is_overdue'] = !$hw['submission_id'] && $hw['due_date'] < $currentDate;
-            $hw['is_late'] = $hw['submitted_at'] && $hw['submitted_at'] > $hw['due_date'];
+            $hw['is_overdue'] = $hw['due_date'] < $currentDate;
+            $hw['status'] = $hw['is_overdue'] ? 'overdue' : 'pending';
         }
 
         echo json_encode([
