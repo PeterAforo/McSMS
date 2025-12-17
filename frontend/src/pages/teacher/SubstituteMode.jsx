@@ -55,15 +55,12 @@ export default function SubstituteMode() {
           axios.get(`${API_BASE_URL}/substitute_mode.php?teacher_id=${currentTeacher.id}`)
         ]);
 
-        const teacherSubjects = classesRes.data.teacher_subjects || [];
-        const uniqueClasses = [];
-        const classIds = new Set();
-        teacherSubjects.forEach(ts => {
-          if (!classIds.has(ts.class_id)) {
-            classIds.add(ts.class_id);
-            uniqueClasses.push({ id: ts.class_id, class_name: ts.class_name });
-          }
-        });
+        // Use teacher_classes from API response
+        const teacherClasses = classesRes.data.teacher_classes || [];
+        const uniqueClasses = teacherClasses.map(tc => ({
+          id: tc.class_id,
+          class_name: tc.class_name
+        }));
         
         setClasses(uniqueClasses);
         setNotes(notesRes.data.notes || []);
