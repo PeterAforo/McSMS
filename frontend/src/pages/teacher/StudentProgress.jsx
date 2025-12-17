@@ -64,16 +64,15 @@ export default function StudentProgress() {
         setTeacherId(teachers[0].id);
         
         const classesRes = await axios.get(`${API_BASE_URL}/teacher_subjects.php?teacher_id=${teachers[0].id}`);
-        const teacherSubjects = classesRes.data.teacher_subjects || [];
         
-        const uniqueClasses = [];
-        const classIds = new Set();
-        teacherSubjects.forEach(ts => {
-          if (!classIds.has(ts.class_id)) {
-            classIds.add(ts.class_id);
-            uniqueClasses.push({ id: ts.class_id, class_name: ts.class_name });
-          }
-        });
+        // Use teacher_classes from API response (new field)
+        const teacherClasses = classesRes.data.teacher_classes || [];
+        
+        // Map to expected format
+        const uniqueClasses = teacherClasses.map(tc => ({
+          id: tc.class_id,
+          class_name: tc.class_name
+        }));
         
         setClasses(uniqueClasses);
         if (uniqueClasses.length > 0) {

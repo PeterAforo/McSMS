@@ -48,6 +48,7 @@ try {
         }
 
         $teacherSubjects = [];
+        $teacherClasses = [];
         
         // Try to get subjects via class_subjects table
         try {
@@ -81,10 +82,50 @@ try {
                 $teacherSubjects = [];
             }
         }
+        
+        // Also get teacher's classes (for pages that need class list)
+        try {
+            // First try via class_subjects
+            $stmt = $pdo->prepare("
+                SELECT DISTINCT c.id as class_id, c.class_name, c.education_level
+                FROM classes c
+                INNER JOIN class_subjects cs ON c.id = cs.class_id
+                WHERE cs.teacher_id = ? AND c.status = 'active'
+                ORDER BY c.class_name
+            ");
+            $stmt->execute([$teacher_id]);
+            $teacherClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Try via teachers table class_id
+            try {
+                $stmt = $pdo->prepare("
+                    SELECT c.id as class_id, c.class_name, c.education_level
+                    FROM classes c
+                    INNER JOIN teachers t ON c.id = t.class_id
+                    WHERE t.id = ? AND c.status = 'active'
+                    ORDER BY c.class_name
+                ");
+                $stmt->execute([$teacher_id]);
+                $teacherClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $e2) {
+                $teacherClasses = [];
+            }
+        }
+        
+        // If no classes found via relationships, get all active classes as fallback
+        if (empty($teacherClasses)) {
+            try {
+                $stmt = $pdo->query("SELECT id as class_id, class_name, education_level FROM classes WHERE status = 'active' ORDER BY class_name LIMIT 20");
+                $teacherClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $teacherClasses = [];
+            }
+        }
 
         echo json_encode([
             'success' => true,
             'teacher_subjects' => $teacherSubjects,
+            'teacher_classes' => $teacherClasses,
             'count' => count($teacherSubjects)
         ]);
     } else {
