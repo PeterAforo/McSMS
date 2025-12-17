@@ -163,12 +163,42 @@ try {
         }
     }
 
+    // 11. Test child_details endpoint response (simulates what frontend gets)
+    $childId = $_GET['child_id'] ?? null;
+    if ($childId) {
+        $stmt = $pdo->prepare("
+            SELECT s.id, s.id as student_id, s.student_id as admission_no, 
+                   CONCAT(s.first_name, ' ', s.last_name) as full_name,
+                   s.class_id, cl.class_name
+            FROM students s
+            LEFT JOIN classes cl ON s.class_id = cl.id
+            WHERE s.id = ?
+        ");
+        $stmt->execute([$childId]);
+        $debug['child_details_response'] = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        // Now test homework fetch with this child's id
+        if ($debug['child_details_response']) {
+            $numericId = $debug['child_details_response']['id'];
+            $classId = $debug['child_details_response']['class_id'];
+            $debug['homework_fetch_using_id'] = $numericId;
+            $debug['homework_fetch_class_id'] = $classId;
+            
+            if ($classId) {
+                $stmt = $pdo->prepare("SELECT * FROM homework WHERE class_id = ?");
+                $stmt->execute([$classId]);
+                $debug['homework_result'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            }
+        }
+    }
+
     echo json_encode([
         'success' => true,
         'debug' => $debug,
         'instructions' => [
             'To check specific student: Add ?student_id=X to URL',
             'To check specific parent: Add ?parent_id=X to URL',
+            'To check child details flow: Add ?child_id=X to URL',
             'Look at homework_class_student_mapping to see if homework classes match student classes'
         ]
     ], JSON_PRETTY_PRINT);
