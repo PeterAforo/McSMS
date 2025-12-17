@@ -747,7 +747,7 @@ function getHomework($pdo, $studentId) {
 
         $stmt = $pdo->prepare("
             SELECT h.*, sub.subject_name, sub.subject_code,
-                   CONCAT(u.first_name, ' ', u.last_name) as teacher_name,
+                   u.name as teacher_name,
                    hs.id as submission_id, hs.status as submission_status, 
                    hs.submitted_at, hs.grade, hs.feedback
             FROM homework h
