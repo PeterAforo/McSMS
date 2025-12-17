@@ -18,7 +18,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once __DIR__ . '/../../config/database.php';
+// Try multiple config paths for compatibility
+$configPaths = [
+    __DIR__ . '/../../config/database.php',
+    $_SERVER['DOCUMENT_ROOT'] . '/config/database.php',
+    dirname(__DIR__, 2) . '/config/database.php'
+];
+$configLoaded = false;
+foreach ($configPaths as $path) {
+    if (file_exists($path)) {
+        require_once $path;
+        $configLoaded = true;
+        break;
+    }
+}
+if (!$configLoaded) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Config file not found']);
+    exit();
+}
 
 try {
     $pdo = new PDO(
@@ -232,8 +250,8 @@ function getStudentHomework($pdo) {
     $sql = "
         SELECT 
             h.*,
-            sub.name as subject_name,
-            sub.code as subject_code,
+            sub.subject_name,
+            sub.subject_code,
             t.first_name as teacher_first_name,
             t.last_name as teacher_last_name,
             hs.id as submission_id,
