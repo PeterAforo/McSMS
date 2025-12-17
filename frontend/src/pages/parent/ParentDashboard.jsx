@@ -3,12 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
+import FamilyLinkCode from '../../components/parent/FamilyLinkCode';
 import {
   Users, GraduationCap, BookOpen, Calendar, Award, DollarSign, CheckCircle,
   AlertTriangle, Info, Brain, TrendingUp, ArrowUpRight, User, Bell, FileText,
   CreditCard, BarChart3, Heart, Eye, Clock, Target, Zap, ChevronRight,
   PieChart, Activity, Star, MessageSquare, ClipboardList, UserPlus, Sparkles,
-  TrendingDown, BookMarked, School, Wallet, Receipt, ArrowRight
+  TrendingDown, BookMarked, School, Wallet, Receipt, ArrowRight, Link2, X
 } from 'lucide-react';
 
 export default function ParentDashboard() {
@@ -19,6 +20,7 @@ export default function ParentDashboard() {
   const [selectedChild, setSelectedChild] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
   const [failedImages, setFailedImages] = useState({});
+  const [showFamilyLink, setShowFamilyLink] = useState(false);
 
   // Helper to get photo URL
   const getPhotoUrl = (photo) => {
@@ -259,7 +261,36 @@ export default function ParentDashboard() {
           color="pink"
           onClick={() => selectedChild && navigate(`/parent/child/${selectedChild.id}`)}
         />
+        <QuickActionCard
+          icon={<Link2 size={24} />}
+          label="Family Link"
+          description="Add parent"
+          color="indigo"
+          onClick={() => setShowFamilyLink(true)}
+        />
       </div>
+
+      {/* Family Link Modal */}
+      {showFamilyLink && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-md w-full">
+            <button
+              onClick={() => setShowFamilyLink(false)}
+              className="absolute -top-2 -right-2 z-10 p-2 bg-white rounded-full shadow-lg hover:bg-gray-100"
+            >
+              <X size={20} />
+            </button>
+            <FamilyLinkCode
+              parentId={user?.id}
+              children={children}
+              onLinkSuccess={() => {
+                setShowFamilyLink(false);
+                fetchDashboardData();
+              }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Application & Enrollment Status */}
       {(applications.length > 0 || pendingApplications > 0) && (

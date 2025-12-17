@@ -1165,15 +1165,15 @@ function removeGuardian($pdo, $id) {
 
 function generateLinkCode($pdo, $data) {
     try {
-        // Generate unique code
-        $code = strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 8));
+        // Generate unique code like FAM-XXXXXX
+        $code = 'FAM-' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 6));
         
         // Expires in 7 days
         $expiresAt = date('Y-m-d H:i:s', strtotime('+7 days'));
 
         $stmt = $pdo->prepare("
-            INSERT INTO family_link_codes (student_id, link_code, created_by, expires_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO family_link_codes (student_id, code, generated_by, expires_at, status)
+            VALUES (?, ?, ?, ?, 'active')
         ");
         $stmt->execute([
             $data['child_id'] ?? $data['student_id'],
@@ -1198,7 +1198,7 @@ function useLinkCode($pdo, $data) {
         // Find valid link code
         $stmt = $pdo->prepare("
             SELECT * FROM family_link_codes 
-            WHERE link_code = ? AND status = 'active' AND expires_at > NOW()
+            WHERE code = ? AND status = 'active' AND expires_at > NOW()
         ");
         $stmt->execute([$data['link_code']]);
         $linkCode = $stmt->fetch(PDO::FETCH_ASSOC);
