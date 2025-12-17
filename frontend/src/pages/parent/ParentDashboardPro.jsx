@@ -48,9 +48,14 @@ export default function ParentDashboardPro() {
       const response = await axios.get(`${API_BASE_URL}/parents.php?user_id=${user?.id}`);
       if (response.data.parents && response.data.parents.length > 0) {
         setParentId(response.data.parents[0].id);
+      } else {
+        // Fallback: use user.id directly as parent_id
+        setParentId(user?.id);
       }
     } catch (error) {
       console.error('Error fetching parent ID:', error);
+      // Fallback on error: use user.id directly
+      setParentId(user?.id);
     }
   };
 
