@@ -480,31 +480,40 @@ function getDashboard($pdo, $parentId) {
             // Get average score from assessment_grades
             try {
                 $stmt = $pdo->prepare("
-                    SELECT AVG(ROUND((ag.marks_obtained / a.total_marks) * 100, 1)) as avg_score
+                    SELECT 
+                        SUM(ag.marks_obtained) as total_marks,
+                        SUM(a.total_marks) as max_marks
                     FROM assessment_grades ag
                     JOIN assessments a ON ag.assessment_id = a.id
                     WHERE ag.student_id = ?
                 ");
                 $stmt->execute(array($studentId));
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                $summary['average_score'] = $result && $result['avg_score'] ? round(floatval($result['avg_score']), 1) : 0;
+                if ($result && $result['max_marks'] > 0) {
+                    $summary['average_score'] = round(($result['total_marks'] / $result['max_marks']) * 100, 1);
+                }
             } catch (Exception $e) {}
             
             // Also include homework grades in average
             try {
                 $stmt = $pdo->prepare("
-                    SELECT AVG(ROUND((hs.marks_obtained / h.total_marks) * 100, 1)) as avg_score
+                    SELECT 
+                        SUM(hs.marks_obtained) as total_marks,
+                        SUM(h.total_marks) as max_marks
                     FROM homework_submissions hs
                     JOIN homework h ON hs.homework_id = h.id
                     WHERE hs.student_id = ? AND hs.status = 'graded' AND hs.marks_obtained IS NOT NULL
                 ");
                 $stmt->execute(array($studentId));
                 $hwResult = $stmt->fetch(PDO::FETCH_ASSOC);
-                if ($hwResult && $hwResult['avg_score'] && $summary['average_score'] == 0) {
-                    $summary['average_score'] = round(floatval($hwResult['avg_score']), 1);
-                } elseif ($hwResult && $hwResult['avg_score'] && $summary['average_score'] > 0) {
-                    // Average of both
-                    $summary['average_score'] = round(($summary['average_score'] + floatval($hwResult['avg_score'])) / 2, 1);
+                if ($hwResult && $hwResult['max_marks'] > 0) {
+                    $hwAvg = round(($hwResult['total_marks'] / $hwResult['max_marks']) * 100, 1);
+                    if ($summary['average_score'] == 0) {
+                        $summary['average_score'] = $hwAvg;
+                    } else {
+                        // Average of both
+                        $summary['average_score'] = round(($summary['average_score'] + $hwAvg) / 2, 1);
+                    }
                 }
             } catch (Exception $e) {}
             
