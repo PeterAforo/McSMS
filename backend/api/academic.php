@@ -342,12 +342,12 @@ try {
             case 'POST':
                 if ($action === 'bulk') {
                     $data = json_decode(file_get_contents('php://input'), true);
-                    $assessment_id = $data['assessment_id'] ?? null;
-                    $grades = $data['grades'] ?? [];
-                    $graded_by = $data['graded_by'] ?? 1;
+                    $assessment_id = isset($data['assessment_id']) ? $data['assessment_id'] : null;
+                    $grades = isset($data['grades']) ? $data['grades'] : array();
+                    $graded_by = isset($data['graded_by']) ? $data['graded_by'] : 1;
 
                     if (!$assessment_id || empty($grades)) {
-                        echo json_encode(['success' => false, 'error' => 'Assessment ID and grades required']);
+                        echo json_encode(array('success' => false, 'error' => 'Assessment ID and grades required', 'received' => $data));
                         break;
                     }
 
@@ -368,31 +368,40 @@ try {
                             UNIQUE KEY unique_assessment_student (assessment_id, student_id)
                         )");
 
+                        $savedCount = 0;
                         foreach ($grades as $grade) {
-                            $stmt = $pdo->prepare("
-                                INSERT INTO assessment_grades (assessment_id, student_id, marks_obtained, grade, comment, graded_by)
-                                VALUES (?, ?, ?, ?, ?, ?)
-                                ON DUPLICATE KEY UPDATE 
-                                    marks_obtained = VALUES(marks_obtained),
-                                    grade = VALUES(grade),
-                                    comment = VALUES(comment),
-                                    graded_by = VALUES(graded_by),
-                                    graded_at = NOW()
-                            ");
-                            $stmt->execute([
-                                $assessment_id,
-                                $grade['student_id'],
-                                $grade['marks_obtained'],
-                                $grade['grade'] ?? null,
-                                $grade['comment'] ?? '',
-                                $graded_by
-                            ]);
+                            $studentId = isset($grade['student_id']) ? $grade['student_id'] : null;
+                            $marksObtained = isset($grade['marks_obtained']) ? $grade['marks_obtained'] : null;
+                            $gradeValue = isset($grade['grade']) ? $grade['grade'] : null;
+                            $comment = isset($grade['comment']) ? $grade['comment'] : '';
+                            
+                            if ($studentId && $marksObtained !== null && $marksObtained !== '') {
+                                $stmt = $pdo->prepare("
+                                    INSERT INTO assessment_grades (assessment_id, student_id, marks_obtained, grade, comment, graded_by)
+                                    VALUES (?, ?, ?, ?, ?, ?)
+                                    ON DUPLICATE KEY UPDATE 
+                                        marks_obtained = VALUES(marks_obtained),
+                                        grade = VALUES(grade),
+                                        comment = VALUES(comment),
+                                        graded_by = VALUES(graded_by),
+                                        graded_at = NOW()
+                                ");
+                                $stmt->execute(array(
+                                    $assessment_id,
+                                    $studentId,
+                                    $marksObtained,
+                                    $gradeValue,
+                                    $comment,
+                                    $graded_by
+                                ));
+                                $savedCount++;
+                            }
                         }
                         $pdo->commit();
-                        echo json_encode(['success' => true, 'message' => 'Grades saved successfully', 'count' => count($grades)]);
+                        echo json_encode(array('success' => true, 'message' => 'Grades saved successfully', 'count' => $savedCount));
                     } catch (Exception $e) {
                         $pdo->rollBack();
-                        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                        echo json_encode(array('success' => false, 'error' => $e->getMessage()));
                     }
                 } else {
                     // Single grade save
@@ -407,15 +416,15 @@ try {
                             graded_by = VALUES(graded_by),
                             graded_at = NOW()
                     ");
-                    $stmt->execute([
+                    $stmt->execute(array(
                         $data['assessment_id'],
                         $data['student_id'],
                         $data['marks_obtained'],
-                        $data['grade'] ?? null,
-                        $data['comment'] ?? '',
-                        $data['graded_by'] ?? 1
-                    ]);
-                    echo json_encode(['success' => true]);
+                        isset($data['grade']) ? $data['grade'] : null,
+                        isset($data['comment']) ? $data['comment'] : '',
+                        isset($data['graded_by']) ? $data['graded_by'] : 1
+                    ));
+                    echo json_encode(array('success' => true));
                 }
                 break;
         }
