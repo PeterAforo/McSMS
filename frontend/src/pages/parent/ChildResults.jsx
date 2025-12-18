@@ -33,11 +33,21 @@ export default function ChildResults() {
 
   const fetchChildren = async () => {
     try {
-      const response = await axios.get(`${API_BASE_URL}/students.php?parent_id=${user?.id}`);
-      const childrenData = response.data.students || [];
-      setChildren(childrenData);
-      if (childrenData.length > 0) {
-        setSelectedChild(childrenData[0]);
+      // Use parent_portal API which handles user_id to parent_id conversion
+      const response = await axios.get(`${API_BASE_URL}/parent_portal.php?resource=children&parent_id=${user?.id}`);
+      const childrenData = response.data.children || [];
+      const mappedChildren = childrenData.map(c => ({
+        id: c.child_id || c.student_id,
+        student_id: c.student_id,
+        first_name: c.full_name?.split(' ')[0] || '',
+        last_name: c.full_name?.split(' ').slice(1).join(' ') || '',
+        full_name: c.full_name,
+        class_name: c.class_name,
+        class_id: c.class_id
+      }));
+      setChildren(mappedChildren);
+      if (mappedChildren.length > 0) {
+        setSelectedChild(mappedChildren[0]);
       }
     } catch (error) {
       console.error('Error fetching children:', error);

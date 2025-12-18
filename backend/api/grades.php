@@ -66,119 +66,185 @@ try {
 function getGrades($pdo, $studentId, $termId, $classId) {
     // If no student_id provided, return empty
     if (!$studentId) {
-        echo json_encode([
+        echo json_encode(array(
             'success' => true,
-            'grades' => [],
+            'grades' => array(),
             'summary' => null,
             'message' => 'Student ID is required'
-        ]);
-        return;
-    }
-
-    // Check if exam_results table exists
-    try {
-        $tableCheck = $pdo->query("SHOW TABLES LIKE 'exam_results'");
-        if ($tableCheck->rowCount() === 0) {
-            echo json_encode([
-                'success' => true,
-                'grades' => [],
-                'summary' => null,
-                'message' => 'Grades feature not yet configured'
-            ]);
-            return;
-        }
-    } catch (Exception $e) {
-        echo json_encode([
-            'success' => true,
-            'grades' => [],
-            'summary' => null,
-            'message' => 'Grades feature not available'
-        ]);
+        ));
         return;
     }
 
     // Get student info
     $stmt = $pdo->prepare("SELECT id, first_name, last_name, class_id FROM students WHERE id = ?");
-    $stmt->execute([$studentId]);
+    $stmt->execute(array($studentId));
     $student = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$student) {
-        echo json_encode([
+        echo json_encode(array(
             'success' => true,
-            'grades' => [],
+            'grades' => array(),
             'summary' => null,
             'message' => 'Student not found'
-        ]);
+        ));
         return;
     }
 
+    $grades = array();
+    
+    // Get grades from assessment_grades table
     try {
-        // Try to get grades from exam_results
         $sql = "
             SELECT 
-                er.id,
-                er.student_id,
-                er.marks_obtained as score,
-                er.percentage,
-                er.grade,
-                er.remarks,
-                es.exam_name,
-                es.exam_date,
-                es.total_marks as max_score,
+                ag.id,
+                ag.student_id,
+                ag.marks_obtained as score,
+                ag.grade,
+                ag.comment as remarks,
+                a.assessment_name as exam_name,
+                a.assessment_date as exam_date,
+                a.total_marks as max_score,
+                a.assessment_type,
                 s.subject_name,
                 s.subject_code,
-                t.name as term_name
-            FROM exam_results er
-            LEFT JOIN exam_schedules es ON er.exam_schedule_id = es.id
-            LEFT JOIN subjects s ON es.subject_id = s.id
-            LEFT JOIN terms t ON es.term_id = t.id
-            WHERE er.student_id = ?
+                t.name as term_name,
+                ROUND((ag.marks_obtained / a.total_marks) * 100, 1) as percentage
+            FROM assessment_grades ag
+            JOIN assessments a ON ag.assessment_id = a.id
+            LEFT JOIN subjects s ON a.subject_id = s.id
+            LEFT JOIN terms t ON a.term_id = t.id
+            WHERE ag.student_id = ?
         ";
         
-        $params = [$studentId];
+        $params = array($studentId);
         
         if ($termId) {
-            $sql .= " AND es.term_id = ?";
+            $sql .= " AND a.term_id = ?";
             $params[] = $termId;
         }
         
-        $sql .= " ORDER BY es.exam_date DESC, s.subject_name";
+        $sql .= " ORDER BY a.assessment_date DESC, s.subject_name";
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Calculate summary
-        $summary = null;
-        if (count($grades) > 0) {
-            $totalScore = 0;
-            $totalMax = 0;
-            foreach ($grades as $grade) {
-                $totalScore += floatval($grade['score'] ?? 0);
-                $totalMax += floatval($grade['max_score'] ?? 100);
-            }
-            $summary = [
-                'total_subjects' => count($grades),
-                'average_score' => $totalMax > 0 ? round(($totalScore / $totalMax) * 100, 2) : 0,
-                'total_marks' => $totalScore,
-                'max_marks' => $totalMax
-            ];
-        }
-
-        echo json_encode([
-            'success' => true,
-            'grades' => $grades,
-            'summary' => $summary,
-            'student' => $student
-        ]);
-
     } catch (Exception $e) {
-        // Return empty on any SQL error
-        echo json_encode([
-            'success' => true,
-            'grades' => [],
-            'summary' => null,
-            'message' => 'No grades data available'
-        ]);
+        // assessment_grades table might not exist, continue with empty
     }
+
+    // Also get graded homework submissions
+    try {
+        $hwSql = "
+            SELECT 
+                hs.id,
+                hs.student_id,
+                hs.marks_obtained as score,
+                hs.grade,
+                hs.feedback as remarks,
+                h.title as exam_name,
+                h.due_date as exam_date,
+                h.total_marks as max_score,
+                'Homework' as assessment_type,
+                s.subject_name,
+                s.subject_code,
+                t.name as term_name,
+                ROUND((hs.marks_obtained / h.total_marks) * 100, 1) as percentage
+            FROM homework_submissions hs
+            JOIN homework h ON hs.homework_id = h.id
+            LEFT JOIN subjects s ON h.subject_id = s.id
+            LEFT JOIN terms t ON h.term_id = t.id
+            WHERE hs.student_id = ? AND hs.status = 'graded' AND hs.marks_obtained IS NOT NULL
+        ";
+        
+        $hwParams = array($studentId);
+        
+        if ($termId) {
+            $hwSql .= " AND h.term_id = ?";
+            $hwParams[] = $termId;
+        }
+        
+        $hwSql .= " ORDER BY h.due_date DESC";
+        
+        $stmt = $pdo->prepare($hwSql);
+        $stmt->execute($hwParams);
+        $hwGrades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Merge homework grades with assessment grades
+        $grades = array_merge($grades, $hwGrades);
+    } catch (Exception $e) {
+        // homework tables might not exist, continue
+    }
+
+    // Group grades by subject for summary
+    $subjectGrades = array();
+    foreach ($grades as $grade) {
+        $subjectName = isset($grade['subject_name']) ? $grade['subject_name'] : 'General';
+        if (!isset($subjectGrades[$subjectName])) {
+            $subjectGrades[$subjectName] = array(
+                'subject_name' => $subjectName,
+                'subject_code' => isset($grade['subject_code']) ? $grade['subject_code'] : '',
+                'total_score' => 0,
+                'total_max' => 0,
+                'count' => 0,
+                'assessments' => array()
+            );
+        }
+        $subjectGrades[$subjectName]['total_score'] += floatval($grade['score']);
+        $subjectGrades[$subjectName]['total_max'] += floatval($grade['max_score']);
+        $subjectGrades[$subjectName]['count']++;
+        $subjectGrades[$subjectName]['assessments'][] = $grade;
+    }
+
+    // Calculate subject averages
+    $subjectResults = array();
+    foreach ($subjectGrades as $subject => $data) {
+        $percentage = $data['total_max'] > 0 ? round(($data['total_score'] / $data['total_max']) * 100, 1) : 0;
+        $percentage = min($percentage, 100); // Cap at 100%
+        
+        // Calculate grade
+        $grade = 'F';
+        if ($percentage >= 90) $grade = 'A+';
+        else if ($percentage >= 80) $grade = 'A';
+        else if ($percentage >= 70) $grade = 'B';
+        else if ($percentage >= 60) $grade = 'C';
+        else if ($percentage >= 50) $grade = 'D';
+        
+        $subjectResults[] = array(
+            'subject_name' => $data['subject_name'],
+            'subject_code' => $data['subject_code'],
+            'total' => $percentage,
+            'grade' => $grade,
+            'score' => $data['total_score'],
+            'max_score' => $data['total_max'],
+            'assessment_count' => $data['count'],
+            'assessments' => $data['assessments']
+        );
+    }
+
+    // Calculate overall summary
+    $summary = null;
+    if (count($grades) > 0) {
+        $totalScore = 0;
+        $totalMax = 0;
+        foreach ($grades as $grade) {
+            $totalScore += floatval($grade['score']);
+            $totalMax += floatval($grade['max_score']);
+        }
+        $avgPercentage = $totalMax > 0 ? min(round(($totalScore / $totalMax) * 100, 2), 100) : 0;
+        
+        $summary = array(
+            'total_subjects' => count($subjectResults),
+            'average_score' => $avgPercentage,
+            'total_marks' => $totalScore,
+            'max_marks' => $totalMax
+        );
+    }
+
+    echo json_encode(array(
+        'success' => true,
+        'grades' => $subjectResults,
+        'all_assessments' => $grades,
+        'summary' => $summary,
+        'student' => $student
+    ));
 }
