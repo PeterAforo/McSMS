@@ -209,66 +209,66 @@ function submitHomework($pdo) {
 function gradeSubmission($pdo) {
     $data = json_decode(file_get_contents('php://input'), true);
     
-    $submissionId = $data['submission_id'] ?? $_GET['id'] ?? null;
-    $score = $data['score'] ?? $data['marks_obtained'] ?? null;
-    $feedback = $data['feedback'] ?? '';
-    $gradedBy = $data['graded_by'] ?? null;
+    $submissionId = isset($data['submission_id']) ? $data['submission_id'] : (isset($_GET['id']) ? $_GET['id'] : null);
+    $score = isset($data['score']) ? $data['score'] : (isset($data['marks_obtained']) ? $data['marks_obtained'] : null);
+    $feedback = isset($data['feedback']) ? $data['feedback'] : '';
+    $gradedBy = isset($data['graded_by']) ? $data['graded_by'] : null;
     
     if (!$submissionId) {
-        echo json_encode(['success' => false, 'error' => 'Submission ID is required']);
+        echo json_encode(array('success' => false, 'error' => 'Submission ID is required'));
         return;
     }
     
+    // Update both score and marks_obtained columns for compatibility
     $stmt = $pdo->prepare("
         UPDATE homework_submissions 
-        SET score = ?, feedback = ?, status = 'graded', graded_at = NOW(), graded_by = ?
+        SET marks_obtained = ?, score = ?, feedback = ?, status = 'graded', graded_at = NOW(), graded_by = ?
         WHERE id = ?
     ");
-    $stmt->execute([$score, $feedback, $gradedBy, $submissionId]);
+    $stmt->execute(array($score, $score, $feedback, $gradedBy, $submissionId));
     
-    echo json_encode([
+    echo json_encode(array(
         'success' => true,
         'message' => 'Submission graded successfully'
-    ]);
+    ));
 }
 
 function bulkGradeSubmissions($pdo) {
     $data = json_decode(file_get_contents('php://input'), true);
     
-    $grades = $data['grades'] ?? [];
-    $gradedBy = $data['graded_by'] ?? null;
+    $grades = isset($data['grades']) ? $data['grades'] : array();
+    $gradedBy = isset($data['graded_by']) ? $data['graded_by'] : null;
     
     if (empty($grades)) {
-        echo json_encode(['success' => false, 'error' => 'No grades provided']);
+        echo json_encode(array('success' => false, 'error' => 'No grades provided'));
         return;
     }
     
     $stmt = $pdo->prepare("
         UPDATE homework_submissions 
-        SET score = ?, feedback = ?, status = 'graded', graded_at = NOW(), graded_by = ?
+        SET marks_obtained = ?, score = ?, feedback = ?, status = 'graded', graded_at = NOW(), graded_by = ?
         WHERE id = ?
     ");
     
     $count = 0;
     foreach ($grades as $grade) {
-        $stmt->execute([
-            $grade['score'] ?? $grade['marks_obtained'] ?? null,
-            $grade['feedback'] ?? '',
-            $gradedBy,
-            $grade['submission_id'] ?? $grade['id']
-        ]);
+        $score = isset($grade['score']) ? $grade['score'] : (isset($grade['marks_obtained']) ? $grade['marks_obtained'] : null);
+        $feedback = isset($grade['feedback']) ? $grade['feedback'] : '';
+        $submissionId = isset($grade['submission_id']) ? $grade['submission_id'] : (isset($grade['id']) ? $grade['id'] : null);
+        
+        $stmt->execute(array($score, $score, $feedback, $gradedBy, $submissionId));
         $count++;
     }
     
-    echo json_encode([
+    echo json_encode(array(
         'success' => true,
-        'message' => "$count submissions graded successfully",
+        'message' => $count . ' submissions graded successfully',
         'count' => $count
-    ]);
+    ));
 }
 
 function getSubmissions($pdo) {
-    $homeworkId = $_GET['homework_id'] ?? null;
+    $homeworkId = isset($_GET['homework_id']) ? $_GET['homework_id'] : null;
     
     $sql = "
         SELECT hs.*, 
@@ -282,7 +282,7 @@ function getSubmissions($pdo) {
         JOIN homework h ON hs.homework_id = h.id
     ";
     
-    $params = [];
+    $params = array();
     if ($homeworkId) {
         $sql .= " WHERE hs.homework_id = ?";
         $params[] = $homeworkId;
@@ -294,17 +294,17 @@ function getSubmissions($pdo) {
     $stmt->execute($params);
     $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    echo json_encode([
+    echo json_encode(array(
         'success' => true,
         'submissions' => $submissions
-    ]);
+    ));
 }
 
 function getStudentSubmissions($pdo) {
-    $studentId = $_GET['student_id'] ?? null;
+    $studentId = isset($_GET['student_id']) ? $_GET['student_id'] : null;
     
     if (!$studentId) {
-        echo json_encode(['success' => false, 'error' => 'Student ID required']);
+        echo json_encode(array('success' => false, 'error' => 'Student ID required'));
         return;
     }
     
@@ -321,20 +321,20 @@ function getStudentSubmissions($pdo) {
         WHERE hs.student_id = ?
         ORDER BY hs.submitted_at DESC
     ");
-    $stmt->execute([$studentId]);
+    $stmt->execute(array($studentId));
     $submissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    echo json_encode([
+    echo json_encode(array(
         'success' => true,
         'submissions' => $submissions
-    ]);
+    ));
 }
 
 function getHomeworkSubmissions($pdo) {
-    $homeworkId = $_GET['homework_id'] ?? null;
+    $homeworkId = isset($_GET['homework_id']) ? $_GET['homework_id'] : null;
     
     if (!$homeworkId) {
-        echo json_encode(['success' => false, 'error' => 'Homework ID required']);
+        echo json_encode(array('success' => false, 'error' => 'Homework ID required'));
         return;
     }
     
@@ -346,11 +346,11 @@ function getHomeworkSubmissions($pdo) {
         LEFT JOIN classes c ON h.class_id = c.id
         WHERE h.id = ?
     ");
-    $stmt->execute([$homeworkId]);
+    $stmt->execute(array($homeworkId));
     $homework = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$homework) {
-        echo json_encode(['success' => false, 'error' => 'Homework not found']);
+        echo json_encode(array('success' => false, 'error' => 'Homework not found'));
         return;
     }
     
@@ -358,41 +358,45 @@ function getHomeworkSubmissions($pdo) {
     $stmt = $pdo->prepare("
         SELECT s.id, s.student_id as admission_no, 
                CONCAT(s.first_name, ' ', s.last_name) as student_name,
-               hs.id as submission_id, hs.status, hs.score, hs.feedback,
-               hs.submitted_at, hs.submission_text, hs.file
+               hs.id as submission_id, hs.status, hs.marks_obtained, hs.score, hs.feedback,
+               hs.submitted_at, hs.submission_text, hs.attachment
         FROM students s
         LEFT JOIN homework_submissions hs ON s.id = hs.student_id AND hs.homework_id = ?
         WHERE s.class_id = ?
         ORDER BY s.first_name
     ");
-    $stmt->execute([$homeworkId, $homework['class_id']]);
+    $stmt->execute(array($homeworkId, $homework['class_id']));
     $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Calculate stats
+    // Calculate stats (PHP 5.6 compatible)
     $totalStudents = count($students);
-    $submitted = count(array_filter($students, fn($s) => $s['submission_id']));
-    $graded = count(array_filter($students, fn($s) => $s['status'] === 'graded'));
+    $submitted = 0;
+    $graded = 0;
+    foreach ($students as $s) {
+        if ($s['submission_id']) $submitted++;
+        if ($s['status'] === 'graded') $graded++;
+    }
     $pending = $totalStudents - $submitted;
     
-    echo json_encode([
+    echo json_encode(array(
         'success' => true,
         'homework' => $homework,
         'students' => $students,
-        'stats' => [
+        'stats' => array(
             'total_students' => $totalStudents,
             'submitted' => $submitted,
             'graded' => $graded,
             'pending' => $pending
-        ]
-    ]);
+        )
+    ));
 }
 
 function checkSubmission($pdo) {
-    $homeworkId = $_GET['homework_id'] ?? null;
-    $studentId = $_GET['student_id'] ?? null;
+    $homeworkId = isset($_GET['homework_id']) ? $_GET['homework_id'] : null;
+    $studentId = isset($_GET['student_id']) ? $_GET['student_id'] : null;
     
     if (!$homeworkId || !$studentId) {
-        echo json_encode(['success' => false, 'error' => 'Homework ID and Student ID required']);
+        echo json_encode(array('success' => false, 'error' => 'Homework ID and Student ID required'));
         return;
     }
     
@@ -402,56 +406,54 @@ function checkSubmission($pdo) {
         JOIN homework h ON hs.homework_id = h.id
         WHERE hs.homework_id = ? AND hs.student_id = ?
     ");
-    $stmt->execute([$homeworkId, $studentId]);
+    $stmt->execute(array($homeworkId, $studentId));
     $submission = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    echo json_encode([
+    echo json_encode(array(
         'success' => true,
         'submitted' => $submission ? true : false,
         'submission' => $submission
-    ]);
+    ));
 }
 
 function updateSubmission($pdo) {
     $data = json_decode(file_get_contents('php://input'), true);
-    $id = $_GET['id'] ?? $data['id'] ?? null;
+    $id = isset($_GET['id']) ? $_GET['id'] : (isset($data['id']) ? $data['id'] : null);
     
     if (!$id) {
-        echo json_encode(['success' => false, 'error' => 'Submission ID required']);
+        echo json_encode(array('success' => false, 'error' => 'Submission ID required'));
         return;
     }
     
-    $submissionText = $data['submission_text'] ?? null;
-    $file = $data['file'] ?? null;
+    $submissionText = isset($data['submission_text']) ? $data['submission_text'] : null;
     
     $stmt = $pdo->prepare("
         UPDATE homework_submissions 
         SET submission_text = COALESCE(?, submission_text), 
-            file = COALESCE(?, file),
             submitted_at = NOW()
         WHERE id = ?
     ");
-    $stmt->execute([$submissionText, $file, $id]);
+    $stmt->execute(array($submissionText, $id));
     
-    echo json_encode([
+    echo json_encode(array(
         'success' => true,
         'message' => 'Submission updated'
-    ]);
+    ));
 }
 
 function deleteSubmission($pdo) {
-    $id = $_GET['id'] ?? null;
+    $id = isset($_GET['id']) ? $_GET['id'] : null;
     
     if (!$id) {
-        echo json_encode(['success' => false, 'error' => 'Submission ID required']);
+        echo json_encode(array('success' => false, 'error' => 'Submission ID required'));
         return;
     }
     
     $stmt = $pdo->prepare("DELETE FROM homework_submissions WHERE id = ?");
-    $stmt->execute([$id]);
+    $stmt->execute(array($id));
     
-    echo json_encode([
+    echo json_encode(array(
         'success' => true,
         'message' => 'Submission deleted'
-    ]);
+    ));
 }
