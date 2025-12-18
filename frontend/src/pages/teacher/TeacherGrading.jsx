@@ -202,7 +202,7 @@ export default function TeacherGrading() {
   const handleGradeAssessment = async (assessment) => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE_URL}/academic.php?resource=grades&action=by_assessment&assessment_id=${assessment.id}`);
+      const response = await axios.get(`${API_BASE_URL}/assessment_grades.php?assessment_id=${assessment.id}`);
       const existingGrades = response.data.grades || [];
       
       const studentsRes = await axios.get(`${API_BASE_URL}/students.php?class_id=${assessment.class_id}`);
@@ -271,7 +271,7 @@ export default function TeacherGrading() {
         return;
       }
 
-      const response = await axios.post(`${API_BASE_URL}/academic.php?resource=grades&action=bulk`, {
+      const response = await axios.post(`${API_BASE_URL}/assessment_grades.php`, {
         assessment_id: selectedAssessment.id,
         grades: gradesData,
         graded_by: user?.id
