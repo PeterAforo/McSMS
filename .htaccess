@@ -1,0 +1,21 @@
+# McSMS Root .htaccess
+# Allow direct access to real files and directories
+
+RewriteEngine On
+
+# If the request is for a real file, serve it directly
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# If the request is for a real directory, serve it directly
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Allow direct access to uploads folder
+RewriteRule ^uploads/ - [L]
+
+# Allow direct access to backend API
+RewriteRule ^backend/ - [L]
+
+# Route all other requests to frontend index.html (SPA routing)
+RewriteRule ^ frontend_dist/index.html [L]

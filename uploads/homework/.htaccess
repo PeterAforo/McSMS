@@ -1,6 +1,8 @@
 # Allow access to uploaded homework files
 Options -Indexes
+RewriteEngine Off
+
+# Ensure files are served directly
 <FilesMatch "\.(jpg|jpeg|png|gif|webp|pdf|doc|docx|txt)$">
-    Order Allow,Deny
-    Allow from all
+    Require all granted
 </FilesMatch>
