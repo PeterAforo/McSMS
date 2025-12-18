@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { 
   Plus, Award, X, Search, Edit2, Trash2, Copy, Loader2, RefreshCw,
   BarChart3, Download, Users, CheckCircle, AlertTriangle, Calendar,
-  TrendingUp, FileText, MessageSquare
+  TrendingUp, FileText, MessageSquare, Lock, Unlock
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
@@ -197,6 +197,25 @@ export default function TeacherGrading() {
     });
     setEditMode(false);
     setShowModal(true);
+  };
+
+  const handleLockAssessment = async (assessment) => {
+    const newStatus = assessment.status === 'locked' ? 'active' : 'locked';
+    const action = newStatus === 'locked' ? 'lock' : 'unlock';
+    
+    if (!confirm(`Are you sure you want to ${action} this assessment? ${newStatus === 'locked' ? 'Grades will no longer be editable.' : 'Grades will become editable again.'}`)) {
+      return;
+    }
+    
+    try {
+      await axios.put(`${API_BASE_URL}/academic.php?resource=assessments&id=${assessment.id}&action=lock`, {
+        status: newStatus
+      });
+      alert(`Assessment ${action}ed successfully!`);
+      fetchData();
+    } catch (error) {
+      alert('Error updating assessment: ' + (error.response?.data?.error || error.message));
+    }
   };
 
   const handleGradeAssessment = async (assessment) => {
@@ -569,16 +588,39 @@ export default function TeacherGrading() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-1">
-                          <button onClick={() => handleGradeAssessment(assessment)} className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Grade">
-                            <Award className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => handleEditAssessment(assessment)} className="p-2 text-gray-600 hover:bg-gray-100 rounded" title="Edit">
+                          {assessment.status === 'locked' ? (
+                            <span className="p-2 text-gray-400" title="Grades Locked">
+                              <Lock className="w-4 h-4" />
+                            </span>
+                          ) : (
+                            <button onClick={() => handleGradeAssessment(assessment)} className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Grade">
+                              <Award className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleEditAssessment(assessment)} 
+                            className={`p-2 rounded ${assessment.status === 'locked' ? 'text-gray-300 cursor-not-allowed' : 'text-gray-600 hover:bg-gray-100'}`} 
+                            title={assessment.status === 'locked' ? 'Locked' : 'Edit'}
+                            disabled={assessment.status === 'locked'}
+                          >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button onClick={() => handleDuplicateAssessment(assessment)} className="p-2 text-gray-600 hover:bg-gray-100 rounded" title="Duplicate">
                             <Copy className="w-4 h-4" />
                           </button>
-                          <button onClick={() => { setSelectedAssessment(assessment); setShowDeleteModal(true); }} className="p-2 text-red-600 hover:bg-red-50 rounded" title="Delete">
+                          <button 
+                            onClick={() => handleLockAssessment(assessment)} 
+                            className={`p-2 rounded ${assessment.status === 'locked' ? 'text-green-600 hover:bg-green-50' : 'text-orange-600 hover:bg-orange-50'}`}
+                            title={assessment.status === 'locked' ? 'Unlock Grades' : 'Lock Grades'}
+                          >
+                            {assessment.status === 'locked' ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                          </button>
+                          <button 
+                            onClick={() => { setSelectedAssessment(assessment); setShowDeleteModal(true); }} 
+                            className={`p-2 rounded ${assessment.status === 'locked' ? 'text-gray-300 cursor-not-allowed' : 'text-red-600 hover:bg-red-50'}`}
+                            title={assessment.status === 'locked' ? 'Locked' : 'Delete'}
+                            disabled={assessment.status === 'locked'}
+                          >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>

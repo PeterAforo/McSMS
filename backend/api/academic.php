@@ -135,8 +135,15 @@ try {
                     $stmt->execute([$id]);
                     echo json_encode(['success' => true, 'assessment' => $stmt->fetch(PDO::FETCH_ASSOC)]);
                 } else {
-                    $stmt = $pdo->query("SELECT a.*, c.class_name, s.subject_name, t.term_name FROM assessments a LEFT JOIN classes c ON a.class_id = c.id LEFT JOIN subjects s ON a.subject_id = s.id LEFT JOIN academic_terms t ON a.term_id = t.id ORDER BY a.assessment_date DESC");
-                    echo json_encode(['success' => true, 'assessments' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+                    $stmt = $pdo->query("SELECT a.*, c.class_name, s.subject_name, t.term_name,
+                        (SELECT COUNT(*) FROM assessment_grades ag WHERE ag.assessment_id = a.id) as graded_count,
+                        (SELECT COUNT(*) FROM students st WHERE st.class_id = a.class_id AND st.status = 'active') as student_count
+                        FROM assessments a 
+                        LEFT JOIN classes c ON a.class_id = c.id 
+                        LEFT JOIN subjects s ON a.subject_id = s.id 
+                        LEFT JOIN academic_terms t ON a.term_id = t.id 
+                        ORDER BY a.assessment_date DESC");
+                    echo json_encode(array('success' => true, 'assessments' => $stmt->fetchAll(PDO::FETCH_ASSOC)));
                 }
                 break;
 
@@ -149,9 +156,17 @@ try {
 
             case 'PUT':
                 $data = json_decode(file_get_contents('php://input'), true);
-                $stmt = $pdo->prepare("UPDATE assessments SET assessment_name=?, assessment_type=?, total_marks=?, weight_percentage=?, assessment_date=?, description=? WHERE id=?");
-                $stmt->execute([$data['assessment_name'], $data['assessment_type'], $data['total_marks'], $data['weight_percentage'], $data['assessment_date'], $data['description'], $id]);
-                echo json_encode(['success' => true]);
+                if ($action === 'lock') {
+                    // Lock/unlock assessment
+                    $status = isset($data['status']) ? $data['status'] : 'locked';
+                    $stmt = $pdo->prepare("UPDATE assessments SET status=? WHERE id=?");
+                    $stmt->execute(array($status, $id));
+                    echo json_encode(array('success' => true, 'status' => $status));
+                } else {
+                    $stmt = $pdo->prepare("UPDATE assessments SET assessment_name=?, assessment_type=?, total_marks=?, weight_percentage=?, assessment_date=?, description=? WHERE id=?");
+                    $stmt->execute(array($data['assessment_name'], $data['assessment_type'], $data['total_marks'], $data['weight_percentage'], $data['assessment_date'], $data['description'], $id));
+                    echo json_encode(array('success' => true));
+                }
                 break;
 
             case 'DELETE':
