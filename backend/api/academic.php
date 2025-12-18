@@ -312,17 +312,17 @@ try {
     elseif ($resource === 'grades') {
         switch ($method) {
             case 'GET':
-                $assessment_id = $_GET['assessment_id'] ?? null;
+                $assessment_id = isset($_GET['assessment_id']) ? $_GET['assessment_id'] : null;
                 if ($assessment_id) {
                     // Check if table exists first
                     try {
                         $tableCheck = $pdo->query("SHOW TABLES LIKE 'assessment_grades'");
                         if ($tableCheck->rowCount() === 0) {
-                            echo json_encode(['success' => true, 'grades' => []]);
+                            echo json_encode(array('success' => true, 'grades' => array()));
                             break;
                         }
                     } catch (Exception $e) {
-                        echo json_encode(['success' => true, 'grades' => []]);
+                        echo json_encode(array('success' => true, 'grades' => array()));
                         break;
                     }
                     
@@ -332,10 +332,10 @@ try {
                         JOIN students s ON ag.student_id = s.id
                         WHERE ag.assessment_id = ?
                     ");
-                    $stmt->execute([$assessment_id]);
-                    echo json_encode(['success' => true, 'grades' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+                    $stmt->execute(array($assessment_id));
+                    echo json_encode(array('success' => true, 'grades' => $stmt->fetchAll(PDO::FETCH_ASSOC)));
                 } else {
-                    echo json_encode(['success' => true, 'grades' => []]);
+                    echo json_encode(array('success' => true, 'grades' => array()));
                 }
                 break;
 
