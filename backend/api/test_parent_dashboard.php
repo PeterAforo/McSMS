@@ -91,16 +91,22 @@ try {
             $stmt->execute(array($studentId));
             $summary['assessment_grades_count'] = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
             
-            // Get average score
+            // Get average score - FIXED: use SUM/SUM instead of AVG
             $stmt = $pdo->prepare("
-                SELECT AVG(ROUND((ag.marks_obtained / a.total_marks) * 100, 1)) as avg_score
+                SELECT 
+                    SUM(ag.marks_obtained) as total_obtained,
+                    SUM(a.total_marks) as total_max
                 FROM assessment_grades ag
                 JOIN assessments a ON ag.assessment_id = a.id
                 WHERE ag.student_id = ?
             ");
             $stmt->execute(array($studentId));
             $avgResult = $stmt->fetch(PDO::FETCH_ASSOC);
-            $summary['average_score_from_assessments'] = $avgResult['avg_score'];
+            $summary['total_marks_obtained'] = $avgResult['total_obtained'];
+            $summary['total_max_marks'] = $avgResult['total_max'];
+            $summary['average_score_from_assessments'] = ($avgResult['total_max'] > 0) 
+                ? round(($avgResult['total_obtained'] / $avgResult['total_max']) * 100, 1) 
+                : 0;
         }
         
         // Get homework grades
