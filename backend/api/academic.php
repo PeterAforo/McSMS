@@ -4,8 +4,11 @@
  * Handles: Attendance, Grading, Homework, Enrollment
  */
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 header('Content-Type: application/json');
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
 if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin)) {
     header('Access-Control-Allow-Origin: ' . $origin);
 }
@@ -21,9 +24,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once __DIR__ . '/../../config/database.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
-$resource = $_GET['resource'] ?? null;
-$id = $_GET['id'] ?? null;
-$action = $_GET['action'] ?? null;
+$resource = isset($_GET['resource']) ? $_GET['resource'] : null;
+$id = isset($_GET['id']) ? $_GET['id'] : null;
+$action = isset($_GET['action']) ? $_GET['action'] : null;
 
 try {
     $pdo = new PDO("mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4", DB_USER, DB_PASS, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
