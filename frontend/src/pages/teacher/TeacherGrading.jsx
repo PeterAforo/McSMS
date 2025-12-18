@@ -251,24 +251,44 @@ export default function TeacherGrading() {
   const handleSaveGrades = async () => {
     try {
       setSaving(true);
-      const gradesData = grades.filter(g => g.marks_obtained !== '').map(g => ({
-        student_id: g.student_id,
-        marks_obtained: g.marks_obtained,
-        grade: g.grade || calculateGrade(g.marks_obtained, selectedAssessment.total_marks),
-        comment: g.comment || ''
-      }));
+      
+      // Filter grades that have marks entered (not empty, not null, not undefined)
+      const gradesData = grades
+        .filter(g => g.marks_obtained !== '' && g.marks_obtained !== null && g.marks_obtained !== undefined)
+        .map(g => ({
+          student_id: g.student_id,
+          marks_obtained: parseFloat(g.marks_obtained),
+          grade: g.grade || calculateGrade(g.marks_obtained, selectedAssessment.total_marks),
+          comment: g.comment || ''
+        }));
 
-      await axios.post(`${API_BASE_URL}/academic.php?resource=grades&action=bulk`, {
+      console.log('Grades to save:', gradesData);
+      console.log('Assessment ID:', selectedAssessment.id);
+
+      if (gradesData.length === 0) {
+        alert('Please enter marks for at least one student');
+        setSaving(false);
+        return;
+      }
+
+      const response = await axios.post(`${API_BASE_URL}/academic.php?resource=grades&action=bulk`, {
         assessment_id: selectedAssessment.id,
         grades: gradesData,
         graded_by: user?.id
       });
 
-      setShowGradeModal(false);
-      alert('Grades saved successfully!');
-      fetchData();
+      console.log('Save response:', response.data);
+
+      if (response.data.success) {
+        setShowGradeModal(false);
+        alert(`Grades saved successfully! (${response.data.count || gradesData.length} grades)`);
+        fetchData();
+      } else {
+        alert('Error: ' + (response.data.error || 'Unknown error'));
+      }
     } catch (error) {
-      alert('Error saving grades');
+      console.error('Save grades error:', error);
+      alert('Error saving grades: ' + (error.response?.data?.error || error.message));
     } finally {
       setSaving(false);
     }
