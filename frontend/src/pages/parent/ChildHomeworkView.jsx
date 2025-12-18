@@ -362,24 +362,30 @@ export default function ChildHomeworkView() {
                   </div>
                   <div className="text-right space-y-2">
                     {/* Show score prominently for graded homework */}
-                    {hw.submission_status === 'graded' && (hw.score || hw.marks_obtained) && (
+                    {hw.submission_status === 'graded' && (
                       <div className="mb-2 bg-green-50 p-2 rounded-lg">
                         <div className="flex items-center gap-1 justify-end">
                           <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                           <span className="text-2xl font-bold text-green-600">
-                            {hw.score || hw.marks_obtained}/{hw.total_marks || 100}
+                            {hw.score || hw.marks_obtained || 0}/{hw.total_marks || 100}
                           </span>
                         </div>
                         <p className="text-xs text-green-600">
-                          {Math.round(((hw.score || hw.marks_obtained) / (hw.total_marks || 100)) * 100)}%
+                          {Math.round(((hw.score || hw.marks_obtained || 0) / (hw.total_marks || 100)) * 100)}%
                         </p>
                       </div>
                     )}
-                    {hw.attachment && (
-                      <button className="btn btn-sm bg-gray-100 hover:bg-gray-200 flex items-center gap-1">
+                    {/* Homework attachment from teacher */}
+                    {(hw.attachment || hw.attachment_url) && (
+                      <a 
+                        href={hw.attachment_url || hw.attachment} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="btn btn-sm bg-gray-100 hover:bg-gray-200 flex items-center gap-1"
+                      >
                         <Download className="w-3 h-3" />
                         Attachment
-                      </button>
+                      </a>
                     )}
                     {/* Submit button - show for pending/overdue homework */}
                     {(!hw.submission_status || hw.submission_status === 'pending') && (

@@ -213,8 +213,8 @@ try {
                     $stmt->execute([$id]);
                     $homework = $stmt->fetch(PDO::FETCH_ASSOC);
                     
-                    // Get submissions
-                    $stmt = $pdo->prepare("SELECT hs.*, st.first_name, st.last_name, st.student_id FROM homework_submissions hs LEFT JOIN students st ON hs.student_id = st.id WHERE hs.homework_id = ?");
+                    // Get submissions with attachment
+                    $stmt = $pdo->prepare("SELECT hs.id, hs.homework_id, hs.student_id, hs.submission_text, hs.attachment, hs.status, hs.marks_obtained, hs.score, hs.feedback, hs.submitted_at, hs.graded_at, hs.graded_by, st.first_name, st.last_name, st.student_id as admission_no FROM homework_submissions hs LEFT JOIN students st ON hs.student_id = st.id WHERE hs.homework_id = ?");
                     $stmt->execute([$id]);
                     $homework['submissions'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     

@@ -713,8 +713,13 @@ export default function TeacherHomework() {
                         </div>
                       )}
 
-                      {submission.file_url && (
-                        <a href={submission.file_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline text-sm mb-3">
+                      {(submission.attachment || submission.file_url) && (
+                        <a 
+                          href={submission.attachment ? `${API_BASE_URL.replace('/api', '')}/uploads/homework/${submission.attachment}` : submission.file_url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="inline-flex items-center gap-1 text-blue-600 hover:underline text-sm mb-3 block"
+                        >
                           <Download className="w-4 h-4" /> View Submitted File
                         </a>
                       )}
