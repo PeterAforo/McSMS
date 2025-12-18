@@ -490,7 +490,8 @@ function getDashboard($pdo, $parentId) {
                 $stmt->execute(array($studentId));
                 $result = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($result && $result['max_marks'] > 0) {
-                    $summary['average_score'] = round(($result['total_marks'] / $result['max_marks']) * 100, 1);
+                    $score = round(($result['total_marks'] / $result['max_marks']) * 100, 1);
+                    $summary['average_score'] = min($score, 100); // Cap at 100%
                 }
             } catch (Exception $e) {}
             
@@ -507,12 +508,12 @@ function getDashboard($pdo, $parentId) {
                 $stmt->execute(array($studentId));
                 $hwResult = $stmt->fetch(PDO::FETCH_ASSOC);
                 if ($hwResult && $hwResult['max_marks'] > 0) {
-                    $hwAvg = round(($hwResult['total_marks'] / $hwResult['max_marks']) * 100, 1);
+                    $hwAvg = min(round(($hwResult['total_marks'] / $hwResult['max_marks']) * 100, 1), 100); // Cap at 100%
                     if ($summary['average_score'] == 0) {
                         $summary['average_score'] = $hwAvg;
                     } else {
                         // Average of both
-                        $summary['average_score'] = round(($summary['average_score'] + $hwAvg) / 2, 1);
+                        $summary['average_score'] = min(round(($summary['average_score'] + $hwAvg) / 2, 1), 100);
                     }
                 }
             } catch (Exception $e) {}
