@@ -50,7 +50,7 @@ try {
     ensureTableStructure($pdo);
     
     $method = $_SERVER['REQUEST_METHOD'];
-    $action = $_GET['action'] ?? '';
+    $action = isset($_GET['action']) ? $_GET['action'] : '';
     
     switch ($method) {
         case 'GET':
@@ -145,16 +145,17 @@ function submitHomework($pdo) {
     try {
         $data = json_decode(file_get_contents('php://input'), true);
         
-        $homeworkId = $data['homework_id'] ?? $_POST['homework_id'] ?? null;
-        $studentId = $data['student_id'] ?? $_POST['student_id'] ?? null;
-        $submissionText = $data['submission_text'] ?? $_POST['submission_text'] ?? '';
+        $homeworkId = isset($data['homework_id']) ? $data['homework_id'] : (isset($_POST['homework_id']) ? $_POST['homework_id'] : null);
+        $studentId = isset($data['student_id']) ? $data['student_id'] : (isset($_POST['student_id']) ? $_POST['student_id'] : null);
+        $submissionText = isset($data['submission_text']) ? $data['submission_text'] : (isset($_POST['submission_text']) ? $_POST['submission_text'] : '');
+        $attachment = isset($data['attachment']) ? $data['attachment'] : (isset($_POST['attachment']) ? $_POST['attachment'] : null);
         
         if (!$homeworkId || !$studentId) {
             echo json_encode(array('success' => false, 'error' => 'Homework ID and Student ID are required'));
             return;
         }
         
-        // Check if homework exists and get due date
+        // Check if homework exists and get due date/time
         $stmt = $pdo->prepare("SELECT * FROM homework WHERE id = ?");
         $stmt->execute(array($homeworkId));
         $homework = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -165,30 +166,41 @@ function submitHomework($pdo) {
         }
         
         // Check if already submitted
-        $stmt = $pdo->prepare("SELECT id FROM homework_submissions WHERE homework_id = ? AND student_id = ?");
+        $stmt = $pdo->prepare("SELECT id, attachment FROM homework_submissions WHERE homework_id = ? AND student_id = ?");
         $stmt->execute(array($homeworkId, $studentId));
-        $existing = $stmt->fetch();
+        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        // Determine if late
-        $isLate = strtotime($homework['due_date']) < time();
+        // Determine if late - check both date and time if available
+        $dueDateTime = $homework['due_date'];
+        if (isset($homework['due_time']) && $homework['due_time']) {
+            $dueDateTime .= ' ' . $homework['due_time'];
+        } else {
+            $dueDateTime .= ' 23:59:59'; // Default to end of day
+        }
+        $isLate = strtotime($dueDateTime) < time();
         $status = $isLate ? 'late' : 'submitted';
+        
+        // Keep existing attachment if no new one provided
+        if (!$attachment && $existing && $existing['attachment']) {
+            $attachment = $existing['attachment'];
+        }
         
         if ($existing) {
             // Update existing submission
             $stmt = $pdo->prepare("
                 UPDATE homework_submissions 
-                SET submission_text = ?, status = ?, submitted_at = NOW()
+                SET submission_text = ?, attachment = ?, status = ?, submitted_at = NOW()
                 WHERE homework_id = ? AND student_id = ?
             ");
-            $stmt->execute(array($submissionText, $status, $homeworkId, $studentId));
+            $stmt->execute(array($submissionText, $attachment, $status, $homeworkId, $studentId));
             $submissionId = $existing['id'];
         } else {
-            // Create new submission - using columns that exist in production
+            // Create new submission
             $stmt = $pdo->prepare("
-                INSERT INTO homework_submissions (homework_id, student_id, submission_text, status, submitted_at)
-                VALUES (?, ?, ?, ?, NOW())
+                INSERT INTO homework_submissions (homework_id, student_id, submission_text, attachment, status, submitted_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
             ");
-            $stmt->execute(array($homeworkId, $studentId, $submissionText, $status));
+            $stmt->execute(array($homeworkId, $studentId, $submissionText, $attachment, $status));
             $submissionId = $pdo->lastInsertId();
         }
         

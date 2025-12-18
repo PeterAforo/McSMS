@@ -745,13 +745,14 @@ function getHomework($pdo, $studentId) {
             return;
         }
 
-        // Try to get homework with submission status
+        // Try to get homework with submission status and scores
         try {
             $stmt = $pdo->prepare("
                 SELECT h.*, sub.subject_name, sub.subject_code,
                        u.name as teacher_name,
                        hs.id as submission_id, hs.status as submission_status,
-                       hs.submitted_at, hs.score, hs.feedback, hs.submission_text
+                       hs.submitted_at, hs.score, hs.marks_obtained, hs.feedback, 
+                       hs.submission_text, hs.attachment as submission_attachment
                 FROM homework h
                 LEFT JOIN subjects sub ON h.subject_id = sub.id
                 LEFT JOIN teachers t ON h.teacher_id = t.id

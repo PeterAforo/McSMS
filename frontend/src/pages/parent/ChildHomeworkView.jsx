@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, BookOpen, Clock, CheckCircle, XCircle, AlertTriangle,
-  Loader2, Calendar, FileText, Download, ExternalLink, Upload, Send, X
+  Loader2, Calendar, FileText, Download, ExternalLink, Upload, Send, X,
+  Camera, Image, Paperclip, Star
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
@@ -29,6 +30,11 @@ export default function ChildHomeworkView() {
   const [selectedHomework, setSelectedHomework] = useState(null);
   const [submissionText, setSubmissionText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadedFileUrl, setUploadedFileUrl] = useState('');
+  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
 
   useEffect(() => {
     fetchParentId();
@@ -107,9 +113,50 @@ export default function ChildHomeworkView() {
     }
   };
 
+  const handleFileUpload = async (file) => {
+    if (!file) return;
+    
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File too large. Maximum size is 10MB');
+      return;
+    }
+    
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Invalid file type. Allowed: JPG, PNG, GIF, PDF, DOC, DOCX');
+      return;
+    }
+    
+    try {
+      setUploadingFile(true);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('homework_id', selectedHomework?.id || '');
+      formData.append('student_id', child?.id || '');
+      
+      const response = await axios.post(`${API_BASE_URL}/upload_homework.php`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
+      if (response.data.success) {
+        setUploadedFile(file);
+        setUploadedFileUrl(response.data.filename);
+      } else {
+        alert(response.data.error || 'Failed to upload file');
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Failed to upload file. Please try again.');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   const handleSubmitHomework = async () => {
-    if (!selectedHomework || !submissionText.trim()) {
-      alert('Please enter your homework response');
+    if (!selectedHomework || (!submissionText.trim() && !uploadedFileUrl)) {
+      alert('Please enter your homework response or upload a file');
       return;
     }
     
@@ -118,7 +165,8 @@ export default function ChildHomeworkView() {
       const response = await axios.post(`${API_BASE_URL}/homework_submissions.php?action=submit`, {
         homework_id: selectedHomework.id,
         student_id: child.id,
-        submission_text: submissionText
+        submission_text: submissionText,
+        attachment: uploadedFileUrl || null
       });
       
       if (response.data.success) {
@@ -126,6 +174,8 @@ export default function ChildHomeworkView() {
         setShowSubmitModal(false);
         setSubmissionText('');
         setSelectedHomework(null);
+        setUploadedFile(null);
+        setUploadedFileUrl('');
         fetchHomework(); // Refresh the list
       } else {
         alert(response.data.error || 'Failed to submit homework');
@@ -141,6 +191,8 @@ export default function ChildHomeworkView() {
   const openSubmitModal = (hw) => {
     setSelectedHomework(hw);
     setSubmissionText('');
+    setUploadedFile(null);
+    setUploadedFileUrl('');
     setShowSubmitModal(true);
   };
 
@@ -294,6 +346,7 @@ export default function ChildHomeworkView() {
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         Due: {new Date(hw.due_date).toLocaleDateString()}
+                        {hw.due_time && ` at ${hw.due_time}`}
                       </span>
                       <span className={`font-medium ${
                         new Date(hw.due_date) < new Date() && !hw.submission_status
@@ -308,9 +361,18 @@ export default function ChildHomeworkView() {
                     </div>
                   </div>
                   <div className="text-right space-y-2">
-                    {hw.submission_status === 'graded' && hw.score && (
-                      <div className="mb-2">
-                        <span className="text-2xl font-bold text-green-600">{hw.score}/{hw.total_marks || 100}</span>
+                    {/* Show score prominently for graded homework */}
+                    {hw.submission_status === 'graded' && (hw.score || hw.marks_obtained) && (
+                      <div className="mb-2 bg-green-50 p-2 rounded-lg">
+                        <div className="flex items-center gap-1 justify-end">
+                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                          <span className="text-2xl font-bold text-green-600">
+                            {hw.score || hw.marks_obtained}/{hw.total_marks || 100}
+                          </span>
+                        </div>
+                        <p className="text-xs text-green-600">
+                          {Math.round(((hw.score || hw.marks_obtained) / (hw.total_marks || 100)) * 100)}%
+                        </p>
                       </div>
                     )}
                     {hw.attachment && (
@@ -395,14 +457,102 @@ export default function ChildHomeworkView() {
                   value={submissionText}
                   onChange={(e) => setSubmissionText(e.target.value)}
                   placeholder="Type your homework answer here..."
-                  className="w-full border rounded-lg p-3 h-40 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full border rounded-lg p-3 h-32 resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+              </div>
+
+              {/* File Upload Section */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Attach File (Optional)
+                </label>
+                <p className="text-xs text-gray-500 mb-2">
+                  Upload a photo of handwritten work, scanned document, or PDF. Max 10MB.
+                </p>
+                
+                {/* Hidden file inputs */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={(e) => handleFileUpload(e.target.files[0])}
+                  accept="image/*,.pdf,.doc,.docx"
+                  className="hidden"
+                />
+                <input
+                  type="file"
+                  ref={cameraInputRef}
+                  onChange={(e) => handleFileUpload(e.target.files[0])}
+                  accept="image/*"
+                  capture="environment"
+                  className="hidden"
+                />
+                
+                {/* Upload buttons */}
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="btn bg-green-100 hover:bg-green-200 text-green-700 flex items-center gap-2 text-sm"
+                  >
+                    <Camera className="w-4 h-4" />
+                    Take Photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="btn bg-purple-100 hover:bg-purple-200 text-purple-700 flex items-center gap-2 text-sm"
+                  >
+                    <Image className="w-4 h-4" />
+                    Choose Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    className="btn bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center gap-2 text-sm"
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    Upload File
+                  </button>
+                </div>
+                
+                {/* Upload progress */}
+                {uploadingFile && (
+                  <div className="flex items-center gap-2 text-blue-600 text-sm">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Uploading file...
+                  </div>
+                )}
+                
+                {/* Uploaded file preview */}
+                {uploadedFile && (
+                  <div className="bg-green-50 p-3 rounded-lg flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <div>
+                        <p className="text-sm font-medium text-green-800">{uploadedFile.name}</p>
+                        <p className="text-xs text-green-600">
+                          {(uploadedFile.size / 1024).toFixed(1)} KB • Ready to submit
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setUploadedFile(null); setUploadedFileUrl(''); }}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Note for parents */}
               <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
                 <strong>Note:</strong> As a parent, you can submit homework on behalf of your child. 
-                The teacher will be able to see this submission and provide feedback.
+                You can type a response, upload a file, or both. The teacher will be able to see this submission and provide feedback.
               </div>
             </div>
 

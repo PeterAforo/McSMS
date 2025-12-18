@@ -46,6 +46,7 @@ export default function TeacherHomework() {
     title: '',
     description: '',
     due_date: '',
+    due_time: '23:59',
     total_marks: 100,
     status: 'active',
     attachment_url: ''
@@ -115,6 +116,7 @@ export default function TeacherHomework() {
       title: '',
       description: '',
       due_date: '',
+      due_time: '23:59',
       total_marks: 100,
       status: 'active',
       attachment_url: ''
@@ -159,6 +161,7 @@ export default function TeacherHomework() {
       title: hw.title,
       description: hw.description,
       due_date: hw.due_date,
+      due_time: hw.due_time || '23:59',
       total_marks: hw.total_marks,
       status: hw.status,
       attachment_url: hw.attachment_url || ''
@@ -190,6 +193,7 @@ export default function TeacherHomework() {
       title: `${hw.title} (Copy)`,
       description: hw.description,
       due_date: '',
+      due_time: hw.due_time || '23:59',
       total_marks: hw.total_marks,
       status: 'active',
       attachment_url: hw.attachment_url || ''
@@ -545,6 +549,10 @@ export default function TeacherHomework() {
                 <div>
                   <label className="block text-sm font-medium mb-2">Due Date *</label>
                   <input type="date" required value={homeworkForm.due_date} onChange={(e) => setHomeworkForm({...homeworkForm, due_date: e.target.value})} className="input" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Due Time *</label>
+                  <input type="time" required value={homeworkForm.due_time} onChange={(e) => setHomeworkForm({...homeworkForm, due_time: e.target.value})} className="input" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">Total Marks</label>
