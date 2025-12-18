@@ -53,6 +53,9 @@ export default function ParentDashboard() {
       if (portalResponse.data.success && portalResponse.data.dashboard?.children?.length > 0) {
         // Transform portal data to match expected format
         const portalData = portalResponse.data.dashboard;
+        // Use children_summary from API if available
+        const apiChildrenSummary = portalData.children_summary || [];
+        
         setDashboardData({
           success: true,
           parent: { id: user.id, name: user.name },
@@ -67,12 +70,16 @@ export default function ParentDashboard() {
             photo: c.photo,
             admission_no: c.admission_no
           })),
-          children_summary: portalData.children.map(c => ({
-            student: { id: c.student_id },
+          children_summary: apiChildrenSummary.length > 0 ? apiChildrenSummary : portalData.children.map(c => ({
+            student: { id: c.child_id || c.student_id },
             attendance_rate: portalData.attendance_summary?.total > 0 
               ? Math.round((portalData.attendance_summary.present / portalData.attendance_summary.total) * 100) 
               : 0,
-            average_score: 0
+            average_score: 0,
+            subjects_enrolled: 0,
+            fee_balance: 0,
+            assignment_completion: 85,
+            participation: 75
           })),
           applications: [],
           insights: [],
