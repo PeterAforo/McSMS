@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { 
   Plus, Eye, X, BookOpen, CheckCircle, FileText, Search, Filter,
   Calendar, Clock, AlertTriangle, Edit2, Trash2, Copy, Loader2,
@@ -11,6 +11,7 @@ import axios from 'axios';
 
 export default function TeacherHomework() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   
   // Core state
@@ -490,7 +491,7 @@ export default function TeacherHomework() {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-1">
-                          <button onClick={() => handleViewSubmissions(hw)} className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Review Submissions">
+                          <button onClick={() => navigate(`/teacher/homework/${hw.id}/review`)} className="p-2 text-blue-600 hover:bg-blue-50 rounded" title="Review Submissions">
                             <Eye className="w-4 h-4" />
                           </button>
                           <button onClick={() => handleEditHomework(hw)} className="p-2 text-gray-600 hover:bg-gray-100 rounded" title="Edit">

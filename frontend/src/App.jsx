@@ -67,6 +67,7 @@ import MyClasses from './pages/teacher/MyClasses';
 import TeacherStudents from './pages/teacher/Students';
 import TeacherAttendance from './pages/teacher/TeacherAttendance';
 import TeacherHomework from './pages/teacher/TeacherHomework';
+import TeacherHomeworkReview from './pages/teacher/TeacherHomeworkReview';
 import TeacherGrading from './pages/teacher/TeacherGrading';
 import TeacherMessages from './pages/teacher/Messages';
 import TeacherSettings from './pages/teacher/Settings';
@@ -281,6 +282,7 @@ function App() {
           <Route path="students" element={<TeacherStudents />} />
           <Route path="attendance" element={<TeacherAttendance />} />
           <Route path="homework" element={<TeacherHomework />} />
+          <Route path="homework/:homeworkId/review" element={<TeacherHomeworkReview />} />
           <Route path="grading" element={<TeacherGrading />} />
           <Route path="reports" element={<TeacherStudentReports />} />
           <Route path="messages" element={<TeacherMessages />} />
