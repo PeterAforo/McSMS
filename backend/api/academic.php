@@ -341,13 +341,19 @@ try {
 
             case 'POST':
                 if ($action === 'bulk') {
-                    $data = json_decode(file_get_contents('php://input'), true);
+                    $rawInput = file_get_contents('php://input');
+                    $data = json_decode($rawInput, true);
                     $assessment_id = isset($data['assessment_id']) ? $data['assessment_id'] : null;
                     $grades = isset($data['grades']) ? $data['grades'] : array();
                     $graded_by = isset($data['graded_by']) ? $data['graded_by'] : 1;
 
+                    // Debug logging
+                    error_log("Grades API - Raw input: " . $rawInput);
+                    error_log("Grades API - Assessment ID: " . $assessment_id);
+                    error_log("Grades API - Grades count: " . count($grades));
+
                     if (!$assessment_id || empty($grades)) {
-                        echo json_encode(array('success' => false, 'error' => 'Assessment ID and grades required', 'received' => $data));
+                        echo json_encode(array('success' => false, 'error' => 'Assessment ID and grades required', 'received' => $data, 'raw' => $rawInput));
                         break;
                     }
 
@@ -398,7 +404,7 @@ try {
                             }
                         }
                         $pdo->commit();
-                        echo json_encode(array('success' => true, 'message' => 'Grades saved successfully', 'count' => $savedCount));
+                        echo json_encode(array('success' => true, 'message' => 'Grades saved successfully', 'count' => $savedCount, 'assessment_id' => $assessment_id));
                     } catch (Exception $e) {
                         $pdo->rollBack();
                         echo json_encode(array('success' => false, 'error' => $e->getMessage()));
