@@ -324,7 +324,7 @@ function App() {
           <Route path="messages" element={<ParentMessages />} />
           <Route path="meetings" element={<ParentMeetings />} />
           <Route path="settings" element={<ParentSettings />} />
-          <Route path="homework" element={<ChildHomework />} />
+          <Route path="homework" element={<ChildHomeworkView />} />
           <Route path="results" element={<ChildResults />} />
           <Route path="profile" element={<Profile />} />
           <Route path="notifications" element={<Notifications />} />

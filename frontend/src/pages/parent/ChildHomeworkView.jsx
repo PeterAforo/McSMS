@@ -15,6 +15,8 @@ export default function ChildHomeworkView() {
   const { user } = useAuthStore();
   const [loading, setLoading] = useState(true);
   const [child, setChild] = useState(null);
+  const [children, setChildren] = useState([]);
+  const [selectedChildId, setSelectedChildId] = useState(childId || null);
   const [homework, setHomework] = useState([]);
   const [categorized, setCategorized] = useState({
     pending: [],
@@ -41,10 +43,21 @@ export default function ChildHomeworkView() {
   }, [user]);
 
   useEffect(() => {
-    if (parentId && childId) {
-      fetchChildDetails();
+    if (parentId) {
+      // If no childId from URL, fetch all children and select first one
+      if (!childId) {
+        fetchChildren();
+      } else {
+        fetchChildDetails(childId);
+      }
     }
   }, [parentId, childId]);
+
+  useEffect(() => {
+    if (selectedChildId && !childId) {
+      fetchChildDetails(selectedChildId);
+    }
+  }, [selectedChildId]);
 
   useEffect(() => {
     if (child?.id) {
@@ -63,10 +76,32 @@ export default function ChildHomeworkView() {
     }
   };
 
-  const fetchChildDetails = async () => {
+  const fetchChildren = async () => {
     try {
-      console.log('Fetching child details for childId:', childId);
-      const response = await axios.get(`${API_BASE_URL}/parent_portal.php?resource=child_details&child_id=${childId}`);
+      const response = await axios.get(`${API_BASE_URL}/parent_portal.php?resource=children&parent_id=${user?.id}`);
+      const childrenData = response.data.children || [];
+      const mappedChildren = childrenData.map(c => ({
+        id: c.child_id || c.student_id,
+        student_id: c.student_id,
+        full_name: c.full_name,
+        class_name: c.class_name,
+        class_id: c.class_id
+      }));
+      setChildren(mappedChildren);
+      if (mappedChildren.length > 0 && !selectedChildId) {
+        setSelectedChildId(mappedChildren[0].id);
+      }
+    } catch (error) {
+      console.error('Error fetching children:', error);
+      setLoading(false);
+    }
+  };
+
+  const fetchChildDetails = async (id) => {
+    try {
+      const targetId = id || childId || selectedChildId;
+      console.log('Fetching child details for childId:', targetId);
+      const response = await axios.get(`${API_BASE_URL}/parent_portal.php?resource=child_details&child_id=${targetId}`);
       console.log('Child details response:', response.data);
       if (response.data.success) {
         console.log('Setting child:', response.data.child);
@@ -258,17 +293,49 @@ export default function ChildHomeworkView() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <button
-          onClick={() => navigate(-1)}
-          className="p-2 hover:bg-gray-100 rounded-lg"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </button>
+        {childId && (
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2 hover:bg-gray-100 rounded-lg"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Homework</h1>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <BookOpen className="w-7 h-7 text-blue-600" />
+            Homework
+          </h1>
           <p className="text-gray-600">{child?.full_name} • {child?.class_name}</p>
         </div>
       </div>
+
+      {/* Child Selector - only show when no childId in URL and multiple children */}
+      {!childId && children.length > 1 && (
+        <div className="card p-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Select Child</label>
+          <div className="flex gap-2 flex-wrap">
+            {children.map(c => (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setSelectedChildId(c.id);
+                  setChild(null);
+                  setHomework([]);
+                  setCategorized({ pending: [], submitted: [], overdue: [], graded: [] });
+                }}
+                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                  selectedChildId === c.id 
+                    ? 'bg-blue-600 text-white' 
+                    : 'bg-gray-100 hover:bg-gray-200'
+                }`}
+              >
+                {c.full_name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
