@@ -223,7 +223,12 @@ try {
                     $class_id = $_GET['class_id'] ?? null;
                     $teacher_id = $_GET['teacher_id'] ?? null;
                     
-                    $sql = "SELECT h.*, c.class_name, s.subject_name, (SELECT COUNT(*) FROM homework_submissions WHERE homework_id = h.id) as submission_count FROM homework h LEFT JOIN classes c ON h.class_id = c.id LEFT JOIN subjects s ON h.subject_id = s.id WHERE 1=1";
+                    $sql = "SELECT h.*, c.class_name, s.subject_name, 
+                           (SELECT COUNT(*) FROM homework_submissions WHERE homework_id = h.id) as submission_count,
+                           (SELECT COUNT(*) FROM students WHERE class_id = h.class_id) as student_count
+                           FROM homework h 
+                           LEFT JOIN classes c ON h.class_id = c.id 
+                           LEFT JOIN subjects s ON h.subject_id = s.id WHERE 1=1";
                     $params = [];
                     
                     if ($class_id) {
