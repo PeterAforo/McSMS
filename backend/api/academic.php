@@ -309,6 +309,118 @@ try {
         }
     }
 
+    elseif ($resource === 'grades') {
+        switch ($method) {
+            case 'GET':
+                $assessment_id = $_GET['assessment_id'] ?? null;
+                if ($assessment_id) {
+                    // Check if table exists first
+                    try {
+                        $tableCheck = $pdo->query("SHOW TABLES LIKE 'assessment_grades'");
+                        if ($tableCheck->rowCount() === 0) {
+                            echo json_encode(['success' => true, 'grades' => []]);
+                            break;
+                        }
+                    } catch (Exception $e) {
+                        echo json_encode(['success' => true, 'grades' => []]);
+                        break;
+                    }
+                    
+                    $stmt = $pdo->prepare("
+                        SELECT ag.*, s.first_name, s.last_name, s.student_id as student_code
+                        FROM assessment_grades ag
+                        JOIN students s ON ag.student_id = s.id
+                        WHERE ag.assessment_id = ?
+                    ");
+                    $stmt->execute([$assessment_id]);
+                    echo json_encode(['success' => true, 'grades' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+                } else {
+                    echo json_encode(['success' => true, 'grades' => []]);
+                }
+                break;
+
+            case 'POST':
+                if ($action === 'bulk') {
+                    $data = json_decode(file_get_contents('php://input'), true);
+                    $assessment_id = $data['assessment_id'] ?? null;
+                    $grades = $data['grades'] ?? [];
+                    $graded_by = $data['graded_by'] ?? 1;
+
+                    if (!$assessment_id || empty($grades)) {
+                        echo json_encode(['success' => false, 'error' => 'Assessment ID and grades required']);
+                        break;
+                    }
+
+                    $pdo->beginTransaction();
+                    try {
+                        // Check if assessment_grades table exists, create if not
+                        $pdo->exec("CREATE TABLE IF NOT EXISTS assessment_grades (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            assessment_id INT NOT NULL,
+                            student_id INT NOT NULL,
+                            marks_obtained DECIMAL(10,2),
+                            grade VARCHAR(5),
+                            comment TEXT,
+                            graded_by INT,
+                            graded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                            UNIQUE KEY unique_assessment_student (assessment_id, student_id)
+                        )");
+
+                        foreach ($grades as $grade) {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO assessment_grades (assessment_id, student_id, marks_obtained, grade, comment, graded_by)
+                                VALUES (?, ?, ?, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE 
+                                    marks_obtained = VALUES(marks_obtained),
+                                    grade = VALUES(grade),
+                                    comment = VALUES(comment),
+                                    graded_by = VALUES(graded_by),
+                                    graded_at = NOW()
+                            ");
+                            $stmt->execute([
+                                $assessment_id,
+                                $grade['student_id'],
+                                $grade['marks_obtained'],
+                                $grade['grade'] ?? null,
+                                $grade['comment'] ?? '',
+                                $graded_by
+                            ]);
+                        }
+                        $pdo->commit();
+                        echo json_encode(['success' => true, 'message' => 'Grades saved successfully', 'count' => count($grades)]);
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                    }
+                } else {
+                    // Single grade save
+                    $data = json_decode(file_get_contents('php://input'), true);
+                    $stmt = $pdo->prepare("
+                        INSERT INTO assessment_grades (assessment_id, student_id, marks_obtained, grade, comment, graded_by)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                        ON DUPLICATE KEY UPDATE 
+                            marks_obtained = VALUES(marks_obtained),
+                            grade = VALUES(grade),
+                            comment = VALUES(comment),
+                            graded_by = VALUES(graded_by),
+                            graded_at = NOW()
+                    ");
+                    $stmt->execute([
+                        $data['assessment_id'],
+                        $data['student_id'],
+                        $data['marks_obtained'],
+                        $data['grade'] ?? null,
+                        $data['comment'] ?? '',
+                        $data['graded_by'] ?? 1
+                    ]);
+                    echo json_encode(['success' => true]);
+                }
+                break;
+        }
+    }
+
     else {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid resource']);
