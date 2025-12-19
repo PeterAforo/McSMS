@@ -92,44 +92,168 @@ function getGrades($pdo, $studentId, $termId, $classId) {
 
     $grades = array();
     
-    // Get grades from assessment_grades table
+    // Try multiple grade tables in order of preference
+    
+    // 1. Try exam_results table (most common)
     try {
         $sql = "
             SELECT 
-                ag.id,
-                ag.student_id,
-                ag.marks_obtained as score,
-                ag.grade,
-                ag.comment as remarks,
-                a.assessment_name as exam_name,
-                a.assessment_date as exam_date,
-                a.total_marks as max_score,
-                a.assessment_type,
+                er.id,
+                er.student_id,
+                er.marks_obtained as score,
+                er.grade,
+                er.remarks,
+                es.exam_name,
+                es.exam_date,
+                es.total_marks as max_score,
+                'Exam' as assessment_type,
                 s.subject_name,
                 s.subject_code,
                 t.name as term_name,
-                ROUND((ag.marks_obtained / a.total_marks) * 100, 1) as percentage
-            FROM assessment_grades ag
-            JOIN assessments a ON ag.assessment_id = a.id
-            LEFT JOIN subjects s ON a.subject_id = s.id
-            LEFT JOIN terms t ON a.term_id = t.id
-            WHERE ag.student_id = ?
+                ROUND((er.marks_obtained / es.total_marks) * 100, 1) as percentage
+            FROM exam_results er
+            JOIN exam_schedules es ON er.exam_schedule_id = es.id
+            LEFT JOIN subjects s ON es.subject_id = s.id
+            LEFT JOIN terms t ON es.term_id = t.id
+            WHERE er.student_id = ?
         ";
         
         $params = array($studentId);
         
         if ($termId) {
-            $sql .= " AND a.term_id = ?";
+            $sql .= " AND es.term_id = ?";
             $params[] = $termId;
         }
         
-        $sql .= " ORDER BY a.assessment_date DESC, s.subject_name";
+        $sql .= " ORDER BY es.exam_date DESC, s.subject_name";
         
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
-        // assessment_grades table might not exist, continue with empty
+        // exam_results table might not exist or have different structure
+    }
+    
+    // 2. Try grades table if no results yet
+    if (empty($grades)) {
+        try {
+            $sql = "
+                SELECT 
+                    g.id,
+                    g.student_id,
+                    g.score,
+                    g.grade,
+                    g.remarks,
+                    g.created_at as exam_date,
+                    100 as max_score,
+                    'Grade' as assessment_type,
+                    s.subject_name,
+                    s.subject_code,
+                    t.name as term_name,
+                    g.score as percentage
+                FROM grades g
+                LEFT JOIN subjects s ON g.subject_id = s.id
+                LEFT JOIN terms t ON g.term_id = t.id
+                WHERE g.student_id = ?
+            ";
+            
+            $params = array($studentId);
+            
+            if ($termId) {
+                $sql .= " AND g.term_id = ?";
+                $params[] = $termId;
+            }
+            
+            $sql .= " ORDER BY g.created_at DESC, s.subject_name";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // grades table might not exist or have different structure
+        }
+    }
+    
+    // 3. Try results table if still no results
+    if (empty($grades)) {
+        try {
+            $sql = "
+                SELECT 
+                    r.id,
+                    r.student_id,
+                    r.marks as score,
+                    r.grade,
+                    r.remarks,
+                    r.created_at as exam_date,
+                    r.total_marks as max_score,
+                    'Result' as assessment_type,
+                    s.subject_name,
+                    s.subject_code,
+                    t.name as term_name,
+                    CASE WHEN r.total_marks > 0 THEN ROUND((r.marks / r.total_marks) * 100, 1) ELSE 0 END as percentage
+                FROM results r
+                LEFT JOIN subjects s ON r.subject_id = s.id
+                LEFT JOIN terms t ON r.term_id = t.id
+                WHERE r.student_id = ?
+            ";
+            
+            $params = array($studentId);
+            
+            if ($termId) {
+                $sql .= " AND r.term_id = ?";
+                $params[] = $termId;
+            }
+            
+            $sql .= " ORDER BY r.created_at DESC, s.subject_name";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // results table might not exist or have different structure
+        }
+    }
+    
+    // 4. Try assessment_grades table (newer schema)
+    if (empty($grades)) {
+        try {
+            $sql = "
+                SELECT 
+                    ag.id,
+                    ag.student_id,
+                    ag.marks_obtained as score,
+                    ag.grade,
+                    ag.comment as remarks,
+                    a.assessment_name as exam_name,
+                    a.assessment_date as exam_date,
+                    a.total_marks as max_score,
+                    a.assessment_type,
+                    s.subject_name,
+                    s.subject_code,
+                    t.name as term_name,
+                    ROUND((ag.marks_obtained / a.total_marks) * 100, 1) as percentage
+                FROM assessment_grades ag
+                JOIN assessments a ON ag.assessment_id = a.id
+                LEFT JOIN subjects s ON a.subject_id = s.id
+                LEFT JOIN terms t ON a.term_id = t.id
+                WHERE ag.student_id = ?
+            ";
+            
+            $params = array($studentId);
+            
+            if ($termId) {
+                $sql .= " AND a.term_id = ?";
+                $params[] = $termId;
+            }
+            
+            $sql .= " ORDER BY a.assessment_date DESC, s.subject_name";
+            
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($params);
+            $grades = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            // assessment_grades table might not exist
+        }
     }
 
     // Also get graded homework submissions
