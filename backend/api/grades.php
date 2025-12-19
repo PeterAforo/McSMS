@@ -109,7 +109,7 @@ function getGrades($pdo, $studentId, $termId, $classId) {
                 'Exam' as assessment_type,
                 s.subject_name,
                 s.subject_code,
-                t.name as term_name,
+                t.term_name,
                 ROUND((er.marks_obtained / es.total_marks) * 100, 1) as percentage
             FROM exam_results er
             JOIN exam_schedules es ON er.exam_schedule_id = es.id
@@ -150,7 +150,7 @@ function getGrades($pdo, $studentId, $termId, $classId) {
                     a.assessment_name as exam_name,
                     s.subject_name,
                     s.subject_code,
-                    t.name as term_name,
+                    t.term_name,
                     CASE WHEN a.total_marks > 0 THEN ROUND((g.marks_obtained / a.total_marks) * 100, 1) ELSE 0 END as percentage
                 FROM grades g
                 JOIN assessments a ON g.assessment_id = a.id
@@ -191,7 +191,7 @@ function getGrades($pdo, $studentId, $termId, $classId) {
                     'Result' as assessment_type,
                     s.subject_name,
                     s.subject_code,
-                    t.name as term_name,
+                    t.term_name,
                     CASE WHEN r.total_marks > 0 THEN ROUND((r.marks / r.total_marks) * 100, 1) ELSE 0 END as percentage
                 FROM results r
                 LEFT JOIN subjects s ON r.subject_id = s.id
@@ -232,7 +232,7 @@ function getGrades($pdo, $studentId, $termId, $classId) {
                     a.assessment_type,
                     s.subject_name,
                     s.subject_code,
-                    t.name as term_name,
+                    t.term_name,
                     ROUND((ag.marks_obtained / a.total_marks) * 100, 1) as percentage
                 FROM assessment_grades ag
                 JOIN assessments a ON ag.assessment_id = a.id
@@ -273,7 +273,7 @@ function getGrades($pdo, $studentId, $termId, $classId) {
                 'Homework' as assessment_type,
                 s.subject_name,
                 s.subject_code,
-                t.name as term_name,
+                t.term_name,
                 ROUND((hs.marks_obtained / h.total_marks) * 100, 1) as percentage
             FROM homework_submissions hs
             JOIN homework h ON hs.homework_id = h.id
