@@ -134,37 +134,39 @@ function getGrades($pdo, $studentId, $termId, $classId) {
         // exam_results table might not exist or have different structure
     }
     
-    // 2. Try grades table if no results yet
+    // 2. Try grades table if no results yet (joins with assessments table)
     if (empty($grades)) {
         try {
             $sql = "
                 SELECT 
                     g.id,
                     g.student_id,
-                    g.score,
+                    g.marks_obtained as score,
                     g.grade,
                     g.remarks,
-                    g.created_at as exam_date,
-                    100 as max_score,
-                    'Grade' as assessment_type,
+                    a.assessment_date as exam_date,
+                    a.total_marks as max_score,
+                    a.assessment_type,
+                    a.assessment_name as exam_name,
                     s.subject_name,
                     s.subject_code,
                     t.name as term_name,
-                    g.score as percentage
+                    CASE WHEN a.total_marks > 0 THEN ROUND((g.marks_obtained / a.total_marks) * 100, 1) ELSE 0 END as percentage
                 FROM grades g
-                LEFT JOIN subjects s ON g.subject_id = s.id
-                LEFT JOIN terms t ON g.term_id = t.id
+                JOIN assessments a ON g.assessment_id = a.id
+                LEFT JOIN subjects s ON a.subject_id = s.id
+                LEFT JOIN terms t ON a.term_id = t.id
                 WHERE g.student_id = ?
             ";
             
             $params = array($studentId);
             
             if ($termId) {
-                $sql .= " AND g.term_id = ?";
+                $sql .= " AND a.term_id = ?";
                 $params[] = $termId;
             }
             
-            $sql .= " ORDER BY g.created_at DESC, s.subject_name";
+            $sql .= " ORDER BY a.assessment_date DESC, s.subject_name";
             
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
