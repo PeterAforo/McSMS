@@ -47,6 +47,20 @@ try {
 
         case 'POST':
             $data = json_decode(file_get_contents('php://input'), true);
+            
+            // Check if item with same name already exists
+            $checkStmt = $pdo->prepare("SELECT id FROM fee_items WHERE item_name = ?");
+            $checkStmt->execute([$data['item_name']]);
+            $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if ($existing) {
+                // Return existing item instead of creating duplicate
+                $stmt = $pdo->prepare("SELECT fi.*, fg.group_name FROM fee_items fi LEFT JOIN fee_groups fg ON fi.fee_group_id = fg.id WHERE fi.id = ?");
+                $stmt->execute([$existing['id']]);
+                echo json_encode(['success' => true, 'fee_item' => $stmt->fetch(PDO::FETCH_ASSOC), 'message' => 'Fee item already exists']);
+                break;
+            }
+            
             $stmt = $pdo->prepare("INSERT INTO fee_items (fee_group_id, item_name, item_code, description, frequency, is_optional, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $data['fee_group_id'],
