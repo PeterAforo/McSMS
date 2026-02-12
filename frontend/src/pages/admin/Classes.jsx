@@ -151,7 +151,7 @@ export default function Classes() {
     setFormData({
       class_name: '',
       class_code: '',
-      level: 'primary',
+      level: '',
       grade: '',
       section: '',
       capacity: 30,
@@ -169,7 +169,7 @@ export default function Classes() {
     setFormData({
       class_name: cls.class_name,
       class_code: cls.class_code,
-      level: cls.level,
+      level: cls.level || (levels.length > 0 ? levels[0].level_code : 'primary'),
       grade: cls.grade || '',
       section: cls.section || '',
       capacity: cls.capacity,
@@ -590,6 +590,7 @@ export default function Classes() {
                     onChange={(e) => setFormData({ ...formData, level: e.target.value })}
                     className="input"
                   >
+                    <option value="">Select Level</option>
                     {levels.map(level => (
                       <option key={level.id} value={level.level_code}>{level.level_name}</option>
                     ))}
