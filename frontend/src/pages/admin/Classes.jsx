@@ -197,6 +197,13 @@ export default function Classes() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate level is selected
+    if (!formData.level) {
+      alert('Please select a level for the class');
+      return;
+    }
+    
     try {
       if (editingClass) {
         await classesAPI.update(editingClass.id, formData);
