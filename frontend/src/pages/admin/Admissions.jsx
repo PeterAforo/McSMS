@@ -22,9 +22,12 @@ export default function Admissions() {
   const [offeredClass, setOfferedClass] = useState('');
   const [offerReason, setOfferReason] = useState('');
   const [requiresExam, setRequiresExam] = useState(false);
-  const [examDate, setExamDate] = useState('');
+  const [examDates, setExamDates] = useState([{ date: '', time: '' }]);
   const [examSubjects, setExamSubjects] = useState('');
   const [examInstructions, setExamInstructions] = useState('');
+  const [examLocation, setExamLocation] = useState('');
+  const [examRoom, setExamRoom] = useState('');
+  const [appointmentType, setAppointmentType] = useState('exam');
   const { user } = useAuthStore();
 
   useEffect(() => {
@@ -62,9 +65,12 @@ export default function Admissions() {
     setOfferedClass(app.class_applying_for || '');
     setOfferReason('');
     setRequiresExam(false);
-    setExamDate('');
+    setExamDates([{ date: '', time: '' }]);
     setExamSubjects('');
     setExamInstructions('');
+    setExamLocation('');
+    setExamRoom('');
+    setAppointmentType('exam');
     setAdminNotes('');
     setRejectionReason('');
   };
@@ -98,30 +104,67 @@ export default function Admissions() {
     }
   };
 
-  // Request entrance exam
+  // Add another exam date slot
+  const addExamDateSlot = () => {
+    setExamDates([...examDates, { date: '', time: '' }]);
+  };
+
+  // Remove an exam date slot
+  const removeExamDateSlot = (index) => {
+    if (examDates.length > 1) {
+      setExamDates(examDates.filter((_, i) => i !== index));
+    }
+  };
+
+  // Update exam date slot
+  const updateExamDateSlot = (index, field, value) => {
+    const updated = [...examDates];
+    updated[index][field] = value;
+    setExamDates(updated);
+  };
+
+  // Request entrance exam with multiple date options
   const handleRequestExam = async () => {
     if (!selectedApp) return;
-    if (!examDate || !examSubjects) {
-      alert('Please provide exam date and subjects');
+    
+    // Validate at least one complete date
+    const validDates = examDates.filter(d => d.date && d.time);
+    if (validDates.length === 0) {
+      alert('Please provide at least one exam date and time');
+      return;
+    }
+    if (!examSubjects) {
+      alert('Please provide exam subjects');
+      return;
+    }
+    if (!examLocation) {
+      alert('Please provide exam location');
       return;
     }
     
     try {
-      await axios.post(`${API_BASE_URL}/applications.php`, {
-        action: 'request_exam',
-        id: selectedApp.id,
-        exam_date: examDate,
-        exam_subjects: examSubjects,
-        exam_instructions: examInstructions,
-        reviewed_by: user.id
+      // Create appointment with available dates
+      const availableDates = validDates.map(d => ({
+        datetime: `${d.date}T${d.time}`,
+        formatted: new Date(`${d.date}T${d.time}`).toLocaleString()
+      }));
+      
+      await axios.post(`${API_BASE_URL}/exam_appointments.php?action=create`, {
+        application_id: selectedApp.id,
+        appointment_type: appointmentType,
+        available_dates: availableDates,
+        location: examLocation,
+        room: examRoom,
+        instructions: examInstructions,
+        subjects: examSubjects
       });
       
-      alert('Entrance exam request sent to parent!');
+      alert(`${appointmentType === 'interview' ? 'Interview' : 'Exam'} appointment created! Parent will be notified to select a date.`);
       setShowModal(false);
       fetchApplications();
     } catch (error) {
       console.error('Error requesting exam:', error);
-      alert('Failed to request exam: ' + (error.response?.data?.error || error.message));
+      alert('Failed to create appointment: ' + (error.response?.data?.error || error.message));
     }
   };
 
@@ -557,34 +600,131 @@ export default function Admissions() {
                           </div>
                         )}
 
-                        {/* Request Exam Form */}
+                        {/* Request Exam/Interview Form */}
                         {actionType === 'exam' && (
                           <div className="space-y-4">
+                            {/* Appointment Type */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Appointment Type *
+                              </label>
+                              <div className="flex gap-4">
+                                <label className="flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    value="exam"
+                                    checked={appointmentType === 'exam'}
+                                    onChange={(e) => setAppointmentType(e.target.value)}
+                                  />
+                                  <span>Entrance Exam</span>
+                                </label>
+                                <label className="flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    value="interview"
+                                    checked={appointmentType === 'interview'}
+                                    onChange={(e) => setAppointmentType(e.target.value)}
+                                  />
+                                  <span>Interview</span>
+                                </label>
+                                <label className="flex items-center gap-2">
+                                  <input
+                                    type="radio"
+                                    value="both"
+                                    checked={appointmentType === 'both'}
+                                    onChange={(e) => setAppointmentType(e.target.value)}
+                                  />
+                                  <span>Both</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Available Dates */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Available Dates * (Parent will choose one)
+                              </label>
+                              <div className="space-y-2">
+                                {examDates.map((slot, index) => (
+                                  <div key={index} className="flex gap-2 items-center">
+                                    <input
+                                      type="date"
+                                      value={slot.date}
+                                      onChange={(e) => updateExamDateSlot(index, 'date', e.target.value)}
+                                      className="input flex-1"
+                                      min={new Date().toISOString().split('T')[0]}
+                                    />
+                                    <input
+                                      type="time"
+                                      value={slot.time}
+                                      onChange={(e) => updateExamDateSlot(index, 'time', e.target.value)}
+                                      className="input w-32"
+                                    />
+                                    {examDates.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => removeExamDateSlot(index)}
+                                        className="p-2 text-red-500 hover:bg-red-50 rounded"
+                                      >
+                                        <XCircle className="w-4 h-4" />
+                                      </button>
+                                    )}
+                                  </div>
+                                ))}
+                                <button
+                                  type="button"
+                                  onClick={addExamDateSlot}
+                                  className="text-sm text-purple-600 hover:text-purple-800 flex items-center gap-1"
+                                >
+                                  <Calendar className="w-4 h-4" />
+                                  Add Another Date Option
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Location & Room */}
                             <div className="grid grid-cols-2 gap-4">
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Exam Date *
+                                  Location *
                                 </label>
                                 <input
-                                  type="datetime-local"
-                                  value={examDate}
-                                  onChange={(e) => setExamDate(e.target.value)}
+                                  type="text"
+                                  value={examLocation}
+                                  onChange={(e) => setExamLocation(e.target.value)}
                                   className="input"
+                                  placeholder="e.g., Main Campus, Admin Block"
                                 />
                               </div>
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                  Subjects *
+                                  Room
                                 </label>
                                 <input
                                   type="text"
-                                  value={examSubjects}
-                                  onChange={(e) => setExamSubjects(e.target.value)}
+                                  value={examRoom}
+                                  onChange={(e) => setExamRoom(e.target.value)}
                                   className="input"
-                                  placeholder="e.g., English, Mathematics"
+                                  placeholder="e.g., Room 101"
                                 />
                               </div>
                             </div>
+
+                            {/* Subjects */}
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">
+                                {appointmentType === 'interview' ? 'Interview Topics' : 'Subjects'} *
+                              </label>
+                              <input
+                                type="text"
+                                value={examSubjects}
+                                onChange={(e) => setExamSubjects(e.target.value)}
+                                className="input"
+                                placeholder={appointmentType === 'interview' ? 'e.g., General Knowledge, Aptitude' : 'e.g., English, Mathematics'}
+                              />
+                            </div>
+
+                            {/* Instructions */}
                             <div>
                               <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Instructions for Parent
@@ -597,12 +737,18 @@ export default function Admissions() {
                                 placeholder="e.g., Please arrive 30 minutes early. Bring pencils and erasers..."
                               />
                             </div>
+
+                            <div className="bg-purple-50 p-3 rounded-lg text-sm text-purple-800">
+                              <p>📧 Parent will receive email and SMS notifications</p>
+                              <p>⏰ Reminders will be sent 24 hours and 1 hour before the appointment</p>
+                            </div>
+
                             <button
                               onClick={handleRequestExam}
                               className="btn bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2"
                             >
                               <ClipboardCheck className="w-4 h-4" />
-                              Send Exam Request
+                              Create Appointment & Notify Parent
                             </button>
                           </div>
                         )}

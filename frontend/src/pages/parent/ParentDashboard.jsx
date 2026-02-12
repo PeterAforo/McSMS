@@ -4,12 +4,13 @@ import axios from 'axios';
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
 import FamilyLinkCode from '../../components/parent/FamilyLinkCode';
+import ExamAppointments from '../../components/parent/ExamAppointments';
 import {
   Users, GraduationCap, BookOpen, Calendar, Award, DollarSign, CheckCircle,
   AlertTriangle, Info, Brain, TrendingUp, ArrowUpRight, User, Bell, FileText,
   CreditCard, BarChart3, Heart, Eye, Clock, Target, Zap, ChevronRight,
   PieChart, Activity, Star, MessageSquare, ClipboardList, UserPlus, Sparkles,
-  TrendingDown, BookMarked, School, Wallet, Receipt, ArrowRight, Link2, X
+  TrendingDown, BookMarked, School, Wallet, Receipt, ArrowRight, Link2, X, XCircle
 } from 'lucide-react';
 
 export default function ParentDashboard() {
@@ -415,6 +416,9 @@ export default function ParentDashboard() {
           )}
         </div>
       )}
+
+      {/* Exam/Interview Appointments */}
+      <ExamAppointments parentId={user?.id} onUpdate={fetchDashboardData} />
 
       {/* AI Insights Section */}
       {insights.length > 0 && (
