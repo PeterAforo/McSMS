@@ -47,12 +47,19 @@ export default function BulkImport() {
 
   const fieldDefinitions = {
     students: [
-      { key: 'first_name', label: 'First Name', required: true }, { key: 'last_name', label: 'Last Name', required: true },
-      { key: 'email', label: 'Email', required: false, validate: 'email' }, { key: 'phone', label: 'Phone', required: false },
-      { key: 'date_of_birth', label: 'Date of Birth', required: true }, { key: 'gender', label: 'Gender', required: true },
-      { key: 'class', label: 'Class/Grade', required: true }, { key: 'admission_number', label: 'Admission Number', required: false, unique: true },
-      { key: 'parent_name', label: 'Parent Name', required: false }, { key: 'parent_email', label: 'Parent Email', required: false },
-      { key: 'parent_phone', label: 'Parent Phone', required: false }
+      { key: 'first_name', label: 'First Name', required: true }, { key: 'last_name', label: 'Last Name/Surname', required: true },
+      { key: 'middle_name', label: 'Middle Name', required: false },
+      { key: 'date_of_birth', label: 'Date of Birth', required: false }, { key: 'gender', label: 'Gender/Sex', required: false },
+      { key: 'class', label: 'Class/Grade', required: false }, { key: 'admission_number', label: 'Admission Number', required: false, unique: true },
+      { key: 'religion', label: 'Religion', required: false }, { key: 'nationality', label: 'Country/Nationality', required: false },
+      { key: 'health_info', label: 'Health Info/Allergies', required: false }, { key: 'address', label: 'Contact Address', required: false },
+      { key: 'previous_school', label: 'Previous School', required: false },
+      { key: 'parent_name', label: 'Parent/Guardian Name', required: false }, { key: 'parent_email', label: 'Parent Email', required: false },
+      { key: 'parent_phone', label: 'Parent Phone', required: false },
+      { key: 'father_name', label: 'Father Name', required: false }, { key: 'father_phone', label: 'Father Phone', required: false },
+      { key: 'father_email', label: 'Father Email', required: false },
+      { key: 'mother_name', label: 'Mother Name', required: false }, { key: 'mother_phone', label: 'Mother Phone', required: false },
+      { key: 'mother_email', label: 'Mother Email', required: false }
     ],
     teachers: [
       { key: 'first_name', label: 'First Name', required: true }, { key: 'last_name', label: 'Last Name', required: true },
@@ -163,13 +170,27 @@ export default function BulkImport() {
     setImporting(true); setStep(3);
     try {
       const formData = new FormData();
-      formData.append('file', file); formData.append('type', importType); formData.append('mappings', JSON.stringify(mappings)); formData.append('duplicate_action', duplicateAction);
-      const response = await axios.post(`${API_BASE_URL}/import.php?action=import`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (response.data.success) { setImportResult({ ...response.data, duplicates_skipped: duplicateAction === 'skip' ? duplicates.length : 0 }); saveImportHistory(response.data); }
-      else throw new Error(response.data.error || 'Import failed');
+      formData.append('file', file);
+      formData.append('module', importType);
+      formData.append('has_header', 'true');
+      formData.append('update_existing', duplicateAction === 'update' ? 'true' : 'false');
+      // Convert mappings from {field: csvColumn} to {columnIndex: field}
+      const indexMappings = {};
+      Object.entries(mappings).forEach(([field, csvColumn]) => {
+        const colIndex = csvColumns.indexOf(csvColumn);
+        if (colIndex !== -1) indexMappings[colIndex] = field;
+      });
+      formData.append('mappings', JSON.stringify(indexMappings));
+      formData.append('class_mappings', JSON.stringify({}));
+      const response = await axios.post(`${API_BASE_URL}/bulk_import.php?action=import`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (response.data.success) {
+        const results = response.data.results || {};
+        setImportResult({ success: true, total_rows: results.total || previewData.length, imported: results.imported || 0, updated: results.updated || 0, failed: results.skipped || 0, errors: results.errors || [] });
+        saveImportHistory({ success: true, total_rows: results.total, imported: results.imported, failed: results.skipped });
+      } else throw new Error(response.data.error || 'Import failed');
     } catch (error) {
-      const result = { success: true, total_rows: previewData.length, imported: previewData.length - (duplicateAction === 'skip' ? duplicates.length : 0), failed: 0, duplicates_skipped: duplicateAction === 'skip' ? duplicates.length : 0 };
-      setImportResult(result); saveImportHistory(result);
+      console.error('Import error:', error);
+      setImportResult({ success: false, error: error.response?.data?.error || error.message || 'Import failed' });
     } finally { setImporting(false); }
   };
 
