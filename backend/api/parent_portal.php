@@ -329,6 +329,7 @@ function getDashboard($pdo, $parentId) {
 
     $dashboard = [
         'children' => [],
+        'applications' => [],
         'upcoming_events' => [],
         'recent_notifications' => [],
         'pending_fees' => 0,
@@ -362,6 +363,25 @@ function getDashboard($pdo, $parentId) {
         ");
         $stmt->execute([$actualParentId]);
         $dashboard['children'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get all applications for this parent (including rejected/declined)
+        try {
+            $stmt = $pdo->prepare("
+                SELECT id, application_number, first_name, last_name, 
+                       CONCAT(first_name, ' ', last_name) as full_name,
+                       date_of_birth, gender, photo, class_applying_for,
+                       status, application_date, reviewed_date,
+                       rejection_reason, offered_class, offer_reason,
+                       admin_notes, student_id
+                FROM student_applications
+                WHERE parent_id = ?
+                ORDER BY application_date DESC
+            ");
+            $stmt->execute([$parentId]);
+            $dashboard['applications'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            $dashboard['applications'] = [];
+        }
 
         // Get upcoming events (next 30 days)
         $stmt = $pdo->prepare("

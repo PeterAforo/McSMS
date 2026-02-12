@@ -81,7 +81,7 @@ export default function ParentDashboard() {
             assignment_completion: 85,
             participation: 75
           })),
-          applications: [],
+          applications: portalData.applications || [],
           insights: [],
           total_fee_balance: portalData.pending_fees || 0,
           notifications: portalData.recent_notifications || [],
@@ -320,7 +320,7 @@ export default function ParentDashboard() {
             </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
             <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -339,6 +339,15 @@ export default function ParentDashboard() {
                 <CheckCircle className="text-green-500" size={32} />
               </div>
             </div>
+            <div className="bg-red-50 border border-red-100 rounded-xl p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-red-600 text-sm font-medium">Declined</p>
+                  <p className="text-2xl font-bold text-red-700">{applications.filter(a => a.status === 'rejected' || a.status === 'offer_declined').length}</p>
+                </div>
+                <XCircle className="text-red-500" size={32} />
+              </div>
+            </div>
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -349,6 +358,61 @@ export default function ParentDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Application Details List */}
+          {applications.length > 0 && (
+            <div className="border-t pt-4">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">All Applications</h3>
+              <div className="space-y-3">
+                {applications.map((app) => (
+                  <div key={app.id} className={`flex items-center justify-between p-3 rounded-lg border ${
+                    app.status === 'approved' ? 'bg-green-50 border-green-200' :
+                    app.status === 'rejected' || app.status === 'offer_declined' ? 'bg-red-50 border-red-200' :
+                    app.status === 'offer_sent' ? 'bg-purple-50 border-purple-200' :
+                    app.status === 'pending' ? 'bg-yellow-50 border-yellow-200' :
+                    'bg-gray-50 border-gray-200'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold ${
+                        app.status === 'approved' ? 'bg-green-500' :
+                        app.status === 'rejected' || app.status === 'offer_declined' ? 'bg-red-500' :
+                        app.status === 'offer_sent' ? 'bg-purple-500' :
+                        'bg-yellow-500'
+                      }`}>
+                        {app.first_name?.[0]}{app.last_name?.[0]}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-800">{app.full_name || `${app.first_name} ${app.last_name}`}</p>
+                        <p className="text-xs text-gray-500">
+                          Applied: {new Date(app.application_date).toLocaleDateString()} • {app.class_applying_for || 'Class not specified'}
+                        </p>
+                        {(app.status === 'rejected' || app.status === 'offer_declined') && app.rejection_reason && (
+                          <p className="text-xs text-red-600 mt-1">Reason: {app.rejection_reason}</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        app.status === 'approved' ? 'bg-green-100 text-green-700' :
+                        app.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                        app.status === 'offer_declined' ? 'bg-red-100 text-red-700' :
+                        app.status === 'offer_sent' ? 'bg-purple-100 text-purple-700' :
+                        app.status === 'offer_accepted' ? 'bg-blue-100 text-blue-700' :
+                        app.status === 'exam_required' ? 'bg-orange-100 text-orange-700' :
+                        'bg-yellow-100 text-yellow-700'
+                      }`}>
+                        {app.status === 'offer_declined' ? 'Declined' : 
+                         app.status === 'offer_sent' ? 'Offer Sent' :
+                         app.status === 'offer_accepted' ? 'Offer Accepted' :
+                         app.status === 'exam_required' ? 'Exam Required' :
+                         app.status?.charAt(0).toUpperCase() + app.status?.slice(1)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
