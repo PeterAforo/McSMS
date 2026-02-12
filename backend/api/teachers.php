@@ -110,10 +110,21 @@ try {
                 ]);
                 $teacherId = $existingTeacher['id'];
             } else {
-                // Generate teacher ID
-                $stmt = $pdo->query("SELECT COUNT(*) as count FROM teachers");
-                $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-                $teacherCode = $data['employee_id'] ?? ('TCH' . date('Y') . str_pad($count + 1, 3, '0', STR_PAD_LEFT));
+                // Generate teacher ID - use MAX to avoid duplicates
+                $year = date('Y');
+                $prefix = 'TCH' . $year;
+                $stmt = $pdo->prepare("SELECT teacher_id FROM teachers WHERE teacher_id LIKE ? ORDER BY teacher_id DESC LIMIT 1");
+                $stmt->execute([$prefix . '%']);
+                $lastTeacherId = $stmt->fetchColumn();
+                
+                if ($lastTeacherId) {
+                    // Extract the numeric suffix and increment
+                    $lastNum = (int)substr($lastTeacherId, strlen($prefix));
+                    $nextNum = $lastNum + 1;
+                } else {
+                    $nextNum = 1;
+                }
+                $teacherCode = $data['employee_id'] ?? ($prefix . str_pad($nextNum, 3, '0', STR_PAD_LEFT));
                 
                 // Parse name if first_name/last_name not provided
                 $firstName = $data['first_name'] ?? '';
