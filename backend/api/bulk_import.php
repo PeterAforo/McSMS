@@ -382,10 +382,24 @@ function mapRowToFields($data, $mappings) {
 }
 
 function importStudent($pdo, $data, $classMappings, $updateExisting) {
+    // Normalize field names (handle variations)
+    $firstName = $data['first_name'] ?? $data['firstname'] ?? $data['first'] ?? '';
+    $lastName = $data['last_name'] ?? $data['lastname'] ?? $data['surname'] ?? '';
+    $middleName = $data['middle_name'] ?? $data['middlename'] ?? $data['middle'] ?? '';
+    
     // Validate required fields
-    if (empty($data['first_name']) || empty($data['last_name'])) {
-        throw new Exception('First name and last name are required');
+    if (empty($firstName) && empty($lastName)) {
+        throw new Exception('First name or last name is required. Got: ' . json_encode(array_keys($data)));
     }
+    
+    // Use available name
+    if (empty($firstName)) $firstName = 'Unknown';
+    if (empty($lastName)) $lastName = 'Unknown';
+    
+    // Store normalized values back
+    $data['first_name'] = $firstName;
+    $data['last_name'] = $lastName;
+    $data['middle_name'] = $middleName;
     
     // Parse date of birth
     $dob = null;

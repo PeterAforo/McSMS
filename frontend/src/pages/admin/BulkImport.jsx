@@ -140,9 +140,50 @@ export default function BulkImport() {
   const autoMapFields = (headers) => {
     const fields = fieldDefinitions[importType] || [];
     const autoMapped = {};
+    
+    // Define aliases for better matching
+    const fieldAliases = {
+      first_name: ['first name', 'firstname', 'first', 'given name'],
+      last_name: ['last name', 'lastname', 'surname', 'family name'],
+      middle_name: ['middle name', 'middlename', 'middle'],
+      date_of_birth: ['date of birth', 'dob', 'birth date', 'birthdate', 'birthday'],
+      gender: ['gender', 'sex'],
+      class: ['class', 'grade', 'form'],
+      admission_number: ['admission number', 'admission no', 'adm no', 'student id', 'reg no'],
+      religion: ['religion', 'faith'],
+      health_info: ['health info', 'health', 'allergies', 'medical', 'health information'],
+      address: ['address', 'contact address', 'home address', 'residential address'],
+      parent_name: ['parent', 'guardian', 'parent or guardian', 'parent name'],
+      parent_phone: ['parent phone', 'guardian phone', 'primary phone', 'primary phone number'],
+      parent_email: ['parent email', 'guardian email', 'primary email', 'parent primary email'],
+      father_name: ['father', 'father name', 'dad'],
+      father_phone: ['father phone', 'father contact'],
+      father_email: ['father email'],
+      mother_name: ['mother', 'mother name', 'mom', 'mum'],
+      mother_phone: ['mother phone', 'mother contact'],
+      mother_email: ['mother email'],
+      nationality: ['country', 'nationality', 'nation'],
+      previous_school: ['previous school', 'school attended', 'former school']
+    };
+    
     fields.forEach(field => {
-      let match = headers.find(h => h.toLowerCase() === field.key.toLowerCase());
-      if (!match) match = headers.find(h => h.toLowerCase().includes(field.key.toLowerCase()) || field.label.toLowerCase().includes(h.toLowerCase()));
+      const aliases = fieldAliases[field.key] || [field.key, field.label.toLowerCase()];
+      let match = null;
+      
+      // Try exact match first
+      for (const alias of aliases) {
+        match = headers.find(h => h.toLowerCase() === alias.toLowerCase());
+        if (match) break;
+      }
+      
+      // Try partial match
+      if (!match) {
+        for (const alias of aliases) {
+          match = headers.find(h => h.toLowerCase().includes(alias) || alias.includes(h.toLowerCase()));
+          if (match) break;
+        }
+      }
+      
       if (match) autoMapped[field.key] = match;
     });
     setMappings(autoMapped);
