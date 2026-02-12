@@ -486,21 +486,36 @@ function importStudent($pdo, $data, $classMappings, $updateExisting) {
         // Generate student ID if not provided
         if (empty($admissionNumber)) {
             $year = date('Y');
-            $stmt = $pdo->query("SELECT COUNT(*) + 1 as next FROM students WHERE YEAR(created_at) = $year");
+            $stmt = $pdo->query("SELECT COALESCE(MAX(CAST(SUBSTRING(admission_number, 4) AS UNSIGNED)), 0) + 1 as next FROM students WHERE admission_number LIKE 'STU%'");
             $next = $stmt->fetch(PDO::FETCH_ASSOC)['next'];
-            $admissionNumber = 'STU' . $year . str_pad($next, 4, '0', STR_PAD_LEFT);
+            $admissionNumber = 'STU' . str_pad($next, 6, '0', STR_PAD_LEFT);
         }
         
         // Generate unique student_id
-        $studentId = 'S' . date('Y') . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+        $stmt = $pdo->query("SELECT COALESCE(MAX(CAST(SUBSTRING(student_id, 2) AS UNSIGNED)), 0) + 1 as next FROM students WHERE student_id LIKE 'S%'");
+        $nextId = $stmt->fetch(PDO::FETCH_ASSOC)['next'];
+        $studentId = 'S' . date('Y') . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        
+        // Default date of birth if not provided (use a placeholder that can be updated later)
+        if (empty($dob)) {
+            $dob = '2010-01-01'; // Default placeholder
+        }
+        
+        // Default admission date to today
+        $admissionDate = date('Y-m-d');
+        
+        // Default gender if not provided
+        if (empty($gender)) {
+            $gender = 'male'; // Default, can be updated later
+        }
         
         // Insert new student
         $stmt = $pdo->prepare("
             INSERT INTO students (
-                student_id, admission_number, first_name, middle_name, last_name,
+                student_id, admission_number, first_name, other_names, last_name,
                 date_of_birth, gender, class_id, religion, nationality,
-                health_info, address, previous_school, parent_id, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
+                allergies, address, previous_school, parent_id, admission_date, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
         ");
         $stmt->execute([
             $studentId,
@@ -516,7 +531,8 @@ function importStudent($pdo, $data, $classMappings, $updateExisting) {
             $data['health_info'] ?? null,
             $data['address'] ?? null,
             $data['previous_school'] ?? null,
-            $parentId
+            $parentId,
+            $admissionDate
         ]);
         return 'imported';
     }
