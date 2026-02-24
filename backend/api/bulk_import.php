@@ -442,14 +442,30 @@ function importStudent($pdo, $data, $classMappings, $updateExisting) {
         }
     }
     
-    // Check for existing student by admission number
+    // Check for existing student by multiple criteria
     $admissionNumber = $data['admission_number'] ?? '';
     $existingStudent = null;
+    $matchedBy = null;
     
+    // 1. Check by admission number (highest priority)
     if (!empty($admissionNumber)) {
-        $stmt = $pdo->prepare("SELECT id FROM students WHERE admission_number = ?");
+        $stmt = $pdo->prepare("SELECT id, student_id, first_name, last_name FROM students WHERE admission_number = ?");
         $stmt->execute([$admissionNumber]);
         $existingStudent = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($existingStudent) $matchedBy = 'admission_number';
+    }
+    
+    // 2. Check by name + date of birth (if no admission number match)
+    if (!$existingStudent && !empty($firstName) && !empty($lastName) && !empty($dob)) {
+        $stmt = $pdo->prepare("
+            SELECT id, student_id, admission_number FROM students 
+            WHERE LOWER(first_name) = LOWER(?) 
+            AND LOWER(last_name) = LOWER(?) 
+            AND date_of_birth = ?
+        ");
+        $stmt->execute([$firstName, $lastName, $dob]);
+        $existingStudent = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($existingStudent) $matchedBy = 'name_dob';
     }
     
     // Extract guardian info (store directly in students table)
@@ -457,6 +473,23 @@ function importStudent($pdo, $data, $classMappings, $updateExisting) {
     $guardianName = $guardianData['name'] ?: null;
     $guardianPhone = cleanPhone($guardianData['phone']) ?: null;
     $guardianEmail = cleanEmail($guardianData['email']) ?: null;
+    
+    // 3. Check by guardian phone (if still no match and phone provided)
+    if (!$existingStudent && !empty($guardianPhone)) {
+        $stmt = $pdo->prepare("
+            SELECT id, student_id, admission_number, first_name, last_name FROM students 
+            WHERE guardian_phone = ? OR guardian_phone LIKE ?
+        ");
+        $phonePattern = '%' . substr($guardianPhone, -9) . '%'; // Match last 9 digits
+        $stmt->execute([$guardianPhone, $phonePattern]);
+        $existingStudent = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($existingStudent) $matchedBy = 'guardian_phone';
+    }
+    
+    // Log match info for debugging - skip if duplicate found and not updating
+    if ($existingStudent && !$updateExisting) {
+        throw new Exception("Duplicate found (matched by $matchedBy): {$existingStudent['first_name']} {$existingStudent['last_name']} - ID: {$existingStudent['student_id']}");
+    }
     
     if ($existingStudent && $updateExisting) {
         // Update existing student
