@@ -1,10 +1,15 @@
 <?php
 /**
  * Debug endpoint for teacher_dashboard.php
+ * PROTECTED: Only accessible in development or with debug key
  */
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
+
+require_once __DIR__ . '/../middleware/debug_protection.php';
+DebugProtection::check();
+DebugProtection::logAccess('debug_teacher_dashboard.php');
 
 $debug = [];
 

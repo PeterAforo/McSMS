@@ -2,6 +2,7 @@
 /**
  * Authentication API
  * Handles login, logout, and user session management
+ * Includes rate limiting for security
  */
 
 // Set CORS headers only if not already set by .htaccess
@@ -19,7 +20,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
+require_once __DIR__ . '/../middleware/rate_limiter.php';
 require_once __DIR__ . '/../../config/database.php';
+
+// Apply rate limiting to login attempts
+$action = $_GET['action'] ?? null;
+if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $clientIP = RateLimiter::getClientIP();
+    if (!RateLimiter::check('login_' . $clientIP, 5, 300)) {
+        exit; // Rate limiter already sent response
+    }
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? null;
@@ -123,6 +134,8 @@ function handleLogin($pdo) {
     // Verify password
     if (!password_verify($data['password'], $user['password'])) {
         logLoginAttempt($pdo, $user['id'], 'failed', 'Invalid password');
+        // Record failed attempt for rate limiting
+        RateLimiter::recordAttempt('login_' . RateLimiter::getClientIP());
         http_response_code(401);
         echo json_encode(['error' => 'Invalid email or password']);
         return;
@@ -130,6 +143,8 @@ function handleLogin($pdo) {
     
     // Log successful login
     logLoginAttempt($pdo, $user['id'], 'success');
+    // Clear rate limit on successful login
+    RateLimiter::clear('login_' . RateLimiter::getClientIP());
     
     // Check if this is first login (last_login is null)
     $isFirstLogin = empty($user['last_login']);

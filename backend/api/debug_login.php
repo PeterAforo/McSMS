@@ -1,16 +1,21 @@
 <?php
 /**
  * Debug Login - Test the login directly
+ * PROTECTED: Only accessible in development or with debug key
  */
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, X-Debug-Key');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
+
+require_once __DIR__ . '/../middleware/debug_protection.php';
+DebugProtection::check();
+DebugProtection::logAccess('debug_login.php');
 
 require_once __DIR__ . '/../../config/database.php';
 

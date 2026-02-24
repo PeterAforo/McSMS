@@ -1,10 +1,15 @@
 <?php
 /**
  * Debug system_reset preview
+ * PROTECTED: Only accessible in development or with debug key
  */
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
+
+require_once __DIR__ . '/../middleware/debug_protection.php';
+DebugProtection::check();
+DebugProtection::logAccess('debug_reset.php');
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);

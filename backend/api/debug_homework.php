@@ -2,12 +2,17 @@
 /**
  * Debug Homework Issue
  * This file helps diagnose why homework is not showing for parents
+ * PROTECTED: Only accessible in development or with debug key
  */
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET');
 header('Access-Control-Allow-Headers: Content-Type');
+
+require_once __DIR__ . '/../middleware/debug_protection.php';
+DebugProtection::check();
+DebugProtection::logAccess('debug_homework.php');
 
 // Load config
 $configPaths = [

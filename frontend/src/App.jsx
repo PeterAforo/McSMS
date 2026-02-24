@@ -1,108 +1,132 @@
-import { useEffect } from 'react';
+import { useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
 import { useThemeStore } from './store/themeStore';
-import AIChatbot from './components/shared/AIChatbot';
-import DynamicFavicon from './components/shared/DynamicFavicon';
-import { VoiceCommandButton } from './components/shared/VoiceCommands';
+
+// Core components loaded immediately
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import Activate from './pages/auth/Activate';
 import DashboardLayout from './components/layout/DashboardLayout';
-import AdminDashboard from './pages/admin/Dashboard';
-import Users from './pages/admin/Users';
-import Students from './pages/admin/Students';
-import StudentProfile from './pages/admin/StudentProfile';
-import Admissions from './pages/admin/Admissions';
-import Classes from './pages/admin/Classes';
-import ClassSubjects from './pages/admin/ClassSubjects';
-import EducationLevels from './pages/admin/EducationLevels';
-import Subjects from './pages/admin/Subjects';
-import Terms from './pages/admin/Terms';
-import Teachers from './pages/admin/Teachers';
-import TeacherProfile from './pages/admin/TeacherProfile';
-import Finance from './pages/admin/Finance';
-import FeeStructure from './pages/admin/FeeStructure';
-import Invoices from './pages/admin/Invoices';
-import Payments from './pages/admin/Payments';
-import Attendance from './pages/admin/Attendance';
-import Grading from './pages/admin/Grading';
-import Homework from './pages/admin/Homework';
-import RoleManagement from './pages/admin/RoleManagement';
-// Settings removed - merged into SystemConfiguration
-import BulkImport from './pages/admin/BulkImport';
-import SystemLogs from './pages/admin/SystemLogs';
-import SystemConfiguration from './pages/admin/SystemConfiguration';
-import SystemReset from './pages/admin/SystemReset';
-import Reports from './pages/admin/Reports';
-import AcademicReports from './pages/admin/AcademicReports';
-import FinancialReports from './pages/admin/FinancialReports';
-import AdminStudentReports from './pages/admin/StudentReports';
-import ExecutiveReports from './pages/admin/ExecutiveReports';
-import Timetable from './pages/admin/Timetable';
-import Exams from './pages/admin/Exams';
-import LMS from './pages/admin/LMS';
-import Analytics from './pages/admin/Analytics';
-import Transport from './pages/admin/Transport';
-import HRPayroll from './pages/admin/HRPayroll';
-import Biometric from './pages/admin/Biometric';
-import MultiSchool from './pages/admin/MultiSchool';
-import AIFeatures from './pages/admin/AIFeatures';
-import AdvancedAnalytics from './pages/admin/AdvancedAnalytics';
-import HRManagement from './pages/admin/HRManagement';
-import AlumniManagement from './pages/admin/AlumniManagement';
-import IntegrationHub from './pages/admin/IntegrationHub';
-import ReportBuilder from './pages/admin/ReportBuilder';
-import VideoConferencing from './pages/admin/VideoConferencing';
-import ComprehensiveDashboard from './pages/admin/ComprehensiveDashboard';
-import DashboardSelector from './pages/admin/DashboardSelector';
-import PrincipalDashboard from './pages/principal/PrincipalDashboard';
-import HRDashboard from './pages/hr/HRDashboard';
-import FinanceDashboard from './pages/finance/FinanceDashboard';
-import TeacherComprehensiveDashboard from './pages/teacher/Dashboard';
-import StudentDashboard from './pages/student/StudentDashboard';
-import ParentComprehensiveDashboard from './pages/parent/ParentDashboard';
-import MyClasses from './pages/teacher/MyClasses';
-import TeacherStudents from './pages/teacher/Students';
-import TeacherAttendance from './pages/teacher/TeacherAttendance';
-import TeacherHomework from './pages/teacher/TeacherHomework';
-import TeacherHomeworkReview from './pages/teacher/TeacherHomeworkReview';
-import TeacherGrading from './pages/teacher/TeacherGrading';
-import TeacherMessages from './pages/teacher/Messages';
-import TeacherSettings from './pages/teacher/Settings';
-import TeacherStudentReports from './pages/teacher/StudentReports';
-import AIInsights from './pages/teacher/AIInsights';
-import HRPortal from './pages/teacher/HRPortal';
-import LessonPlanning from './pages/teacher/LessonPlanning';
-import StudentProgress from './pages/teacher/StudentProgress';
-import BehaviorTracking from './pages/teacher/BehaviorTracking';
-import ResourceLibrary from './pages/teacher/ResourceLibrary';
-import SeatingChart from './pages/teacher/SeatingChart';
-import SubstituteMode from './pages/teacher/SubstituteMode';
-import ApplyForAdmission from './pages/parent/ApplyForAdmission';
-import ChildDetails from './pages/parent/ChildDetails';
-import TermEnrollment from './pages/parent/TermEnrollment';
-import ParentInvoices from './pages/parent/Invoices';
-import ParentPayments from './pages/parent/Payments';
-import ParentMessages from './pages/parent/Messages';
-import ParentSettings from './pages/parent/Settings';
-import ChildHomework from './pages/parent/ChildHomework';
-import ChildResults from './pages/parent/ChildResults';
-import ChildAttendance from './pages/parent/ChildAttendance';
-import ChildGrades from './pages/parent/ChildGrades';
-import ChildHomeworkView from './pages/parent/ChildHomeworkView';
-import ChildTeachers from './pages/parent/ChildTeachers';
-import ChildReportCards from './pages/parent/ChildReportCards';
-import ParentMeetings from './pages/parent/ParentMeetings';
-import WhatsAppMessaging from './pages/admin/WhatsAppMessaging';
-import SMSMessaging from './pages/admin/SMSMessaging';
-import EmailMessaging from './pages/admin/EmailMessaging';
-import AdminMessages from './pages/admin/Messages';
 import Unauthorized from './pages/Unauthorized';
-import Profile from './pages/shared/Profile';
-import Notifications from './pages/shared/Notifications';
-import HelpCenter from './pages/shared/HelpCenter';
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+);
+
+// Lazy loaded components - Auth
+const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const Activate = lazy(() => import('./pages/auth/Activate'));
+
+// Lazy loaded - Shared components
+const AIChatbot = lazy(() => import('./components/shared/AIChatbot'));
+const DynamicFavicon = lazy(() => import('./components/shared/DynamicFavicon'));
+const Profile = lazy(() => import('./pages/shared/Profile'));
+const Notifications = lazy(() => import('./pages/shared/Notifications'));
+const HelpCenter = lazy(() => import('./pages/shared/HelpCenter'));
+
+// Lazy loaded - Admin pages (largest bundle reduction)
+const AdminDashboard = lazy(() => import('./pages/admin/Dashboard'));
+const Users = lazy(() => import('./pages/admin/Users'));
+const Students = lazy(() => import('./pages/admin/Students'));
+const StudentProfile = lazy(() => import('./pages/admin/StudentProfile'));
+const Admissions = lazy(() => import('./pages/admin/Admissions'));
+const Classes = lazy(() => import('./pages/admin/Classes'));
+const ClassSubjects = lazy(() => import('./pages/admin/ClassSubjects'));
+const EducationLevels = lazy(() => import('./pages/admin/EducationLevels'));
+const Subjects = lazy(() => import('./pages/admin/Subjects'));
+const Terms = lazy(() => import('./pages/admin/Terms'));
+const Teachers = lazy(() => import('./pages/admin/Teachers'));
+const TeacherProfile = lazy(() => import('./pages/admin/TeacherProfile'));
+const Finance = lazy(() => import('./pages/admin/Finance'));
+const FeeStructure = lazy(() => import('./pages/admin/FeeStructure'));
+const Invoices = lazy(() => import('./pages/admin/Invoices'));
+const Payments = lazy(() => import('./pages/admin/Payments'));
+const Attendance = lazy(() => import('./pages/admin/Attendance'));
+const Grading = lazy(() => import('./pages/admin/Grading'));
+const Homework = lazy(() => import('./pages/admin/Homework'));
+const RoleManagement = lazy(() => import('./pages/admin/RoleManagement'));
+const BulkImport = lazy(() => import('./pages/admin/BulkImport'));
+const SystemLogs = lazy(() => import('./pages/admin/SystemLogs'));
+const SystemConfiguration = lazy(() => import('./pages/admin/SystemConfiguration'));
+const SystemReset = lazy(() => import('./pages/admin/SystemReset'));
+const Reports = lazy(() => import('./pages/admin/Reports'));
+const AcademicReports = lazy(() => import('./pages/admin/AcademicReports'));
+const FinancialReports = lazy(() => import('./pages/admin/FinancialReports'));
+const AdminStudentReports = lazy(() => import('./pages/admin/StudentReports'));
+const ExecutiveReports = lazy(() => import('./pages/admin/ExecutiveReports'));
+const Timetable = lazy(() => import('./pages/admin/Timetable'));
+const Exams = lazy(() => import('./pages/admin/Exams'));
+const LMS = lazy(() => import('./pages/admin/LMS'));
+const Analytics = lazy(() => import('./pages/admin/Analytics'));
+const Transport = lazy(() => import('./pages/admin/Transport'));
+const HRPayroll = lazy(() => import('./pages/admin/HRPayroll'));
+const Biometric = lazy(() => import('./pages/admin/Biometric'));
+const MultiSchool = lazy(() => import('./pages/admin/MultiSchool'));
+const AIFeatures = lazy(() => import('./pages/admin/AIFeatures'));
+const AdvancedAnalytics = lazy(() => import('./pages/admin/AdvancedAnalytics'));
+const HRManagement = lazy(() => import('./pages/admin/HRManagement'));
+const AlumniManagement = lazy(() => import('./pages/admin/AlumniManagement'));
+const IntegrationHub = lazy(() => import('./pages/admin/IntegrationHub'));
+const ReportBuilder = lazy(() => import('./pages/admin/ReportBuilder'));
+const VideoConferencing = lazy(() => import('./pages/admin/VideoConferencing'));
+const ComprehensiveDashboard = lazy(() => import('./pages/admin/ComprehensiveDashboard'));
+const DashboardSelector = lazy(() => import('./pages/admin/DashboardSelector'));
+const WhatsAppMessaging = lazy(() => import('./pages/admin/WhatsAppMessaging'));
+const SMSMessaging = lazy(() => import('./pages/admin/SMSMessaging'));
+const EmailMessaging = lazy(() => import('./pages/admin/EmailMessaging'));
+const AdminMessages = lazy(() => import('./pages/admin/Messages'));
+
+// Lazy loaded - Role dashboards
+const PrincipalDashboard = lazy(() => import('./pages/principal/PrincipalDashboard'));
+const HRDashboard = lazy(() => import('./pages/hr/HRDashboard'));
+const FinanceDashboard = lazy(() => import('./pages/finance/FinanceDashboard'));
+const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
+const StudentHomework = lazy(() => import('./pages/student/StudentHomework'));
+const StudentGrades = lazy(() => import('./pages/student/StudentGrades'));
+const StudentAttendance = lazy(() => import('./pages/student/StudentAttendance'));
+const StudentTimetable = lazy(() => import('./pages/student/StudentTimetable'));
+const StudentMessages = lazy(() => import('./pages/student/StudentMessages'));
+
+// Lazy loaded - Teacher pages
+const TeacherComprehensiveDashboard = lazy(() => import('./pages/teacher/Dashboard'));
+const MyClasses = lazy(() => import('./pages/teacher/MyClasses'));
+const TeacherStudents = lazy(() => import('./pages/teacher/Students'));
+const TeacherAttendance = lazy(() => import('./pages/teacher/TeacherAttendance'));
+const TeacherHomework = lazy(() => import('./pages/teacher/TeacherHomework'));
+const TeacherHomeworkReview = lazy(() => import('./pages/teacher/TeacherHomeworkReview'));
+const TeacherGrading = lazy(() => import('./pages/teacher/TeacherGrading'));
+const TeacherMessages = lazy(() => import('./pages/teacher/Messages'));
+const TeacherSettings = lazy(() => import('./pages/teacher/Settings'));
+const TeacherStudentReports = lazy(() => import('./pages/teacher/StudentReports'));
+const AIInsights = lazy(() => import('./pages/teacher/AIInsights'));
+const HRPortal = lazy(() => import('./pages/teacher/HRPortal'));
+const LessonPlanning = lazy(() => import('./pages/teacher/LessonPlanning'));
+const StudentProgress = lazy(() => import('./pages/teacher/StudentProgress'));
+const BehaviorTracking = lazy(() => import('./pages/teacher/BehaviorTracking'));
+const ResourceLibrary = lazy(() => import('./pages/teacher/ResourceLibrary'));
+const SeatingChart = lazy(() => import('./pages/teacher/SeatingChart'));
+const SubstituteMode = lazy(() => import('./pages/teacher/SubstituteMode'));
+
+// Lazy loaded - Parent pages
+const ParentComprehensiveDashboard = lazy(() => import('./pages/parent/ParentDashboard'));
+const ApplyForAdmission = lazy(() => import('./pages/parent/ApplyForAdmission'));
+const ChildDetails = lazy(() => import('./pages/parent/ChildDetails'));
+const TermEnrollment = lazy(() => import('./pages/parent/TermEnrollment'));
+const ParentInvoices = lazy(() => import('./pages/parent/Invoices'));
+const ParentPayments = lazy(() => import('./pages/parent/Payments'));
+const ParentMessages = lazy(() => import('./pages/parent/Messages'));
+const ParentSettings = lazy(() => import('./pages/parent/Settings'));
+const ChildHomework = lazy(() => import('./pages/parent/ChildHomework'));
+const ChildResults = lazy(() => import('./pages/parent/ChildResults'));
+const ChildAttendance = lazy(() => import('./pages/parent/ChildAttendance'));
+const ChildGrades = lazy(() => import('./pages/parent/ChildGrades'));
+const ChildHomeworkView = lazy(() => import('./pages/parent/ChildHomeworkView'));
+const ChildTeachers = lazy(() => import('./pages/parent/ChildTeachers'));
+const ChildReportCards = lazy(() => import('./pages/parent/ChildReportCards'));
+const ParentMeetings = lazy(() => import('./pages/parent/ParentMeetings'));
 
 // Protected Route Component
 function ProtectedRoute({ children, allowedRoles }) {
@@ -137,8 +161,11 @@ function ThemeInitializer({ children }) {
 function App() {
   return (
     <BrowserRouter>
-      <DynamicFavicon />
-      <Routes>
+      <Suspense fallback={<PageLoader />}>
+        <DynamicFavicon />
+      </Suspense>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
@@ -264,6 +291,13 @@ function App() {
           }
         >
           <Route path="dashboard" element={<StudentDashboard />} />
+          <Route path="homework" element={<StudentHomework />} />
+          <Route path="grades" element={<StudentGrades />} />
+          <Route path="attendance" element={<StudentAttendance />} />
+          <Route path="timetable" element={<StudentTimetable />} />
+          <Route path="messages" element={<StudentMessages />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="help" element={<HelpCenter />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
@@ -338,9 +372,12 @@ function App() {
         {/* 404 */}
         <Route path="*" element={<div className="p-8"><h1 className="text-2xl">404 - Page Not Found</h1></div>} />
       </Routes>
+      </Suspense>
       
       {/* AI Chatbot - Available on all pages (bottom-left) */}
-      <AIChatbot />
+      <Suspense fallback={null}>
+        <AIChatbot />
+      </Suspense>
     </BrowserRouter>
   );
 }
