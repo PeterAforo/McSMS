@@ -507,10 +507,26 @@ function importStudent($pdo, $data, $classMappings, $updateExisting) {
             $admissionNumber = 'STU' . str_pad($next, 6, '0', STR_PAD_LEFT);
         }
         
-        // Generate unique student_id
-        $stmt = $pdo->query("SELECT COALESCE(MAX(CAST(SUBSTRING(student_id, 2) AS UNSIGNED)), 0) + 1 as next FROM students WHERE student_id LIKE 'S%'");
-        $nextId = $stmt->fetch(PDO::FETCH_ASSOC)['next'];
-        $studentId = 'S' . date('Y') . str_pad($nextId, 4, '0', STR_PAD_LEFT);
+        // Generate unique student_id using simple counter
+        $year = date('Y');
+        $stmt = $pdo->query("SELECT COUNT(*) + 1 as next FROM students");
+        $count = $stmt->fetch(PDO::FETCH_ASSOC)['next'];
+        // Use timestamp + count for uniqueness
+        $studentId = 'STU' . $year . str_pad($count, 4, '0', STR_PAD_LEFT);
+        
+        // Ensure uniqueness by checking and incrementing if needed
+        $maxAttempts = 100;
+        $attempt = 0;
+        while ($attempt < $maxAttempts) {
+            $checkStmt = $pdo->prepare("SELECT id FROM students WHERE student_id = ?");
+            $checkStmt->execute([$studentId]);
+            if (!$checkStmt->fetch()) {
+                break; // ID is unique
+            }
+            $count++;
+            $studentId = 'STU' . $year . str_pad($count, 4, '0', STR_PAD_LEFT);
+            $attempt++;
+        }
         
         // Default date of birth if not provided (use a placeholder that can be updated later)
         if (empty($dob)) {
