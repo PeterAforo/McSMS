@@ -107,10 +107,34 @@ export default function BulkImport() {
   };
 
   const handleDownloadTemplate = () => {
-    const fields = fieldDefinitions[importType] || [];
-    const headers = fields.map(f => f.label).join(',');
-    const sampleRow = fields.map(f => f.key.includes('email') ? 'example@email.com' : f.key.includes('date') ? '2024-01-15' : `Sample`).join(',');
-    const csv = `${headers}\n${sampleRow}`;
+    const templates = {
+      students: {
+        headers: ['First Name', 'Last Name', 'Middle Name', 'Date of Birth', 'Gender', 'Class', 'Admission Number', 'Email', 'Phone', 'Address', 'Religion', 'Nationality', 'Guardian Name', 'Guardian Phone', 'Guardian Email', 'Previous School', 'Health Info'],
+        samples: [
+          ['John', 'Smith', 'Michael', '2015-05-15', 'Male', 'Grade 1', '', 'john@email.com', '+233241234567', '123 Main St', 'Christianity', 'Ghanaian', 'Mary Smith', '+233241234568', 'mary@email.com', 'ABC School', 'No allergies'],
+          ['Jane', 'Doe', '', '2016-08-22', 'Female', 'Grade 2', '', '', '+233249876543', '456 Oak Ave', 'Islam', 'Nigerian', 'James Doe', '+233249876544', 'james@email.com', '', 'Allergic to peanuts']
+        ]
+      },
+      teachers: {
+        headers: ['First Name', 'Last Name', 'Email', 'Phone', 'Employee ID', 'Gender', 'Date of Birth', 'Address', 'Qualification', 'Department'],
+        samples: [['Grace', 'Asante', 'grace@school.com', '+233241234567', 'TCH001', 'Female', '1985-03-15', '123 Teacher Lane', 'B.Ed Education', 'Primary']]
+      },
+      classes: {
+        headers: ['Class Name', 'Class Code', 'Level', 'Grade', 'Section', 'Capacity', 'Room Number'],
+        samples: [['Grade 1', 'GR1', 'PRIMARY', '1', 'A', '30', 'Room 101'], ['Pre-Primary 1', 'PP1', 'PRE-PRIMARY', '0', 'A', '25', 'Room 001']]
+      },
+      subjects: {
+        headers: ['Subject Name', 'Subject Code', 'Description', 'Credit Hours', 'Is Elective'],
+        samples: [['Mathematics', 'MATH', 'Core mathematics', '4', 'No'], ['French', 'FRN', 'French language', '2', 'Yes']]
+      },
+      fee_items: {
+        headers: ['Fee Name', 'Amount', 'Description', 'Category', 'Is Mandatory'],
+        samples: [['Tuition Fee', '5000', 'Term tuition', 'Tuition', 'Yes'], ['Sports Fee', '200', 'Sports activities', 'Extra', 'No']]
+      }
+    };
+    const t = templates[importType];
+    if (!t) return;
+    const csv = t.headers.join(',') + '\n' + t.samples.map(row => row.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `${importType}_template.csv`; a.click();
   };
@@ -227,8 +251,10 @@ export default function BulkImport() {
       if (response.data.success) {
         const results = response.data.results || {};
         const debugErrors = response.data.debug_errors || [];
+        const missingData = response.data.missing_data || {};
         console.log('Import results:', results);
         console.log('Debug errors:', debugErrors);
+        console.log('Missing data:', missingData);
         setImportResult({ 
           success: true, 
           total_rows: results.total || previewData.length, 
@@ -236,7 +262,8 @@ export default function BulkImport() {
           updated: results.updated || 0, 
           failed: results.skipped || 0, 
           errors: results.errors || [],
-          debug_errors: debugErrors
+          debug_errors: debugErrors,
+          missing_data: missingData
         });
         saveImportHistory({ success: true, total_rows: results.total, imported: results.imported, failed: results.skipped });
       } else throw new Error(response.data.error || 'Import failed');
@@ -266,6 +293,35 @@ export default function BulkImport() {
     if (validationErrors.length === 0) { alert('No errors to export'); return; }
     const csv = 'Row,Field,Error\n' + validationErrors.map(e => `${e.row},"${e.field}","${e.error}"`).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `import_errors_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+  };
+
+  const downloadTemplate = (type) => {
+    const templates = {
+      students: {
+        headers: ['First Name', 'Last Name', 'Middle Name', 'Date of Birth', 'Gender', 'Class', 'Admission Number', 'Email', 'Phone', 'Address', 'Religion', 'Nationality', 'Guardian Name', 'Guardian Phone', 'Guardian Email', 'Previous School', 'Health Info'],
+        sample: ['John', 'Smith', 'Michael', '2015-05-15', 'Male', 'Grade 1', '', 'john@email.com', '+233241234567', '123 Main St', 'Christianity', 'Ghanaian', 'Mary Smith', '+233241234568', 'mary@email.com', 'ABC School', 'No allergies']
+      },
+      teachers: {
+        headers: ['First Name', 'Last Name', 'Email', 'Phone', 'Employee ID', 'Gender', 'Date of Birth', 'Address', 'Qualification', 'Department'],
+        sample: ['Grace', 'Asante', 'grace@school.com', '+233241234567', 'TCH001', 'Female', '1985-03-15', '123 Teacher Lane', 'B.Ed Education', 'Primary']
+      },
+      classes: {
+        headers: ['Class Name', 'Class Code', 'Level', 'Grade', 'Section', 'Capacity', 'Room Number'],
+        sample: ['Grade 1', 'GR1', 'PRIMARY', '1', 'A', '30', 'Room 101']
+      },
+      subjects: {
+        headers: ['Subject Name', 'Subject Code', 'Description', 'Credit Hours', 'Is Elective'],
+        sample: ['Mathematics', 'MATH', 'Core mathematics', '4', 'No']
+      }
+    };
+    const t = templates[type];
+    if (!t) return;
+    const csv = t.headers.join(',') + '\n' + t.sample.join(',');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${type}_template.csv`;
+    a.click();
   };
 
   const handleReset = () => { setStep(1); setFile(null); setMappings({}); setImportResult(null); setCsvColumns([]); setPreviewData([]); setValidationErrors([]); setDuplicates([]); setShowValidationPreview(false); };
@@ -391,6 +447,22 @@ export default function BulkImport() {
                   importResult.success ? <><CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-6" /><h3 className="text-2xl font-bold mb-4">Import {importResult.imported > 0 ? 'Successful' : 'Complete'}!</h3>
                     <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md mx-auto mb-6"><div className="space-y-2 text-left"><div className="flex justify-between"><span>Total Rows:</span><span className="font-semibold">{importResult.total_rows}</span></div><div className="flex justify-between"><span className="text-green-700">Imported:</span><span className="font-semibold text-green-700">{importResult.imported}</span></div>{importResult.updated > 0 && <div className="flex justify-between"><span className="text-blue-700">Updated:</span><span className="font-semibold text-blue-700">{importResult.updated}</span></div>}{importResult.duplicates_skipped > 0 && <div className="flex justify-between"><span className="text-orange-700">Skipped:</span><span className="font-semibold text-orange-700">{importResult.duplicates_skipped}</span></div>}{importResult.failed > 0 && <div className="flex justify-between"><span className="text-red-700">Failed:</span><span className="font-semibold text-red-700">{importResult.failed}</span></div>}</div></div>
                     {importResult.debug_errors?.length > 0 && <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-lg mx-auto mb-6 text-left"><h4 className="font-semibold text-red-700 mb-2">Error Details (first {importResult.debug_errors.length}):</h4><div className="space-y-1 text-sm max-h-40 overflow-y-auto">{importResult.debug_errors.map((err, i) => <div key={i} className="text-red-600">Row {err.row}: {err.error}</div>)}</div></div>}
+                    {importResult.missing_data && Object.keys(importResult.missing_data).length > 0 && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 max-w-lg mx-auto mb-6 text-left">
+                        <h4 className="font-semibold text-amber-700 mb-3 flex items-center gap-2"><AlertCircle className="w-4 h-4" /> Data Completion Required</h4>
+                        <div className="space-y-2 text-sm">
+                          {Object.values(importResult.missing_data).map((item, i) => (
+                            <div key={i} className="flex justify-between items-center p-2 bg-white rounded border border-amber-100">
+                              <span className="text-amber-800">{item.label}</span>
+                              <span className="font-semibold text-amber-700 bg-amber-100 px-2 py-0.5 rounded">{item.count} students</span>
+                            </div>
+                          ))}
+                        </div>
+                        <a href="/admin/students" className="mt-3 inline-flex items-center gap-1 text-amber-700 hover:text-amber-800 text-sm font-medium">
+                          Go to Students to complete data <ArrowRight className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
                     <button onClick={handleReset} className="btn btn-primary">Import More</button></>
                   : <><AlertCircle className="w-20 h-20 text-red-600 mx-auto mb-6" /><h3 className="text-2xl font-bold mb-4">Import Failed</h3><p className="text-red-600 mb-6">{importResult.error}</p><button onClick={handleReset} className="btn btn-secondary">Try Again</button></>
                 ) : null}

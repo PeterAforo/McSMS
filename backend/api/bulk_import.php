@@ -364,11 +364,79 @@ function importData($pdo) {
     // Include first 10 errors in response for debugging
     $debugErrors = array_slice($results['errors'], 0, 10);
     
+    // Get summary of missing data for imported students
+    $missingDataSummary = [];
+    if ($module === 'students' && $results['imported'] > 0) {
+        $missingDataSummary = getMissingDataSummary($pdo);
+    }
+    
     echo json_encode([
         'success' => true,
         'results' => $results,
-        'debug_errors' => $debugErrors
+        'debug_errors' => $debugErrors,
+        'missing_data' => $missingDataSummary
     ]);
+}
+
+function getMissingDataSummary($pdo) {
+    $summary = [];
+    
+    // Students without class assigned
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM students WHERE class_id IS NULL AND status = 'active'");
+    $noClass = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    if ($noClass > 0) {
+        $summary['no_class'] = [
+            'count' => (int)$noClass,
+            'label' => 'Students without class assigned',
+            'field' => 'class_id'
+        ];
+    }
+    
+    // Students without email
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM students WHERE (email IS NULL OR email = '') AND status = 'active'");
+    $noEmail = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    if ($noEmail > 0) {
+        $summary['no_email'] = [
+            'count' => (int)$noEmail,
+            'label' => 'Students without email',
+            'field' => 'email'
+        ];
+    }
+    
+    // Students with placeholder DOB (2010-01-01)
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM students WHERE date_of_birth = '2010-01-01' AND status = 'active'");
+    $placeholderDob = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    if ($placeholderDob > 0) {
+        $summary['placeholder_dob'] = [
+            'count' => (int)$placeholderDob,
+            'label' => 'Students with placeholder date of birth',
+            'field' => 'date_of_birth'
+        ];
+    }
+    
+    // Students without guardian info
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM students WHERE (guardian_name IS NULL OR guardian_name = '') AND (guardian_phone IS NULL OR guardian_phone = '') AND status = 'active'");
+    $noGuardian = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    if ($noGuardian > 0) {
+        $summary['no_guardian'] = [
+            'count' => (int)$noGuardian,
+            'label' => 'Students without guardian information',
+            'field' => 'guardian_name'
+        ];
+    }
+    
+    // Students without phone
+    $stmt = $pdo->query("SELECT COUNT(*) as count FROM students WHERE (phone IS NULL OR phone = '') AND status = 'active'");
+    $noPhone = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+    if ($noPhone > 0) {
+        $summary['no_phone'] = [
+            'count' => (int)$noPhone,
+            'label' => 'Students without phone number',
+            'field' => 'phone'
+        ];
+    }
+    
+    return $summary;
 }
 
 function mapRowToFields($data, $mappings) {

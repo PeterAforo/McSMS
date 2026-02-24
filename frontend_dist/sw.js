@@ -1,5 +1,5 @@
 // McSMS Service Worker - Offline Support & Push Notifications
-const CACHE_NAME = 'mcsms-v3';
+const CACHE_NAME = 'mcsms-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately
