@@ -66,12 +66,17 @@ try {
                     recipient_type VARCHAR(20) DEFAULT 'parent',
                     subject VARCHAR(255) NOT NULL,
                     message TEXT NOT NULL,
+                    thread_id VARCHAR(100) NULL,
+                    parent_message_id INT NULL,
                     is_read TINYINT(1) DEFAULT 0,
+                    read_at DATETIME NULL,
                     starred TINYINT(1) DEFAULT 0,
                     priority VARCHAR(20) DEFAULT 'normal',
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     INDEX idx_sender (sender_id),
-                    INDEX idx_recipient (recipient_id)
+                    INDEX idx_recipient (recipient_id),
+                    INDEX idx_thread (thread_id),
+                    INDEX idx_created (created_at)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
             ");
             error_log("Messages table recreated successfully");
@@ -267,8 +272,21 @@ try {
             $data = json_decode(file_get_contents('php://input'), true);
             
             if ($id) {
-                $stmt = $pdo->prepare("UPDATE messages SET is_read = ? WHERE id = ?");
-                $stmt->execute([$data['is_read'] ?? true, $id]);
+                // Mark as read with timestamp
+                if (isset($data['is_read']) && $data['is_read']) {
+                    $stmt = $pdo->prepare("UPDATE messages SET is_read = 1, read_at = NOW() WHERE id = ? AND is_read = 0");
+                    $stmt->execute([$id]);
+                } else {
+                    $stmt = $pdo->prepare("UPDATE messages SET is_read = ? WHERE id = ?");
+                    $stmt->execute([$data['is_read'] ?? true, $id]);
+                }
+                
+                // Update starred status if provided
+                if (isset($data['starred'])) {
+                    $stmt = $pdo->prepare("UPDATE messages SET starred = ? WHERE id = ?");
+                    $stmt->execute([$data['starred'] ? 1 : 0, $id]);
+                }
+                
                 echo json_encode(['success' => true]);
             }
             break;

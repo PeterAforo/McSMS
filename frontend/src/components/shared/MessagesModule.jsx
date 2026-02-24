@@ -22,6 +22,10 @@ export default function MessagesModule({ userType = 'parent' }) {
   const [parentId, setParentId] = useState(null);
   const [bulkMode, setBulkMode] = useState(false);
   const [selectedMessages, setSelectedMessages] = useState([]);
+  const [pollingEnabled, setPollingEnabled] = useState(true);
+  const [lastMessageCount, setLastMessageCount] = useState(0);
+  const [showInlineReply, setShowInlineReply] = useState(false);
+  const [inlineReplyText, setInlineReplyText] = useState('');
 
   const [composeData, setComposeData] = useState({
     recipient_id: '',
@@ -37,6 +41,29 @@ export default function MessagesModule({ userType = 'parent' }) {
   useEffect(() => {
     fetchData();
   }, [user?.id]);
+
+  // Real-time polling for new messages
+  useEffect(() => {
+    if (!pollingEnabled || !user?.id) return;
+    
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await axios.get(`${API_BASE_URL}/messages.php?user_id=${user?.id}&limit=100`);
+        const newMessages = response.data.messages || [];
+        
+        // Check if there are new messages
+        if (newMessages.length > lastMessageCount) {
+          // Silently refresh data
+          await fetchData();
+          setLastMessageCount(newMessages.length);
+        }
+      } catch (error) {
+        // Silent fail for polling
+      }
+    }, 15000); // Poll every 15 seconds
+    
+    return () => clearInterval(pollInterval);
+  }, [pollingEnabled, user?.id, lastMessageCount]);
 
   const fetchData = async () => {
     try {
@@ -343,7 +370,16 @@ export default function MessagesModule({ userType = 'parent' }) {
 
   const getMessageStatus = (msg) => {
     if (!msg.isSent) return null;
-    if (msg.is_read) return { icon: CheckCheck, color: 'text-blue-500', label: 'Read' };
+    if (msg.is_read) {
+      const readTime = msg.read_at ? new Date(msg.read_at).toLocaleTimeString('en-US', { 
+        hour: 'numeric', minute: '2-digit', hour12: true 
+      }) : '';
+      return { 
+        icon: CheckCheck, 
+        color: 'text-blue-500', 
+        label: readTime ? `Read at ${readTime}` : 'Read' 
+      };
+    }
     return { icon: Check, color: 'text-gray-400', label: 'Delivered' };
   };
 
@@ -653,32 +689,100 @@ export default function MessagesModule({ userType = 'parent' }) {
                 })}
               </div>
 
-              {/* Reply Box */}
+              {/* Inline Reply Box */}
               <div className="p-4 border-t bg-white">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => {
-                      const otherParticipant = selectedThread.participants.find(p => 
-                        String(p.id) !== String(user?.id) && String(p.id) !== String(parentId)
-                      );
-                      setComposeData({
-                        recipient_id: otherParticipant?.id || '',
-                        recipient_type: otherParticipant?.type || 'parent',
-                        subject: `Re: ${selectedThread.subject}`,
-                        message: ''
-                      });
-                      setShowCompose(true);
-                    }}
-                    className="btn btn-primary flex items-center gap-2"
-                  >
-                    <Reply className="w-4 h-4" />
-                    Reply
-                  </button>
-                  <button className="btn bg-gray-100 hover:bg-gray-200 flex items-center gap-2">
-                    <Forward className="w-4 h-4" />
-                    Forward
-                  </button>
-                </div>
+                {showInlineReply ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={inlineReplyText}
+                      onChange={(e) => setInlineReplyText(e.target.value)}
+                      placeholder="Type your reply..."
+                      className="w-full border rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                      rows="3"
+                      autoFocus
+                    />
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => {
+                          setShowInlineReply(false);
+                          setInlineReplyText('');
+                        }}
+                        className="text-gray-500 hover:text-gray-700 text-sm"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!inlineReplyText.trim()) return;
+                          
+                          const otherParticipant = selectedThread.participants.find(p => 
+                            String(p.id) !== String(user?.id) && String(p.id) !== String(parentId)
+                          );
+                          
+                          try {
+                            setSending(true);
+                            const response = await axios.post(`${API_BASE_URL}/messages.php`, {
+                              sender_id: user?.id,
+                              sender_type: userType,
+                              recipient_id: otherParticipant?.id,
+                              recipient_type: otherParticipant?.type || 'parent',
+                              subject: `Re: ${selectedThread.subject}`,
+                              message: inlineReplyText
+                            });
+                            
+                            if (response.data.success) {
+                              setInlineReplyText('');
+                              setShowInlineReply(false);
+                              await fetchData();
+                              // Re-select thread to show new message
+                              setTimeout(() => {
+                                const updatedThread = threads.find(t => t.id === selectedThread.id);
+                                if (updatedThread) setSelectedThread(updatedThread);
+                              }, 500);
+                            }
+                          } catch (error) {
+                            alert('Failed to send reply');
+                          } finally {
+                            setSending(false);
+                          }
+                        }}
+                        disabled={sending || !inlineReplyText.trim()}
+                        className="btn btn-primary flex items-center gap-2"
+                      >
+                        {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        Send Reply
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setShowInlineReply(true)}
+                      className="btn btn-primary flex items-center gap-2 flex-1"
+                    >
+                      <Reply className="w-4 h-4" />
+                      Reply
+                    </button>
+                    <button 
+                      onClick={() => {
+                        const otherParticipant = selectedThread.participants.find(p => 
+                          String(p.id) !== String(user?.id) && String(p.id) !== String(parentId)
+                        );
+                        setComposeData({
+                          recipient_id: otherParticipant?.id || '',
+                          recipient_type: otherParticipant?.type || 'parent',
+                          subject: `Re: ${selectedThread.subject}`,
+                          message: ''
+                        });
+                        setShowCompose(true);
+                      }}
+                      className="btn bg-gray-100 hover:bg-gray-200 flex items-center gap-2"
+                    >
+                      <Forward className="w-4 h-4" />
+                      New Window
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           )}

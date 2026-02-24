@@ -1,1 +1,0 @@
-import{j as t}from"./index-BJjBoEl3.js";import{M as r}from"./MessagesModule-pYvpYB6h.js";import"./plus-BAyHOYMC.js";import"./send-DoTEoptr.js";import"./star-Cw_DQ3MZ.js";import"./trash-2-D5Z16-8n.js";import"./check-check-lWL33iIz.js";import"./check-3YgDwdwG.js";function n(){return t.jsx(r,{userType:"student"})}export{n as default};

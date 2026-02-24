@@ -1,0 +1,1 @@
+import{j as r}from"./index-Bb70lWQj.js";import{M as t}from"./MessagesModule-tIIT_1Zm.js";import"./plus-CPcNG1Rq.js";import"./send-mV_4jNOt.js";import"./star-BCWhUoTL.js";import"./trash-2-DJbLkz-b.js";import"./check-check-CX0GFm9K.js";import"./check-D1J0HAzH.js";function u(){return r.jsx(t,{userType:"parent"})}export{u as default};
