@@ -16,11 +16,12 @@ class Env {
             return;
         }
 
-        $envFile = $path ?? dirname(__DIR__, 2) . '/.env';
+        $rootDir = dirname(dirname(__DIR__));
+        $envFile = $path ?? $rootDir . '/.env';
         
         if (!file_exists($envFile)) {
             // Fall back to .env.example for development
-            $envFile = dirname(__DIR__, 2) . '/.env.example';
+            $envFile = $rootDir . '/.env.example';
         }
 
         if (file_exists($envFile)) {
