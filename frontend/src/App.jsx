@@ -81,8 +81,16 @@ const AdminMessages = lazy(() => import('./pages/admin/Messages'));
 
 // Lazy loaded - Role dashboards
 const PrincipalDashboard = lazy(() => import('./pages/principal/PrincipalDashboard'));
+const StaffOverview = lazy(() => import('./pages/principal/StaffOverview'));
+const AcademicPerformance = lazy(() => import('./pages/principal/AcademicPerformance'));
+const SchoolCalendar = lazy(() => import('./pages/principal/SchoolCalendar'));
 const HRDashboard = lazy(() => import('./pages/hr/HRDashboard'));
+const EmployeeManagement = lazy(() => import('./pages/hr/EmployeeManagement'));
+const LeaveManagement = lazy(() => import('./pages/hr/LeaveManagement'));
+const PayrollManagement = lazy(() => import('./pages/hr/PayrollManagement'));
 const FinanceDashboard = lazy(() => import('./pages/finance/FinanceDashboard'));
+const InvoiceManagement = lazy(() => import('./pages/finance/InvoiceManagement'));
+const PaymentTracking = lazy(() => import('./pages/finance/PaymentTracking'));
 const StudentDashboard = lazy(() => import('./pages/student/StudentDashboard'));
 const StudentHomework = lazy(() => import('./pages/student/StudentHomework'));
 const StudentGrades = lazy(() => import('./pages/student/StudentGrades'));
@@ -249,6 +257,11 @@ function App() {
           }
         >
           <Route path="dashboard" element={<PrincipalDashboard />} />
+          <Route path="staff" element={<StaffOverview />} />
+          <Route path="academic-performance" element={<AcademicPerformance />} />
+          <Route path="calendar" element={<SchoolCalendar />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="help" element={<HelpCenter />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
@@ -263,6 +276,11 @@ function App() {
           }
         >
           <Route path="dashboard" element={<HRDashboard />} />
+          <Route path="employees" element={<EmployeeManagement />} />
+          <Route path="leave" element={<LeaveManagement />} />
+          <Route path="payroll" element={<PayrollManagement />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="help" element={<HelpCenter />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
@@ -277,6 +295,10 @@ function App() {
           }
         >
           <Route path="dashboard" element={<FinanceDashboard />} />
+          <Route path="invoices" element={<InvoiceManagement />} />
+          <Route path="payments" element={<PaymentTracking />} />
+          <Route path="profile" element={<Profile />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="help" element={<HelpCenter />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>

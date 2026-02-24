@@ -1,1 +1,0 @@
-import{j as r}from"./index-Bb70lWQj.js";import{M as e}from"./MessagesModule-tIIT_1Zm.js";import"./plus-CPcNG1Rq.js";import"./send-mV_4jNOt.js";import"./star-BCWhUoTL.js";import"./trash-2-DJbLkz-b.js";import"./check-check-CX0GFm9K.js";import"./check-D1J0HAzH.js";function f(){return r.jsx(e,{userType:"teacher"})}export{f as default};

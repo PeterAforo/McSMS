@@ -1,0 +1,1 @@
+import{j as r}from"./index-BPSrnhOO.js";import{M as o}from"./MessagesModule-CLPLLmGp.js";import"./plus-CYwjhRsy.js";import"./send-QIae6x__.js";import"./star-CEwckNrc.js";import"./trash-2-CwaYW-NP.js";import"./check-check-B3Kuaazw.js";import"./check-DKR0O6Lq.js";function u(){return r.jsx(o,{userType:"admin"})}export{u as default};
