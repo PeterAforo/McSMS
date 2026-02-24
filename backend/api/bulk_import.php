@@ -452,45 +452,48 @@ function importStudent($pdo, $data, $classMappings, $updateExisting) {
         $existingStudent = $stmt->fetch(PDO::FETCH_ASSOC);
     }
     
-    // First, create or find parent
-    $parentId = null;
-    $parentData = extractParentData($data);
-    if (!empty($parentData['name']) || !empty($parentData['phone']) || !empty($parentData['email'])) {
-        $parentId = createOrFindParent($pdo, $parentData, $updateExisting);
-    }
+    // Extract guardian info (store directly in students table)
+    $guardianData = extractParentData($data);
+    $guardianName = $guardianData['name'] ?: null;
+    $guardianPhone = cleanPhone($guardianData['phone']) ?: null;
+    $guardianEmail = cleanEmail($guardianData['email']) ?: null;
     
     if ($existingStudent && $updateExisting) {
         // Update existing student
         $stmt = $pdo->prepare("
             UPDATE students SET
                 first_name = ?,
-                middle_name = ?,
+                other_names = COALESCE(?, other_names),
                 last_name = ?,
                 date_of_birth = ?,
                 gender = ?,
                 class_id = COALESCE(?, class_id),
                 religion = COALESCE(?, religion),
                 nationality = COALESCE(?, nationality),
-                health_info = COALESCE(?, health_info),
+                allergies = COALESCE(?, allergies),
                 address = COALESCE(?, address),
                 previous_school = COALESCE(?, previous_school),
-                parent_id = COALESCE(?, parent_id),
+                guardian_name = COALESCE(?, guardian_name),
+                guardian_phone = COALESCE(?, guardian_phone),
+                guardian_email = COALESCE(?, guardian_email),
                 updated_at = NOW()
             WHERE id = ?
         ");
         $stmt->execute([
-            $data['first_name'],
-            $data['middle_name'] ?? null,
-            $data['last_name'],
+            $firstName,
+            $middleName ?: null,
+            $lastName,
             $dob,
             $gender,
             $classId,
             $data['religion'] ?? null,
             $data['nationality'] ?? null,
-            $data['health_info'] ?? null,
+            $data['health_info'] ?? $data['allergies'] ?? null,
             $data['address'] ?? null,
             $data['previous_school'] ?? null,
-            $parentId,
+            $guardianName,
+            $guardianPhone,
+            $guardianEmail,
             $existingStudent['id']
         ]);
         return 'updated';
@@ -527,24 +530,27 @@ function importStudent($pdo, $data, $classMappings, $updateExisting) {
             INSERT INTO students (
                 student_id, admission_number, first_name, other_names, last_name,
                 date_of_birth, gender, class_id, religion, nationality,
-                allergies, address, previous_school, parent_id, admission_date, status, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
+                allergies, address, previous_school, guardian_name, guardian_phone, guardian_email,
+                admission_date, status, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', NOW())
         ");
         $stmt->execute([
             $studentId,
             $admissionNumber,
-            $data['first_name'],
-            $data['middle_name'] ?? null,
-            $data['last_name'],
+            $firstName,
+            $middleName ?: null,
+            $lastName,
             $dob,
             $gender,
             $classId,
             $data['religion'] ?? null,
             $data['nationality'] ?? null,
-            $data['health_info'] ?? null,
+            $data['health_info'] ?? $data['allergies'] ?? null,
             $data['address'] ?? null,
             $data['previous_school'] ?? null,
-            $parentId,
+            $guardianName,
+            $guardianPhone,
+            $guardianEmail,
             $admissionDate
         ]);
         return 'imported';
@@ -603,49 +609,7 @@ function cleanEmail($email) {
     return trim($email);
 }
 
-function createOrFindParent($pdo, $parentData, $updateExisting) {
-    $phone = cleanPhone($parentData['phone']);
-    $email = $parentData['email'];
-    
-    // Try to find existing parent by phone or email
-    if (!empty($phone)) {
-        $stmt = $pdo->prepare("SELECT id FROM parents WHERE phone = ? OR phone LIKE ?");
-        $stmt->execute([$phone, "%$phone%"]);
-        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($existing) return $existing['id'];
-    }
-    
-    if (!empty($email)) {
-        $stmt = $pdo->prepare("SELECT id FROM parents WHERE email = ?");
-        $stmt->execute([$email]);
-        $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($existing) return $existing['id'];
-    }
-    
-    // Create new parent
-    if (empty($parentData['name']) && empty($phone)) {
-        return null;
-    }
-    
-    $stmt = $pdo->prepare("
-        INSERT INTO parents (name, phone, email, address, father_name, father_phone, father_email, mother_name, mother_phone, mother_email, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-    ");
-    $stmt->execute([
-        $parentData['name'],
-        $phone,
-        $email ?: null,
-        $parentData['address'] ?: null,
-        $parentData['father_name'] ?: null,
-        cleanPhone($parentData['father_phone']),
-        cleanEmail($parentData['father_email']) ?: null,
-        $parentData['mother_name'] ?: null,
-        cleanPhone($parentData['mother_phone']),
-        cleanEmail($parentData['mother_email']) ?: null
-    ]);
-    
-    return $pdo->lastInsertId();
-}
+// createOrFindParent removed - guardian info now stored directly in students table
 
 function cleanPhone($phone) {
     if (empty($phone)) return null;
