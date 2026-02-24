@@ -11,7 +11,14 @@ class RateLimiter {
         if (self::$cacheDir === null) {
             self::$cacheDir = __DIR__ . '/../../cache/rate_limit';
             if (!is_dir(self::$cacheDir)) {
-                mkdir(self::$cacheDir, 0755, true);
+                @mkdir(self::$cacheDir, 0755, true);
+            }
+            // Fallback to system temp if cache dir is not writable
+            if (!is_writable(self::$cacheDir)) {
+                self::$cacheDir = sys_get_temp_dir() . '/mcsms_rate_limit';
+                if (!is_dir(self::$cacheDir)) {
+                    @mkdir(self::$cacheDir, 0755, true);
+                }
             }
         }
         return self::$cacheDir;
@@ -25,65 +32,90 @@ class RateLimiter {
      * @return bool True if allowed, false if rate limited
      */
     public static function check($key, $maxAttempts = 5, $windowSeconds = 300) {
-        $cacheFile = self::getCacheDir() . '/' . md5($key) . '.json';
-        
-        $data = ['attempts' => [], 'blocked_until' => 0];
-        
-        if (file_exists($cacheFile)) {
-            $data = json_decode(file_get_contents($cacheFile), true) ?: $data;
-        }
-        
-        $now = time();
-        
-        // Check if currently blocked
-        if ($data['blocked_until'] > $now) {
-            $remainingSeconds = $data['blocked_until'] - $now;
-            self::sendRateLimitResponse($remainingSeconds);
-            return false;
-        }
-        
-        // Clean old attempts outside the window
-        $data['attempts'] = array_filter($data['attempts'], function($timestamp) use ($now, $windowSeconds) {
-            return ($now - $timestamp) < $windowSeconds;
-        });
-        
-        // Check if over limit
-        if (count($data['attempts']) >= $maxAttempts) {
-            // Block for increasing duration based on attempts
-            $blockDuration = min(3600, 60 * pow(2, count($data['attempts']) - $maxAttempts));
-            $data['blocked_until'] = $now + $blockDuration;
-            file_put_contents($cacheFile, json_encode($data), LOCK_EX);
+        try {
+            $cacheDir = self::getCacheDir();
+            if (!$cacheDir || !is_writable($cacheDir)) {
+                // If we can't write to cache, allow the request (fail open)
+                return true;
+            }
             
-            self::sendRateLimitResponse($blockDuration);
-            return false;
-        }
+            $cacheFile = $cacheDir . '/' . md5($key) . '.json';
+            
+            $data = ['attempts' => [], 'blocked_until' => 0];
+            
+            if (file_exists($cacheFile)) {
+                $data = @json_decode(file_get_contents($cacheFile), true) ?: $data;
+            }
         
-        return true;
+            $now = time();
+            
+            // Check if currently blocked
+            if ($data['blocked_until'] > $now) {
+                $remainingSeconds = $data['blocked_until'] - $now;
+                self::sendRateLimitResponse($remainingSeconds);
+                return false;
+            }
+            
+            // Clean old attempts outside the window
+            $data['attempts'] = array_filter($data['attempts'], function($timestamp) use ($now, $windowSeconds) {
+                return ($now - $timestamp) < $windowSeconds;
+            });
+            
+            // Check if over limit
+            if (count($data['attempts']) >= $maxAttempts) {
+                // Block for increasing duration based on attempts
+                $blockDuration = min(3600, 60 * pow(2, count($data['attempts']) - $maxAttempts));
+                $data['blocked_until'] = $now + $blockDuration;
+                @file_put_contents($cacheFile, json_encode($data), LOCK_EX);
+                
+                self::sendRateLimitResponse($blockDuration);
+                return false;
+            }
+            
+            return true;
+        } catch (Exception $e) {
+            // On any error, fail open (allow the request)
+            return true;
+        }
     }
     
     /**
      * Record an attempt
      */
     public static function recordAttempt($key) {
-        $cacheFile = self::getCacheDir() . '/' . md5($key) . '.json';
-        
-        $data = ['attempts' => [], 'blocked_until' => 0];
-        
-        if (file_exists($cacheFile)) {
-            $data = json_decode(file_get_contents($cacheFile), true) ?: $data;
+        try {
+            $cacheDir = self::getCacheDir();
+            if (!$cacheDir || !is_writable($cacheDir)) return;
+            
+            $cacheFile = $cacheDir . '/' . md5($key) . '.json';
+            
+            $data = ['attempts' => [], 'blocked_until' => 0];
+            
+            if (file_exists($cacheFile)) {
+                $data = @json_decode(file_get_contents($cacheFile), true) ?: $data;
+            }
+            
+            $data['attempts'][] = time();
+            @file_put_contents($cacheFile, json_encode($data), LOCK_EX);
+        } catch (Exception $e) {
+            // Silently fail
         }
-        
-        $data['attempts'][] = time();
-        file_put_contents($cacheFile, json_encode($data), LOCK_EX);
     }
     
     /**
      * Clear attempts for a key (e.g., after successful login)
      */
     public static function clear($key) {
-        $cacheFile = self::getCacheDir() . '/' . md5($key) . '.json';
-        if (file_exists($cacheFile)) {
-            unlink($cacheFile);
+        try {
+            $cacheDir = self::getCacheDir();
+            if (!$cacheDir) return;
+            
+            $cacheFile = $cacheDir . '/' . md5($key) . '.json';
+            if (file_exists($cacheFile)) {
+                @unlink($cacheFile);
+            }
+        } catch (Exception $e) {
+            // Silently fail
         }
     }
     
