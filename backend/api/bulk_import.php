@@ -361,17 +361,30 @@ function importData($pdo) {
     
     fclose($handle);
     
+    // Include first 10 errors in response for debugging
+    $debugErrors = array_slice($results['errors'], 0, 10);
+    
     echo json_encode([
         'success' => true,
-        'results' => $results
+        'results' => $results,
+        'debug_errors' => $debugErrors
     ]);
 }
 
 function mapRowToFields($data, $mappings) {
     $rowData = [];
+    
+    // Handle both numeric index mappings and string key mappings
     foreach ($mappings as $index => $field) {
-        if ($field !== 'skip' && isset($data[$index])) {
-            $value = trim($data[$index]);
+        if ($field !== 'skip' && $field !== '') {
+            // Try numeric index first
+            if (is_numeric($index) && isset($data[(int)$index])) {
+                $value = trim($data[(int)$index]);
+            } elseif (isset($data[$index])) {
+                $value = trim($data[$index]);
+            } else {
+                continue;
+            }
             // Clean up escaped characters
             $value = str_replace(['\\r\\n', '\\r', '\\n'], ' ', $value);
             $value = preg_replace('/\\\\+/', '', $value);

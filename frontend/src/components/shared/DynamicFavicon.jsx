@@ -64,7 +64,12 @@ export default function DynamicFavicon() {
     let manifestLink = document.querySelector("link[rel='manifest']");
     if (manifestLink) {
       // Add cache-busting parameter to force refresh
-      const manifestUrl = `${API_BASE_URL}/manifest.php?v=${Date.now()}`;
+      // Ensure we use the correct production URL, not localhost
+      let manifestUrl = `${API_BASE_URL}/manifest.php?v=${Date.now()}`;
+      // Safety check: if running on production domain, ensure manifest URL matches
+      if (window.location.hostname === 'eea.mcaforo.com' && manifestUrl.includes('localhost')) {
+        manifestUrl = `https://eea.mcaforo.com/backend/api/manifest.php?v=${Date.now()}`;
+      }
       manifestLink.href = manifestUrl;
     }
 

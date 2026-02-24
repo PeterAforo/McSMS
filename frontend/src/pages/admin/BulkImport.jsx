@@ -226,7 +226,18 @@ export default function BulkImport() {
       const response = await axios.post(`${API_BASE_URL}/bulk_import.php?action=import`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (response.data.success) {
         const results = response.data.results || {};
-        setImportResult({ success: true, total_rows: results.total || previewData.length, imported: results.imported || 0, updated: results.updated || 0, failed: results.skipped || 0, errors: results.errors || [] });
+        const debugErrors = response.data.debug_errors || [];
+        console.log('Import results:', results);
+        console.log('Debug errors:', debugErrors);
+        setImportResult({ 
+          success: true, 
+          total_rows: results.total || previewData.length, 
+          imported: results.imported || 0, 
+          updated: results.updated || 0, 
+          failed: results.skipped || 0, 
+          errors: results.errors || [],
+          debug_errors: debugErrors
+        });
         saveImportHistory({ success: true, total_rows: results.total, imported: results.imported, failed: results.skipped });
       } else throw new Error(response.data.error || 'Import failed');
     } catch (error) {
@@ -377,8 +388,9 @@ export default function BulkImport() {
             {step === 3 && (
               <div className="text-center py-12">
                 {importing ? <><div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div><h3 className="text-xl font-bold mb-2">Importing...</h3><p className="text-gray-600">Please wait</p></> : importResult ? (
-                  importResult.success ? <><CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-6" /><h3 className="text-2xl font-bold mb-4">Import Successful!</h3>
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md mx-auto mb-6"><div className="space-y-2 text-left"><div className="flex justify-between"><span>Total Rows:</span><span className="font-semibold">{importResult.total_rows}</span></div><div className="flex justify-between"><span className="text-green-700">Imported:</span><span className="font-semibold text-green-700">{importResult.imported}</span></div>{importResult.duplicates_skipped > 0 && <div className="flex justify-between"><span className="text-orange-700">Skipped:</span><span className="font-semibold text-orange-700">{importResult.duplicates_skipped}</span></div>}{importResult.failed > 0 && <div className="flex justify-between"><span className="text-red-700">Failed:</span><span className="font-semibold text-red-700">{importResult.failed}</span></div>}</div></div>
+                  importResult.success ? <><CheckCircle className="w-20 h-20 text-green-600 mx-auto mb-6" /><h3 className="text-2xl font-bold mb-4">Import {importResult.imported > 0 ? 'Successful' : 'Complete'}!</h3>
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-6 max-w-md mx-auto mb-6"><div className="space-y-2 text-left"><div className="flex justify-between"><span>Total Rows:</span><span className="font-semibold">{importResult.total_rows}</span></div><div className="flex justify-between"><span className="text-green-700">Imported:</span><span className="font-semibold text-green-700">{importResult.imported}</span></div>{importResult.updated > 0 && <div className="flex justify-between"><span className="text-blue-700">Updated:</span><span className="font-semibold text-blue-700">{importResult.updated}</span></div>}{importResult.duplicates_skipped > 0 && <div className="flex justify-between"><span className="text-orange-700">Skipped:</span><span className="font-semibold text-orange-700">{importResult.duplicates_skipped}</span></div>}{importResult.failed > 0 && <div className="flex justify-between"><span className="text-red-700">Failed:</span><span className="font-semibold text-red-700">{importResult.failed}</span></div>}</div></div>
+                    {importResult.debug_errors?.length > 0 && <div className="bg-red-50 border border-red-200 rounded-lg p-4 max-w-lg mx-auto mb-6 text-left"><h4 className="font-semibold text-red-700 mb-2">Error Details (first {importResult.debug_errors.length}):</h4><div className="space-y-1 text-sm max-h-40 overflow-y-auto">{importResult.debug_errors.map((err, i) => <div key={i} className="text-red-600">Row {err.row}: {err.error}</div>)}</div></div>}
                     <button onClick={handleReset} className="btn btn-primary">Import More</button></>
                   : <><AlertCircle className="w-20 h-20 text-red-600 mx-auto mb-6" /><h3 className="text-2xl font-bold mb-4">Import Failed</h3><p className="text-red-600 mb-6">{importResult.error}</p><button onClick={handleReset} className="btn btn-secondary">Try Again</button></>
                 ) : null}
