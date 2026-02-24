@@ -183,15 +183,16 @@ export default function AIChatbot() {
     // Simulate AI thinking
     await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
 
-    // Try API first, fallback to local FAQ
+    // Try AI API first, fallback to local FAQ
     let response;
     try {
-      const apiResponse = await axios.post(`${API_BASE_URL}/chatbot.php`, {
-        query: input,
+      const apiResponse = await axios.post(`${API_BASE_URL}/ai.php`, {
+        action: 'chat',
+        message: input,
         user_id: user?.id,
         user_type: user?.user_type
       });
-      response = apiResponse.data.response;
+      response = apiResponse.data.response || findResponse(input);
     } catch (e) {
       response = findResponse(input);
     }
