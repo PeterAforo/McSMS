@@ -20,12 +20,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once __DIR__ . '/../middleware/rate_limiter.php';
+// Load rate limiter if available (optional)
+$rateLimiterFile = __DIR__ . '/../middleware/rate_limiter.php';
+$hasRateLimiter = file_exists($rateLimiterFile);
+if ($hasRateLimiter) {
+    require_once $rateLimiterFile;
+}
+
 require_once __DIR__ . '/../../config/database.php';
 
-// Apply rate limiting to login attempts
+// Apply rate limiting to login attempts (if available)
 $action = $_GET['action'] ?? null;
-if ($action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($hasRateLimiter && $action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $clientIP = RateLimiter::getClientIP();
     if (!RateLimiter::check('login_' . $clientIP, 5, 300)) {
         exit; // Rate limiter already sent response
