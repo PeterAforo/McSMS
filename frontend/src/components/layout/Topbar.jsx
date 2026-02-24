@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Search, Bell, Mail, ChevronDown, User, Settings, LogOut, MessageSquare, Calendar, Award, FileText, X, Loader2, Mic, HelpCircle } from 'lucide-react';
+import { Search, Bell, Mail, ChevronDown, User, Settings, LogOut, MessageSquare, Calendar, Award, FileText, X, Loader2, Mic, HelpCircle, Menu } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useThemeStore } from '../../store/themeStore';
 import { API_BASE_URL } from '../../config';
@@ -9,7 +9,7 @@ import ThemeToggle from '../shared/ThemeToggle';
 import { VoiceSearchButton } from '../shared/VoiceSearch';
 import { VoiceCommandButton } from '../shared/VoiceCommands';
 
-export default function Topbar() {
+export default function Topbar({ onMenuClick = () => {} }) {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
@@ -217,9 +217,18 @@ export default function Topbar() {
   };
 
   return (
-    <div className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 flex items-center justify-between">
+    <div className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 flex items-center justify-between">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={onMenuClick}
+        className="lg:hidden p-2 -ml-2 mr-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+        aria-label="Open menu"
+      >
+        <Menu className="w-6 h-6" />
+      </button>
+
       {/* Search */}
-      <div className="flex-1 max-w-xl relative" ref={searchRef}>
+      <div className="flex-1 max-w-xl relative hidden sm:block" ref={searchRef}>
         <form onSubmit={handleSearch} className="relative flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />

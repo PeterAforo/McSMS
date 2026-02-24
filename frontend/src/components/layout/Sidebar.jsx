@@ -49,7 +49,7 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { useSchoolSettings } from '../../hooks/useSchoolSettings';
 
-export default function Sidebar() {
+export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { settings } = useSchoolSettings();
@@ -351,7 +351,12 @@ export default function Sidebar() {
   }, [location.pathname]);
 
   return (
-    <div className="w-64 bg-white border-r border-gray-200 h-screen flex flex-col">
+    <div className={`
+      fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 h-screen flex flex-col
+      transform transition-transform duration-300 ease-in-out
+      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      lg:relative lg:translate-x-0
+    `}>
       {/* Logo */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center gap-3">

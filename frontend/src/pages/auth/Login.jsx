@@ -81,7 +81,7 @@ export default function Login() {
 
             {/* Animated Welcome Text */}
             <div className="space-y-4">
-              <h1 className="text-6xl font-bold animate-slide-up">
+              <h1 className="text-4xl lg:text-6xl font-bold animate-slide-up">
                 Welcome to
               </h1>
               <h2 className="text-5xl font-extrabold bg-gradient-to-r from-yellow-200 via-pink-200 to-purple-200 bg-clip-text text-transparent animate-slide-up" style={{ animationDelay: '0.2s' }}>
