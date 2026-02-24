@@ -40,6 +40,10 @@ export default function Classes() {
   const [showSubjectsModal, setShowSubjectsModal] = useState(false);
   const [showEnrollModal, setShowEnrollModal] = useState(false);
   const [showPromoteModal, setShowPromoteModal] = useState(false);
+  const [showTeachersModal, setShowTeachersModal] = useState(false);
+  const [classTeachers, setClassTeachers] = useState([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
+  const [selectedRole, setSelectedRole] = useState('subject_teacher');
   const [subjects, setSubjects] = useState([]);
   const [allStudents, setAllStudents] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
@@ -115,6 +119,66 @@ export default function Classes() {
       setAllStudents(response.data.students || []);
     } catch (error) {
       console.error('Error fetching students:', error);
+    }
+  };
+
+  const fetchClassTeachers = async (classId) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/class_teachers.php?action=by_class&class_id=${classId}`);
+      setClassTeachers(response.data.teachers || []);
+    } catch (error) {
+      console.error('Error fetching class teachers:', error);
+      setClassTeachers([]);
+    }
+  };
+
+  const handleManageTeachers = async (cls) => {
+    setSelectedClass(cls);
+    await fetchClassTeachers(cls.id);
+    setSelectedTeacherId('');
+    setSelectedRole('subject_teacher');
+    setShowTeachersModal(true);
+  };
+
+  const handleAddTeacherToClass = async () => {
+    if (!selectedTeacherId || !selectedClass) return;
+    try {
+      await axios.post(`${API_BASE_URL}/class_teachers.php`, {
+        class_id: selectedClass.id,
+        teacher_id: parseInt(selectedTeacherId),
+        role: selectedRole,
+        is_primary: selectedRole === 'class_teacher'
+      });
+      await fetchClassTeachers(selectedClass.id);
+      setSelectedTeacherId('');
+      fetchClasses();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to add teacher');
+    }
+  };
+
+  const handleRemoveTeacherFromClass = async (assignmentId) => {
+    if (!confirm('Remove this teacher from the class?')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/class_teachers.php?id=${assignmentId}`);
+      await fetchClassTeachers(selectedClass.id);
+      fetchClasses();
+    } catch (error) {
+      alert('Failed to remove teacher');
+    }
+  };
+
+  const handleSetPrimaryTeacher = async (assignmentId) => {
+    try {
+      await axios.put(`${API_BASE_URL}/class_teachers.php`, {
+        id: assignmentId,
+        is_primary: true,
+        role: 'class_teacher'
+      });
+      await fetchClassTeachers(selectedClass.id);
+      fetchClasses();
+    } catch (error) {
+      alert('Failed to update');
     }
   };
 
@@ -526,6 +590,9 @@ export default function Classes() {
                         </button>
                         <button onClick={() => handleEnrollStudents(cls)} className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Enroll Students">
                           <UserPlus className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleManageTeachers(cls)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded" title="Manage Teachers">
+                          <Users className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleManageSubjects(cls)} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Manage Subjects">
                           <BookOpen className="w-4 h-4" />
@@ -957,6 +1024,113 @@ export default function Classes() {
                     Promote Students
                   </button>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Teachers Modal */}
+      {showTeachersModal && selectedClass && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-center justify-between sticky top-0 bg-white">
+              <div>
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <Users className="w-5 h-5 text-indigo-600" />
+                  Manage Teachers
+                </h2>
+                <p className="text-sm text-gray-500">{selectedClass.class_name}</p>
+              </div>
+              <button onClick={() => setShowTeachersModal(false)}><X className="w-6 h-6" /></button>
+            </div>
+            <div className="p-6">
+              {/* Add Teacher Form */}
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 className="font-medium mb-3">Add Teacher to Class</h3>
+                <div className="grid grid-cols-3 gap-3">
+                  <select
+                    value={selectedTeacherId}
+                    onChange={(e) => setSelectedTeacherId(e.target.value)}
+                    className="input col-span-1"
+                  >
+                    <option value="">Select Teacher</option>
+                    {teachers.filter(t => !classTeachers.some(ct => ct.teacher_id === t.id)).map(teacher => (
+                      <option key={teacher.id} value={teacher.id}>
+                        {teacher.first_name} {teacher.last_name}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={selectedRole}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    className="input"
+                  >
+                    <option value="class_teacher">Class Teacher (Primary)</option>
+                    <option value="assistant">Assistant Teacher</option>
+                    <option value="subject_teacher">Subject Teacher</option>
+                    <option value="support">Support Staff</option>
+                  </select>
+                  <button
+                    onClick={handleAddTeacherToClass}
+                    disabled={!selectedTeacherId}
+                    className="btn bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    <Plus className="w-4 h-4 mr-1" /> Add
+                  </button>
+                </div>
+              </div>
+
+              {/* Current Teachers List */}
+              <h3 className="font-medium mb-3">Assigned Teachers ({classTeachers.length})</h3>
+              {classTeachers.length === 0 ? (
+                <p className="text-gray-500 text-center py-8">No teachers assigned to this class yet</p>
+              ) : (
+                <div className="space-y-2">
+                  {classTeachers.map(ct => (
+                    <div key={ct.id} className={`flex items-center justify-between p-3 rounded-lg border ${ct.is_primary ? 'bg-indigo-50 border-indigo-200' : 'bg-white'}`}>
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${ct.is_primary ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}>
+                          {ct.first_name?.[0]}{ct.last_name?.[0]}
+                        </div>
+                        <div>
+                          <p className="font-medium">{ct.first_name} {ct.last_name}</p>
+                          <div className="flex items-center gap-2">
+                            <span className={`text-xs px-2 py-0.5 rounded ${
+                              ct.role === 'class_teacher' ? 'bg-indigo-100 text-indigo-700' :
+                              ct.role === 'assistant' ? 'bg-green-100 text-green-700' :
+                              ct.role === 'subject_teacher' ? 'bg-purple-100 text-purple-700' :
+                              'bg-gray-100 text-gray-700'
+                            }`}>
+                              {ct.role?.replace('_', ' ')}
+                            </span>
+                            {ct.is_primary && <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Primary</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!ct.is_primary && (
+                          <button
+                            onClick={() => handleSetPrimaryTeacher(ct.id)}
+                            className="text-xs text-indigo-600 hover:underline"
+                          >
+                            Set as Primary
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleRemoveTeacherFromClass(ct.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-6 pt-4 border-t">
+                <button onClick={() => setShowTeachersModal(false)} className="btn btn-primary w-full">Done</button>
               </div>
             </div>
           </div>
