@@ -4,11 +4,12 @@
  * Send email and SMS notifications
  */
 
-// Error reporting for debugging (disable in production)
+// Error reporting - temporarily enable for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
+// Set headers early
 header('Content-Type: application/json');
 $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin) || strpos($origin, 'eea.mcaforo.com') !== false) {
@@ -25,19 +26,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Load database config
-$configPath = __DIR__ . '/../../config/database.php';
-if (!file_exists($configPath)) {
+// Try multiple possible config paths
+$possiblePaths = [
+    __DIR__ . '/../../config/database.php',      // Standard: backend/api -> config
+    __DIR__ . '/../config/database.php',          // If config is in backend/config
+    __DIR__ . '/../../../config/database.php',    // If deeper nesting
+    dirname(__DIR__, 2) . '/config/database.php', // Alternative method
+];
+
+$configPath = null;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        $configPath = $path;
+        break;
+    }
+}
+
+if (!$configPath) {
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Database config not found']);
+    echo json_encode([
+        'success' => false, 
+        'error' => 'Database config not found',
+        'debug' => [
+            'dir' => __DIR__,
+            'tried' => $possiblePaths
+        ]
+    ]);
     exit;
 }
-require_once $configPath;
+
+// Set up error handler to catch all errors
+set_error_handler(function($severity, $message, $file, $line) {
+    throw new ErrorException($message, 0, $severity, $file, $line);
+});
+
+try {
+    require_once $configPath;
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Config load error: ' . $e->getMessage()]);
+    exit;
+}
 
 // Only load vendor if it exists
 $vendorPath = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($vendorPath)) {
     require_once $vendorPath;
+}
+
+// Check if DB constants are defined
+if (!defined('DB_HOST') || !defined('DB_NAME') || !defined('DB_USER') || !defined('DB_PASS')) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database constants not defined']);
+    exit;
 }
 
 try {
