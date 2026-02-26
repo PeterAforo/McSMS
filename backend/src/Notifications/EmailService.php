@@ -8,9 +8,13 @@ class EmailService
 {
     private $mailer;
     private $config;
+    private $appUrl;
     
     public function __construct($config = [])
     {
+        // Load from environment if available
+        $envConfig = $this->loadEnvConfig();
+        
         $this->config = array_merge([
             'host' => 'smtp.gmail.com',
             'port' => 587,
@@ -19,10 +23,35 @@ class EmailService
             'from_email' => 'noreply@mcsms.edu.gh',
             'from_name' => 'McSMS School',
             'encryption' => 'tls'
-        ], $config);
+        ], $envConfig, $config);
+        
+        $this->appUrl = $this->config['app_url'] ?? 'https://eea.mcaforo.com';
         
         $this->mailer = new PHPMailer(true);
         $this->setupMailer();
+    }
+    
+    /**
+     * Load configuration from environment variables
+     */
+    private function loadEnvConfig()
+    {
+        // Try to load env.php
+        $envFile = dirname(__DIR__, 2) . '/config/env.php';
+        if (file_exists($envFile)) {
+            require_once $envFile;
+        }
+        
+        return [
+            'host' => getenv('MAIL_HOST') ?: ($_ENV['MAIL_HOST'] ?? 'smtp.gmail.com'),
+            'port' => (int)(getenv('MAIL_PORT') ?: ($_ENV['MAIL_PORT'] ?? 587)),
+            'username' => getenv('MAIL_USERNAME') ?: ($_ENV['MAIL_USERNAME'] ?? ''),
+            'password' => getenv('MAIL_PASSWORD') ?: ($_ENV['MAIL_PASSWORD'] ?? ''),
+            'from_email' => getenv('MAIL_FROM_ADDRESS') ?: ($_ENV['MAIL_FROM_ADDRESS'] ?? 'noreply@mcsms.edu.gh'),
+            'from_name' => getenv('MAIL_FROM_NAME') ?: ($_ENV['MAIL_FROM_NAME'] ?? 'McSMS School'),
+            'encryption' => 'tls',
+            'app_url' => getenv('APP_URL') ?: ($_ENV['APP_URL'] ?? 'https://eea.mcaforo.com')
+        ];
     }
     
     private function setupMailer()
@@ -270,7 +299,7 @@ class EmailService
                         <p><strong>Amount Paid:</strong> <span class='amount'>GHS " . number_format($payment['amount'], 2) . "</span></p>
                     </div>
                     <p>Thank you for your payment!</p>
-                    <a href='http://localhost:5173/parent/payments' class='button'>View Receipt</a>
+                    <a href='{$this->appUrl}/parent/payments' class='button'>View Receipt</a>
                 </div>
                 <div class='footer'>
                     <p>&copy; 2025 {$this->config['from_name']}. All rights reserved.</p>
@@ -424,7 +453,7 @@ class EmailService
                     <p>The report card for {$student['first_name']} {$student['last_name']} is now available.</p>
                     <p><strong>Term:</strong> {$term['term_name']}</p>
                     <p>You can view and download the report card from your parent portal.</p>
-                    <a href='http://localhost:5173/parent/reports' class='button'>View Report Card</a>
+                    <a href='{$this->appUrl}/parent/reports' class='button'>View Report Card</a>
                 </div>
                 <div class='footer'>
                     <p>&copy; 2025 {$this->config['from_name']}. All rights reserved.</p>
@@ -466,7 +495,7 @@ class EmailService
                         <p><strong>Amount Due:</strong> <span class='amount'>GHS " . number_format($invoice['balance'], 2) . "</span></p>
                     </div>
                     <p>Please make payment as soon as possible to avoid additional late fees.</p>
-                    <a href='http://localhost:5173/parent/invoices' class='button'>Pay Now</a>
+                    <a href='{$this->appUrl}/parent/invoices' class='button'>Pay Now</a>
                 </div>
                 <div class='footer'>
                     <p>&copy; 2025 {$this->config['from_name']}. All rights reserved.</p>

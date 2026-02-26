@@ -490,6 +490,12 @@ function markBulkAttendance($pdo, $data = null) {
         }
 
         $pdo->commit();
+        
+        // Trigger absence alerts for absent students
+        $absentStudents = array_filter($data['attendance'], fn($r) => $r['status'] === 'absent');
+        if (!empty($absentStudents)) {
+            triggerAbsenceAlerts($pdo, $absentStudents, $data['attendance'][0]['date'] ?? date('Y-m-d'));
+        }
 
         echo json_encode([
             'success' => true,
@@ -803,6 +809,56 @@ function markTeacherAttendance($pdo, $data = null) {
     } catch (Exception $e) {
         $pdo->rollBack();
         throw $e;
+    }
+}
+
+/**
+ * Trigger absence email alerts for absent students
+ */
+function triggerAbsenceAlerts($pdo, $absentStudents, $date) {
+    try {
+        $vendorPath = __DIR__ . '/../vendor/autoload.php';
+        if (!file_exists($vendorPath)) return;
+        
+        require_once $vendorPath;
+        
+        $emailService = new \McSMS\Notifications\EmailService();
+        
+        foreach ($absentStudents as $record) {
+            // Get student and parent details
+            $stmt = $pdo->prepare("
+                SELECT s.*, p.email as parent_email
+                FROM students s
+                LEFT JOIN users p ON s.parent_id = p.id
+                WHERE s.id = ?
+            ");
+            $stmt->execute([$record['student_id']]);
+            $student = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$student || !$student['parent_email']) continue;
+            
+            // Send absence alert
+            $result = $emailService->sendAttendanceAlert($student, $student['parent_email'], $date, 'absent');
+            
+            // Log the email
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO email_logs (recipient_email, subject, email_type, status, related_id, related_type, sent_at)
+                    VALUES (?, ?, 'attendance', ?, ?, 'student', ?)
+                ");
+                $stmt->execute([
+                    $student['parent_email'],
+                    "Attendance Alert - {$student['first_name']} {$student['last_name']}",
+                    $result['success'] ? 'sent' : 'failed',
+                    $student['id'],
+                    $result['success'] ? date('Y-m-d H:i:s') : null
+                ]);
+            } catch (Exception $e) {
+                // Ignore logging errors
+            }
+        }
+    } catch (Exception $e) {
+        error_log("Absence alert error: " . $e->getMessage());
     }
 }
 ?>

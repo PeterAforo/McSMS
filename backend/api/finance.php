@@ -474,7 +474,11 @@ try {
                 
                 $pdo->commit();
                 
-                echo json_encode(['success' => true, 'payment_number' => $paymentNumber]);
+                // Trigger payment confirmation email (async, non-blocking)
+                $paymentId = $pdo->lastInsertId();
+                triggerPaymentEmail($paymentId);
+                
+                echo json_encode(['success' => true, 'payment_number' => $paymentNumber, 'payment_id' => $paymentId]);
                 break;
         }
     }
@@ -983,4 +987,59 @@ try {
     }
     http_response_code(500);
     echo json_encode(['error' => $e->getMessage()]);
+}
+
+/**
+ * Trigger payment confirmation email (non-blocking)
+ */
+function triggerPaymentEmail($paymentId) {
+    try {
+        // Load email service
+        $vendorPath = __DIR__ . '/../vendor/autoload.php';
+        if (!file_exists($vendorPath)) return;
+        
+        require_once $vendorPath;
+        require_once __DIR__ . '/../../config/database.php';
+        
+        $pdo = new PDO(
+            "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
+            DB_USER, DB_PASS,
+            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+        );
+        
+        // Get payment details with parent email
+        $stmt = $pdo->prepare("
+            SELECT pay.*, i.invoice_number, 
+                   CONCAT(s.first_name, ' ', s.last_name) as student_name,
+                   p.email as parent_email
+            FROM payments pay
+            JOIN invoices i ON pay.invoice_id = i.id
+            JOIN students s ON i.student_id = s.id
+            LEFT JOIN users p ON s.parent_id = p.id
+            WHERE pay.id = ?
+        ");
+        $stmt->execute([$paymentId]);
+        $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$payment || !$payment['parent_email']) return;
+        
+        // Send email
+        $emailService = new \McSMS\Notifications\EmailService();
+        $result = $emailService->sendPaymentConfirmation($payment, $payment['parent_email']);
+        
+        // Log the email
+        $stmt = $pdo->prepare("
+            INSERT INTO email_logs (recipient_email, subject, email_type, status, related_id, related_type, sent_at)
+            VALUES (?, ?, 'payment', ?, ?, 'payment', ?)
+        ");
+        $stmt->execute([
+            $payment['parent_email'],
+            "Payment Received - {$payment['payment_number']}",
+            $result['success'] ? 'sent' : 'failed',
+            $paymentId,
+            $result['success'] ? date('Y-m-d H:i:s') : null
+        ]);
+    } catch (Exception $e) {
+        error_log("Payment email error: " . $e->getMessage());
+    }
 }
