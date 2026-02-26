@@ -1,13 +1,19 @@
 <?php
 /**
  * Push Notifications API
- * Handles web push notifications for real-time alerts
+ * Handles web push notifications for real-time alerts using VAPID
  */
 
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
+if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1|eea\.mcaforo\.com)(:\d+)?$/', $origin)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    header('Access-Control-Allow-Origin: *');
+}
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Credentials: true');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -15,6 +21,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/../vendor/autoload.php';
+
+use Minishlink\WebPush\WebPush;
+use Minishlink\WebPush\Subscription;
 
 try {
     $pdo = new PDO(
@@ -158,10 +168,24 @@ try {
     echo json_encode(['error' => 'Server error', 'message' => $e->getMessage()]);
 }
 
+function getVapidKeys() {
+    // Load from environment or use defaults
+    // Generate keys with: vendor/bin/minishlink-web-push generate-keys
+    $envFile = dirname(__DIR__, 2) . '/config/env.php';
+    if (file_exists($envFile)) {
+        require_once $envFile;
+    }
+    
+    return [
+        'publicKey' => getenv('VAPID_PUBLIC_KEY') ?: ($_ENV['VAPID_PUBLIC_KEY'] ?? 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U'),
+        'privateKey' => getenv('VAPID_PRIVATE_KEY') ?: ($_ENV['VAPID_PRIVATE_KEY'] ?? 'UUxI4O8-FbRouADVXc-4z3l6SZXHk6-Miehph384Fuw'),
+        'subject' => getenv('VAPID_SUBJECT') ?: ($_ENV['VAPID_SUBJECT'] ?? 'mailto:admin@eea.mcaforo.com')
+    ];
+}
+
 function getVapidPublicKey() {
-    // In production, generate and store VAPID keys securely
-    // For now, return a placeholder that can be configured
-    return 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
+    $keys = getVapidKeys();
+    return $keys['publicKey'];
 }
 
 function subscribeUser($pdo, $data) {
@@ -327,18 +351,59 @@ function sendToUser($pdo, $userId, $title, $body, $data = []) {
         // Also create in-app notification
         createInAppNotification($pdo, $userId, $title, $body, $data);
         
-        // For actual push notifications, you would use a library like web-push
-        // This is a placeholder that logs the notification
+        // Send actual push notifications using web-push library
+        $vapidKeys = getVapidKeys();
+        $auth = [
+            'VAPID' => [
+                'subject' => $vapidKeys['subject'],
+                'publicKey' => $vapidKeys['publicKey'],
+                'privateKey' => $vapidKeys['privateKey']
+            ]
+        ];
+        
+        $webPush = new WebPush($auth);
+        $payload = json_encode([
+            'title' => $title,
+            'body' => $body,
+            'icon' => '/icons/icon-192x192.svg',
+            'badge' => '/icons/icon-192x192.svg',
+            'data' => $data,
+            'tag' => $data['type'] ?? 'notification',
+            'requireInteraction' => true
+        ]);
+        
+        $sent = 0;
+        $failed = 0;
+        
         foreach ($subscriptions as $sub) {
-            // In production, use web-push library to send actual push notifications
-            // For now, just log it
-            error_log("Push notification to user $userId: $title - $body");
+            $subscription = Subscription::create([
+                'endpoint' => $sub['endpoint'],
+                'publicKey' => $sub['p256dh'],
+                'authToken' => $sub['auth']
+            ]);
+            
+            $webPush->queueNotification($subscription, $payload);
+        }
+        
+        // Send all queued notifications
+        foreach ($webPush->flush() as $report) {
+            if ($report->isSuccess()) {
+                $sent++;
+            } else {
+                $failed++;
+                // Remove invalid subscriptions
+                if ($report->isSubscriptionExpired()) {
+                    $stmt = $pdo->prepare("DELETE FROM push_subscriptions WHERE endpoint = ?");
+                    $stmt->execute([$report->getEndpoint()]);
+                }
+            }
         }
         
         return [
             'success' => true, 
             'message' => 'Notification sent',
-            'subscriptions_notified' => count($subscriptions)
+            'sent' => $sent,
+            'failed' => $failed
         ];
         
     } catch (Exception $e) {

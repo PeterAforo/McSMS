@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { API_BASE_URL } from '../config';
 
-// VAPID public key - generate your own for production
+// VAPID public key - should match backend configuration
 const VAPID_PUBLIC_KEY = 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U';
 
 class PushNotificationService {
@@ -82,7 +83,7 @@ class PushNotificationService {
   // Send subscription to server
   async sendSubscriptionToServer(subscription, userId) {
     try {
-      await fetch(`${API_BASE_URL}/push_subscriptions.php`, {
+      await fetch(`${API_BASE_URL}/push_notifications.php?action=subscribe`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -98,8 +99,10 @@ class PushNotificationService {
   // Remove subscription from server
   async removeSubscriptionFromServer(userId) {
     try {
-      await fetch(`${API_BASE_URL}/push_subscriptions.php?user_id=${userId}`, {
-        method: 'DELETE'
+      await fetch(`${API_BASE_URL}/push_notifications.php?action=unsubscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId })
       });
     } catch (error) {
       console.error('Error removing subscription from server:', error);
@@ -221,5 +224,5 @@ export function usePushNotifications(userId) {
   };
 }
 
-// Need to import useState and useEffect for the hook
-import { useState, useEffect } from 'react';
+// Export default for convenience
+export default pushNotifications;
