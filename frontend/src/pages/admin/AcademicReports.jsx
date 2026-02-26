@@ -127,7 +127,8 @@ export default function AcademicReports() {
           {/* Class Performance Report */}
           {activeReport === 'class_performance' && reportData.classes && (
             <div className="card overflow-hidden">
-              <table className="w-full">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[500px]">
                 <thead className="bg-gray-50 border-b">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th>
@@ -151,6 +152,7 @@ export default function AcademicReports() {
                   ))}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
 
@@ -173,7 +175,8 @@ export default function AcademicReports() {
               </div>
 
               <div className="card overflow-hidden">
-                <table className="w-full">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[600px]">
                   <thead className="bg-gray-50 border-b">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Class</th>
@@ -195,6 +198,7 @@ export default function AcademicReports() {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             </div>
           )}

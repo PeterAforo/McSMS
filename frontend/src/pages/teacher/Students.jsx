@@ -131,7 +131,7 @@ export default function TeacherStudents() {
       {/* Class Info Card */}
       {classInfo && !showAll && (
         <div className="card p-6">
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
             <div>
               <p className="text-sm text-gray-600 mb-1">Class Code</p>
               <p className="font-semibold text-gray-900">{classInfo.class_code}</p>
