@@ -357,7 +357,8 @@ export default function SystemLogs() {
 
           {/* Logs Table */}
           <div className="card overflow-hidden">
-            <table className="w-full">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[800px]">
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
@@ -394,6 +395,7 @@ export default function SystemLogs() {
                 )}
               </tbody>
             </table>
+            </div>
           </div>
 
           {/* Pagination */}
