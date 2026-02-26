@@ -5,8 +5,38 @@
  * Includes rate limiting and security headers
  */
 
-// Load security bootstrap
-require_once __DIR__ . '/../middleware/security_bootstrap.php';
+// Error handling - log errors but don't display
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
+// Set JSON content type early
+header('Content-Type: application/json');
+
+// Handle CORS manually first to ensure it works
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+$allowedOrigins = ['http://localhost:5173', 'http://localhost:3000', 'https://eea.mcaforo.com'];
+if (in_array($origin, $allowedOrigins) || strpos($origin, 'localhost') !== false) {
+    header("Access-Control-Allow-Origin: $origin");
+} else {
+    header('Access-Control-Allow-Origin: *');
+}
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-Token');
+header('Access-Control-Allow-Credentials: true');
+
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(204);
+    exit;
+}
+
+// Load security bootstrap (with error handling)
+$securityBootstrapPath = __DIR__ . '/../middleware/security_bootstrap.php';
+if (file_exists($securityBootstrapPath)) {
+    require_once $securityBootstrapPath;
+} else {
+    error_log("Security bootstrap not found: $securityBootstrapPath");
+}
 
 // Load audit middleware (optional - don't break auth if it fails)
 $auditMiddlewarePath = __DIR__ . '/../middleware/audit_middleware.php';
@@ -19,7 +49,9 @@ if (file_exists($auditMiddlewarePath)) {
 }
 
 // Initialize security for authentication endpoints (strict rate limiting)
-SecurityBootstrap::initAuth();
+if (class_exists('SecurityBootstrap')) {
+    SecurityBootstrap::initAuth();
+}
 
 require_once __DIR__ . '/../../config/database.php';
 
@@ -126,7 +158,9 @@ function handleLogin($pdo) {
     if (!password_verify($data['password'], $user['password'])) {
         logLoginAttempt($pdo, $user['id'], 'failed', 'Invalid password');
         // Record failed attempt for rate limiting
-        RateLimiter::recordAttempt('login_' . RateLimiter::getClientIP());
+        if (class_exists('RateLimiter')) {
+            RateLimiter::recordAttempt('login_' . RateLimiter::getClientIP());
+        }
         // Audit log - failed login (if available)
         if (class_exists('AuditMiddleware')) {
             AuditMiddleware::logLoginFailed($data['email'], 'Invalid password');
@@ -139,7 +173,9 @@ function handleLogin($pdo) {
     // Log successful login
     logLoginAttempt($pdo, $user['id'], 'success');
     // Clear rate limit on successful login
-    RateLimiter::clear('login_' . RateLimiter::getClientIP());
+    if (class_exists('RateLimiter')) {
+        RateLimiter::clear('login_' . RateLimiter::getClientIP());
+    }
     
     // Audit log - successful login (if available)
     if (class_exists('AuditMiddleware')) {
