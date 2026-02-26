@@ -2,55 +2,15 @@
 /**
  * Authentication API
  * Handles login, logout, and user session management
- * Includes rate limiting and security headers
  */
-
-// Error handling - log errors but don't display
-error_reporting(E_ALL);
-ini_set('display_errors', 0);
-ini_set('log_errors', 1);
-
-// Set JSON content type early
 header('Content-Type: application/json');
-
-// Handle CORS manually first to ensure it works
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-$allowedOrigins = ['http://localhost:5173', 'http://localhost:3000', 'https://eea.mcaforo.com'];
-if (in_array($origin, $allowedOrigins) || strpos($origin, 'localhost') !== false) {
-    header("Access-Control-Allow-Origin: $origin");
-} else {
-    header('Access-Control-Allow-Origin: *');
-}
+header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization, X-CSRF-Token');
-header('Access-Control-Allow-Credentials: true');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(204);
+    http_response_code(200);
     exit;
-}
-
-// Load security bootstrap (with error handling)
-$securityBootstrapPath = __DIR__ . '/../middleware/security_bootstrap.php';
-if (file_exists($securityBootstrapPath)) {
-    require_once $securityBootstrapPath;
-} else {
-    error_log("Security bootstrap not found: $securityBootstrapPath");
-}
-
-// Load audit middleware (optional - don't break auth if it fails)
-$auditMiddlewarePath = __DIR__ . '/../middleware/audit_middleware.php';
-if (file_exists($auditMiddlewarePath)) {
-    try {
-        require_once $auditMiddlewarePath;
-    } catch (Exception $e) {
-        error_log("Audit middleware load failed: " . $e->getMessage());
-    }
-}
-
-// Initialize security for authentication endpoints (strict rate limiting)
-if (class_exists('SecurityBootstrap')) {
-    SecurityBootstrap::initAuth();
 }
 
 require_once __DIR__ . '/../../config/database.php';
