@@ -15,7 +15,7 @@ CREATE INDEX IF NOT EXISTS idx_students_admission_date ON students(admission_dat
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_teachers_status ON teachers(status);
 CREATE INDEX IF NOT EXISTS idx_teachers_user_id ON teachers(user_id);
-CREATE INDEX IF NOT EXISTS idx_teachers_department_id ON teachers(department_id);
+-- Note: department_id index removed - column may not exist in all installations
 
 -- ============================================
 -- ATTENDANCE TABLE INDEXES (High volume table)

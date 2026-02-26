@@ -3,12 +3,15 @@
  * Comprehensive Finance API
  * Handles: Fee Rules, Installment Plans, Invoices, Payments
  */
+header('Content-Type: application/json');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
-// Load security bootstrap
-require_once __DIR__ . '/../middleware/security_bootstrap.php';
-
-// Initialize security for sensitive financial endpoints
-SecurityBootstrap::initSensitive();
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit();
+}
 
 require_once __DIR__ . '/../../config/database.php';
 

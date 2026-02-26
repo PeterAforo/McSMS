@@ -143,6 +143,18 @@ function getSystemStatus($pdo) {
     $stmt = $pdo->query("SELECT * FROM system_onboarding WHERE id = 1");
     $status = $stmt->fetch(PDO::FETCH_ASSOC);
     
+    // If no status record exists, return default
+    if (!$status) {
+        echo json_encode([
+            'success' => true,
+            'status' => null,
+            'completion_percentage' => 0,
+            'completed_steps' => 0,
+            'total_steps' => 6
+        ]);
+        return;
+    }
+    
     // Calculate completion percentage
     $fields = [
         'school_setup_completed',
@@ -155,7 +167,7 @@ function getSystemStatus($pdo) {
     
     $completed = 0;
     foreach ($fields as $field) {
-        if ($status[$field]) $completed++;
+        if (isset($status[$field]) && $status[$field]) $completed++;
     }
     
     $percentage = round(($completed / count($fields)) * 100);
