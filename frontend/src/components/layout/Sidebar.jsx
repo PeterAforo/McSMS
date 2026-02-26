@@ -351,12 +351,28 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   }, [location.pathname]);
 
   return (
-    <div className={`
-      fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 h-screen flex flex-col
-      transform transition-transform duration-300 ease-in-out
-      ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      lg:relative lg:translate-x-0
-    `}>
+    <aside 
+      className={`
+        fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-gray-200 h-screen flex flex-col
+        transform transition-transform duration-300 ease-in-out
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+        lg:relative lg:translate-x-0
+      `}
+      role="navigation"
+      aria-label="Main navigation"
+    >
+      {/* Mobile close button */}
+      <button
+        onClick={onClose}
+        className="lg:hidden absolute top-4 right-4 p-2 text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
+        aria-label="Close navigation menu"
+      >
+        <span className="sr-only">Close menu</span>
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
       {/* Logo */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center gap-3">
@@ -472,6 +488,6 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
           })}
         </div>
       </nav>
-    </div>
+    </aside>
   );
 }

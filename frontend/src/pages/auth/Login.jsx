@@ -167,22 +167,30 @@ export default function Login() {
             </div>
 
             {error && (
-              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+              <div 
+                role="alert" 
+                aria-live="polite"
+                className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3"
+              >
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <p className="text-sm text-red-700">{error}</p>
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-5" aria-label="Login form">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
                   <input
+                    id="email"
+                    name="email"
                     type="email"
                     required
+                    autoComplete="email"
+                    aria-required="true"
                     className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="admin@school.com"
                     value={formData.email}
@@ -192,14 +200,18 @@ export default function Login() {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
                   <input
+                    id="password"
+                    name="password"
                     type="password"
                     required
+                    autoComplete="current-password"
+                    aria-required="true"
                     className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="••••••••"
                     value={formData.password}
@@ -209,8 +221,13 @@ export default function Login() {
               </div>
 
               <div className="flex items-center justify-between">
-                <label className="flex items-center cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <label htmlFor="remember-me" className="flex items-center cursor-pointer">
+                  <input 
+                    id="remember-me"
+                    name="remember-me"
+                    type="checkbox" 
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                  />
                   <span className="ml-2 text-sm text-gray-600">Remember me</span>
                 </label>
                 <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium">

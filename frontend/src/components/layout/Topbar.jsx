@@ -217,14 +217,18 @@ export default function Topbar({ onMenuClick = () => {} }) {
   };
 
   return (
-    <div className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 flex items-center justify-between">
+    <header 
+      className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 lg:px-6 flex items-center justify-between"
+      role="banner"
+    >
       {/* Mobile Menu Button */}
       <button
         onClick={onMenuClick}
-        className="lg:hidden p-2 -ml-2 mr-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-        aria-label="Open menu"
+        className="lg:hidden p-2 -ml-2 mr-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        aria-label="Open navigation menu"
+        aria-expanded={false}
       >
-        <Menu className="w-6 h-6" />
+        <Menu className="w-6 h-6" aria-hidden="true" />
       </button>
 
       {/* Search */}
@@ -590,6 +594,6 @@ export default function Topbar({ onMenuClick = () => {} }) {
           )}
         </div>
       </div>
-    </div>
+    </header>
   );
 }
