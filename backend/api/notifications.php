@@ -4,9 +4,14 @@
  * Send email and SMS notifications
  */
 
+// Error reporting for debugging (disable in production)
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+
 header('Content-Type: application/json');
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
-if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin)) {
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin) || strpos($origin, 'eea.mcaforo.com') !== false) {
     header('Access-Control-Allow-Origin: ' . $origin);
 } else {
     header('Access-Control-Allow-Origin: *');
@@ -20,10 +25,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-require_once __DIR__ . '/../../config/database.php';
+// Load database config
+$configPath = __DIR__ . '/../../config/database.php';
+if (!file_exists($configPath)) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Database config not found']);
+    exit;
+}
+require_once $configPath;
 
 // Only load vendor if it exists
-$vendorPath = __DIR__ . '/../../backend/vendor/autoload.php';
+$vendorPath = __DIR__ . '/../vendor/autoload.php';
 if (file_exists($vendorPath)) {
     require_once $vendorPath;
 }
