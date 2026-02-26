@@ -12,3 +12,72 @@ RewriteRule ^(.*)$ - [L]
     php_flag display_errors Off
     php_value error_reporting 0
 </IfModule>
+
+# ============================================
+# GZIP COMPRESSION - Reduces transfer size by 60-80%
+# ============================================
+<IfModule mod_deflate.c>
+    # Compress HTML, CSS, JavaScript, Text, XML and fonts
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/xml
+    
+    # Remove browser bugs
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+    Header append Vary User-Agent
+</IfModule>
+
+# ============================================
+# BROWSER CACHING - Reduces repeat requests
+# ============================================
+<IfModule mod_expires.c>
+    ExpiresActive On
+    
+    # Images - cache for 1 month
+    ExpiresByType image/jpeg "access plus 1 month"
+    ExpiresByType image/png "access plus 1 month"
+    ExpiresByType image/gif "access plus 1 month"
+    ExpiresByType image/webp "access plus 1 month"
+    ExpiresByType image/svg+xml "access plus 1 month"
+    ExpiresByType image/x-icon "access plus 1 year"
+    
+    # CSS and JavaScript - cache for 1 week
+    ExpiresByType text/css "access plus 1 week"
+    ExpiresByType application/javascript "access plus 1 week"
+    ExpiresByType text/javascript "access plus 1 week"
+    
+    # Fonts - cache for 1 month
+    ExpiresByType font/woff2 "access plus 1 month"
+    ExpiresByType font/woff "access plus 1 month"
+    ExpiresByType application/font-woff "access plus 1 month"
+    ExpiresByType application/font-woff2 "access plus 1 month"
+    
+    # JSON/XML - short cache
+    ExpiresByType application/json "access plus 0 seconds"
+    ExpiresByType application/xml "access plus 0 seconds"
+</IfModule>
+
+# ============================================
+# SECURITY HEADERS
+# ============================================
+<IfModule mod_headers.c>
+    # Prevent MIME type sniffing
+    Header set X-Content-Type-Options "nosniff"
+    
+    # XSS Protection
+    Header set X-XSS-Protection "1; mode=block"
+    
+    # Clickjacking protection
+    Header set X-Frame-Options "SAMEORIGIN"
+    
+    # Referrer Policy
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>

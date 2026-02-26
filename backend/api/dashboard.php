@@ -5,15 +5,9 @@
  */
 
 header('Content-Type: application/json');
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin) || strpos($origin, 'eea.mcaforo.com') !== false) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-} else {
-    header('Access-Control-Allow-Origin: *');
-}
+header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Access-Control-Allow-Credentials: true');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -21,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once dirname(dirname(__DIR__)) . '/config/database.php';
+require_once __DIR__ . '/../utils/Cache.php';
 require_once __DIR__ . '/debug_helper.php';
 
 // Version check
@@ -165,93 +160,103 @@ function getAdminDashboard($pdo, $action) {
 }
 
 function getAdminStats($pdo) {
-    $stats = [];
+    // Cache admin stats for 2 minutes (counts don't change frequently)
+    $cacheKey = Cache::key('admin_stats', [date('Y-m-d')]);
     
-    // Total Students
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM students WHERE status = 'active'");
-    $stats['total_students'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-    
-    // Total Teachers
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM teachers WHERE status = 'active'");
-    $stats['total_teachers'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-    
-    // Total Employees
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM employees WHERE status = 'active'");
-    $stats['total_employees'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-    
-    // Total Classes
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM classes");
-    $stats['total_classes'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-    
-    // Total Parents
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM parents");
-    $stats['total_parents'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-    
-    // Attendance Today
-    $today = date('Y-m-d');
-    $stmt = $pdo->prepare("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'");
-    $stmt->execute([$today]);
-    $stats['attendance_today'] = $stmt->fetch(PDO::FETCH_ASSOC)['present'];
-    
-    // Pending Leave Applications
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'");
-    $stats['pending_leaves'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-    
-    // Active Terms
-    $stmt = $pdo->query("SELECT COUNT(*) as count FROM terms WHERE status = 'active'");
-    $stats['active_terms'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
-    
-    return $stats;
+    return Cache::remember($cacheKey, function() use ($pdo) {
+        $stats = [];
+        
+        // Total Students
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM students WHERE status = 'active'");
+        $stats['total_students'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        // Total Teachers
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM teachers WHERE status = 'active'");
+        $stats['total_teachers'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        // Total Employees
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM employees WHERE status = 'active'");
+        $stats['total_employees'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        // Total Classes
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM classes");
+        $stats['total_classes'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        // Total Parents
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM parents");
+        $stats['total_parents'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        // Attendance Today
+        $today = date('Y-m-d');
+        $stmt = $pdo->prepare("SELECT COUNT(*) as present FROM attendance WHERE date = ? AND status = 'present'");
+        $stmt->execute([$today]);
+        $stats['attendance_today'] = $stmt->fetch(PDO::FETCH_ASSOC)['present'];
+        
+        // Pending Leave Applications
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM leave_applications WHERE status = 'pending'");
+        $stats['pending_leaves'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        // Active Terms
+        $stmt = $pdo->query("SELECT COUNT(*) as count FROM terms WHERE status = 'active'");
+        $stats['active_terms'] = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
+        
+        return $stats;
+    }, 120); // 2 minutes TTL
 }
 
 function getFinancialOverview($pdo) {
-    $financial = [];
     $currentMonth = date('Y-m');
-    $currentYear = date('Y');
+    $cacheKey = Cache::key('financial_overview', [$currentMonth]);
     
-    // Total Revenue This Month
-    $stmt = $pdo->prepare("
-        SELECT COALESCE(SUM(amount), 0) as total 
-        FROM payments 
-        WHERE DATE_FORMAT(payment_date, '%Y-%m') = ?
-    ");
-    $stmt->execute([$currentMonth]);
-    $financial['revenue_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-    
-    // Total Revenue This Year
-    $stmt = $pdo->prepare("
-        SELECT COALESCE(SUM(amount), 0) as total 
-        FROM payments 
-        WHERE YEAR(payment_date) = ?
-    ");
-    $stmt->execute([$currentYear]);
-    $financial['revenue_this_year'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-    
-    // Outstanding Fees
-    $stmt = $pdo->query("
-        SELECT COALESCE(SUM(balance), 0) as total 
-        FROM invoices 
-        WHERE status IN ('pending', 'partial')
-    ");
-    $financial['outstanding_fees'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-    
-    // Total Payroll This Month
-    $stmt = $pdo->prepare("
-        SELECT COALESCE(SUM(net_salary), 0) as total 
-        FROM payroll 
-        WHERE payroll_month = ?
-    ");
-    $stmt->execute([$currentMonth]);
-    $financial['payroll_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-    
-    // Collection Rate
-    $stmt = $pdo->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices");
-    $totalInvoiced = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-    $stmt = $pdo->query("SELECT COALESCE(SUM(paid_amount), 0) as total FROM invoices");
-    $totalPaid = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
-    $financial['collection_rate'] = $totalInvoiced > 0 ? round(($totalPaid / $totalInvoiced) * 100, 1) : 0;
-    
-    return $financial;
+    return Cache::remember($cacheKey, function() use ($pdo) {
+        $financial = [];
+        $currentMonth = date('Y-m');
+        $currentYear = date('Y');
+        
+        // Total Revenue This Month
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM payments 
+            WHERE DATE_FORMAT(payment_date, '%Y-%m') = ?
+        ");
+        $stmt->execute([$currentMonth]);
+        $financial['revenue_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        
+        // Total Revenue This Year
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(amount), 0) as total 
+            FROM payments 
+            WHERE YEAR(payment_date) = ?
+        ");
+        $stmt->execute([$currentYear]);
+        $financial['revenue_this_year'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        
+        // Outstanding Fees
+        $stmt = $pdo->query("
+            SELECT COALESCE(SUM(balance), 0) as total 
+            FROM invoices 
+            WHERE status IN ('pending', 'partial')
+        ");
+        $financial['outstanding_fees'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        
+        // Total Payroll This Month
+        $stmt = $pdo->prepare("
+            SELECT COALESCE(SUM(net_salary), 0) as total 
+            FROM payroll 
+            WHERE payroll_month = ?
+        ");
+        $stmt->execute([$currentMonth]);
+        $financial['payroll_this_month'] = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        
+        // Collection Rate
+        $stmt = $pdo->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices");
+        $totalInvoiced = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        $stmt = $pdo->query("SELECT COALESCE(SUM(paid_amount), 0) as total FROM invoices");
+        $totalPaid = $stmt->fetch(PDO::FETCH_ASSOC)['total'];
+        $financial['collection_rate'] = $totalInvoiced > 0 ? round(($totalPaid / $totalInvoiced) * 100, 1) : 0;
+        
+        return $financial;
+    }, 180); // 3 minutes TTL
 }
 
 function getAcademicOverview($pdo) {
