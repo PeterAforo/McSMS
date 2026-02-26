@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportTableToPDF, generateReport } from '../../utils/pdfExport';
 import { 
   Truck, Users, MapPin, Wrench, Plus, Edit2, Trash2, X, Calendar, Navigation, Clock, Phone, Mail, 
   Route, ChevronRight, UserCheck, Search, Filter, Download, Printer, Fuel, History, DollarSign,

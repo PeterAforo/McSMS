@@ -9,7 +9,7 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
 import axios from 'axios';
-import html2canvas from 'html2canvas';
+import { getHtml2Canvas, exportElementToPDF } from '../../utils/pdfExport';
 
 export default function StudentReports() {
   const navigate = useNavigate();

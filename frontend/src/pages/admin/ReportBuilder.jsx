@@ -8,8 +8,7 @@ import {
 } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportTableToPDF, generateReport } from '../../utils/pdfExport';
 
 const API = `${API_BASE_URL}/report_builder.php`;
 

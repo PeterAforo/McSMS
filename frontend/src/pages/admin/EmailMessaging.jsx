@@ -9,8 +9,7 @@ import {
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportTableToPDF, generateReport } from '../../utils/pdfExport';
 
 export default function EmailMessaging() {
   const { user } = useAuthStore();

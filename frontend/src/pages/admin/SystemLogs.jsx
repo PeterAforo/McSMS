@@ -7,8 +7,7 @@ import {
   MessageSquare, Mail, Phone, BookOpen, Building, Layers, Zap
 } from 'lucide-react';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportTableToPDF, generateReport } from '../../utils/pdfExport';
 import { API_BASE_URL } from '../../config';
 
 export default function SystemLogs() {

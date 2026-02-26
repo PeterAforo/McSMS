@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportTableToPDF, generateReport } from '../../utils/pdfExport';
 import { Fingerprint, Camera, CreditCard, Shield, Plus, Edit2, Trash2, X, Eye, Clock, Users, UserCheck, AlertTriangle, Activity, MapPin, Wifi, WifiOff, CheckCircle, XCircle, RefreshCw, Thermometer, Search, Download, Printer, BarChart3, Calendar, FileText, Bell, Lock, Unlock, Building, History, TrendingUp, PieChart, Filter } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 

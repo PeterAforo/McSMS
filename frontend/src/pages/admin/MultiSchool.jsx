@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportTableToPDF, generateReport } from '../../utils/pdfExport';
 import { Building, TrendingUp, Users, DollarSign, Plus, Edit2, X, Eye, ArrowRightLeft, FileText, MessageSquare, Share2, BarChart3, MapPin, Phone, Mail, Globe, Crown, RefreshCw, CheckCircle, XCircle, Clock, Send, Download, Search, Filter, PieChart, Activity, History, Settings, Trash2, Copy, GitBranch, Layers, AlertCircle, Database, FileSpreadsheet } from 'lucide-react';
 import { API_BASE_URL } from '../../config';
 

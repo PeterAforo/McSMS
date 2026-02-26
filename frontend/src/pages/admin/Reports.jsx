@@ -9,8 +9,7 @@ import { Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { API_BASE_URL } from '../../config';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportTableToPDF, generateReport } from '../../utils/pdfExport';
 
 export default function Reports() {
   const { user } = useAuthStore();
@@ -279,14 +278,12 @@ export default function Reports() {
     }
   };
 
-  const exportReportToPDF = (report) => {
-    const doc = new jsPDF();
-    doc.setFontSize(18);
-    doc.text(report.name || 'Report', 14, 22);
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
-    doc.text(`Period: ${selectedPeriod}`, 14, 36);
-    doc.save(`${report.name || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`);
+  const exportReportToPDF = async (report) => {
+    await generateReport({
+      title: report.name || 'Report',
+      subtitle: `Generated: ${new Date().toLocaleString()} | Period: ${selectedPeriod}`,
+      filename: `${report.name || 'report'}_${new Date().toISOString().split('T')[0]}.pdf`
+    });
   };
 
   const exportReportToExcel = (report) => {

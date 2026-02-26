@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { exportTableToPDF, generateReport } from '../../utils/pdfExport';
 import { 
   TrendingUp, Users, DollarSign, Calendar, AlertTriangle, Award, 
   Download, RefreshCw, BarChart3, PieChart, FileText, GraduationCap,
