@@ -1,70 +1,51 @@
 <?php
 /**
  * Debug test file - DELETE AFTER DEBUGGING
- * Tests each step of notifications.php to find the error
+ * Tries to include notifications.php code to find the exact error
  */
+
+// Catch ALL errors including fatal ones
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error !== null && in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        header('Content-Type: application/json');
+        echo json_encode([
+            'fatal_error' => true,
+            'type' => $error['type'],
+            'message' => $error['message'],
+            'file' => $error['file'],
+            'line' => $error['line']
+        ]);
+    }
+});
+
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-$debug = ['steps' => []];
+// Check if notifications.php file can be read
+$notificationsFile = __DIR__ . '/notifications.php';
+$debug = [
+    'notifications_file_exists' => file_exists($notificationsFile),
+    'notifications_file_readable' => is_readable($notificationsFile),
+    'notifications_file_size' => file_exists($notificationsFile) ? filesize($notificationsFile) : 0,
+];
 
-try {
-    $debug['steps'][] = 'Step 1: Starting';
+// Try to syntax check the file
+if (file_exists($notificationsFile)) {
+    $output = [];
+    $returnCode = 0;
+    exec('php -l ' . escapeshellarg($notificationsFile) . ' 2>&1', $output, $returnCode);
+    $debug['syntax_check'] = implode("\n", $output);
+    $debug['syntax_ok'] = $returnCode === 0;
     
-    // Step 2: Load config
-    $configPath = __DIR__ . '/../../config/database.php';
-    $debug['steps'][] = 'Step 2: Config path = ' . $configPath;
-    $debug['config_exists'] = file_exists($configPath);
+    // Read first 100 chars to verify file content
+    $content = file_get_contents($notificationsFile);
+    $debug['file_starts_with'] = substr($content, 0, 100);
+    $debug['file_length'] = strlen($content);
     
-    if (file_exists($configPath)) {
-        require_once $configPath;
-        $debug['steps'][] = 'Step 3: Config loaded';
-        $debug['db_host_defined'] = defined('DB_HOST');
-        $debug['db_name_defined'] = defined('DB_NAME');
-    } else {
-        $debug['steps'][] = 'Step 3: Config NOT FOUND';
-    }
-    
-    // Step 4: Try database connection
-    if (defined('DB_HOST') && defined('DB_NAME') && defined('DB_USER') && defined('DB_PASS')) {
-        $debug['steps'][] = 'Step 4: Attempting DB connection';
-        $pdo = new PDO(
-            "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4",
-            DB_USER,
-            DB_PASS,
-            [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-        );
-        $debug['steps'][] = 'Step 5: DB connected successfully';
-        $debug['db_connected'] = true;
-        
-        // Step 6: Check notifications table
-        $stmt = $pdo->query("SHOW TABLES LIKE 'notifications'");
-        $debug['notifications_table_exists'] = $stmt->rowCount() > 0;
-        $debug['steps'][] = 'Step 6: Table check done';
-        
-        // Step 7: Try a simple query
-        if ($debug['notifications_table_exists']) {
-            $stmt = $pdo->query("SELECT COUNT(*) as cnt FROM notifications");
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            $debug['notification_count'] = $result['cnt'];
-            $debug['steps'][] = 'Step 7: Query successful';
-        }
-    } else {
-        $debug['steps'][] = 'Step 4: DB constants not defined';
-    }
-    
-    $debug['success'] = true;
-    
-} catch (Exception $e) {
-    $debug['success'] = false;
-    $debug['error'] = $e->getMessage();
-    $debug['error_file'] = $e->getFile();
-    $debug['error_line'] = $e->getLine();
-} catch (Error $e) {
-    $debug['success'] = false;
-    $debug['error'] = $e->getMessage();
-    $debug['error_file'] = $e->getFile();
-    $debug['error_line'] = $e->getLine();
+    // Check for BOM or other issues
+    $debug['has_bom'] = (substr($content, 0, 3) === "\xEF\xBB\xBF");
+    $debug['first_bytes_hex'] = bin2hex(substr($content, 0, 10));
 }
 
 echo json_encode($debug, JSON_PRETTY_PRINT);
