@@ -12,7 +12,7 @@ import { useEducationLevels } from '../../hooks/useEducationLevels';
 export default function Subjects() {
   const [subjects, setSubjects] = useState([]);
   const [departments, setDepartments] = useState([]);
-  const { educationLevels } = useEducationLevels();
+  const { levels: educationLevels } = useEducationLevels();
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingSubject, setEditingSubject] = useState(null);
@@ -491,7 +491,7 @@ export default function Subjects() {
             </select>
             <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="input w-auto">
               <option value="">All Levels</option>
-              {educationLevels.map(level => (
+              {(educationLevels || []).map(level => (
                 <option key={level.id} value={level.level_code}>{level.level_name}</option>
               ))}
             </select>
@@ -710,7 +710,7 @@ export default function Subjects() {
                     className="input"
                   >
                     <option value="all">All Levels</option>
-                    {educationLevels.map(level => (
+                    {(educationLevels || []).map(level => (
                       <option key={level.id} value={level.level_code}>{level.level_name}</option>
                     ))}
                   </select>
