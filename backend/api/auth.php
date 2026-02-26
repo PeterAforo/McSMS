@@ -7,6 +7,7 @@
 
 // Load security bootstrap
 require_once __DIR__ . '/../middleware/security_bootstrap.php';
+require_once __DIR__ . '/../middleware/audit_middleware.php';
 
 // Initialize security for authentication endpoints (strict rate limiting)
 SecurityBootstrap::initAuth();
@@ -117,6 +118,8 @@ function handleLogin($pdo) {
         logLoginAttempt($pdo, $user['id'], 'failed', 'Invalid password');
         // Record failed attempt for rate limiting
         RateLimiter::recordAttempt('login_' . RateLimiter::getClientIP());
+        // Audit log - failed login
+        AuditMiddleware::logLoginFailed($data['email'], 'Invalid password');
         http_response_code(401);
         echo json_encode(['error' => 'Invalid email or password']);
         return;
@@ -126,6 +129,9 @@ function handleLogin($pdo) {
     logLoginAttempt($pdo, $user['id'], 'success');
     // Clear rate limit on successful login
     RateLimiter::clear('login_' . RateLimiter::getClientIP());
+    
+    // Audit log - successful login
+    AuditMiddleware::logLogin($user['id'], $user['email'], $user['role']);
     
     // Check if this is first login (last_login is null)
     $isFirstLogin = empty($user['last_login']);
