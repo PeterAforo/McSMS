@@ -1,8 +1,12 @@
-// McSMS Service Worker - Offline Support & Push Notifications
-const CACHE_NAME = 'mcsms-v2';
+// McSMS Service Worker - Offline Support, Push Notifications & Caching
+const CACHE_VERSION = 'v3';
+const STATIC_CACHE = `mcsms-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `mcsms-dynamic-${CACHE_VERSION}`;
+const VENDOR_CACHE = `mcsms-vendor-${CACHE_VERSION}`;
+const IMAGE_CACHE = `mcsms-images-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
-// Assets to cache immediately
+// Assets to cache immediately (shell)
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
@@ -12,10 +16,31 @@ const PRECACHE_ASSETS = [
   '/icons/icon-512x512.png'
 ];
 
+// Cache duration settings (in seconds)
+const CACHE_DURATIONS = {
+  vendor: 30 * 24 * 60 * 60, // 30 days for vendor chunks
+  static: 7 * 24 * 60 * 60,  // 7 days for static assets
+  dynamic: 24 * 60 * 60,     // 1 day for dynamic content
+  images: 14 * 24 * 60 * 60  // 14 days for images
+};
+
+// Check if URL is a vendor chunk (long-term cacheable)
+const isVendorChunk = (url) => {
+  return url.includes('/assets/vendor-') || 
+         url.includes('/assets/html2canvas') ||
+         url.includes('/assets/purify') ||
+         url.includes('/assets/index.es');
+};
+
+// Check if URL is an image
+const isImage = (url) => {
+  return /\.(jpg|jpeg|png|gif|webp|svg|ico)$/i.test(url);
+};
+
 // Install event - cache core assets
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(STATIC_CACHE).then((cache) => {
       console.log('Service Worker: Caching core assets');
       return cache.addAll(PRECACHE_ASSETS);
     })
@@ -25,12 +50,16 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean old caches
 self.addEventListener('activate', (event) => {
+  const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, VENDOR_CACHE, IMAGE_CACHE];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+          .filter((name) => name.startsWith('mcsms-') && !currentCaches.includes(name))
+          .map((name) => {
+            console.log('Service Worker: Deleting old cache:', name);
+            return caches.delete(name);
+          })
       );
     })
   );
@@ -74,10 +103,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Determine which cache to use based on request type
+  const getCacheName = (url) => {
+    if (isVendorChunk(url)) return VENDOR_CACHE;
+    if (isImage(url)) return IMAGE_CACHE;
+    if (url.includes('/assets/')) return STATIC_CACHE;
+    return DYNAMIC_CACHE;
+  };
+
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
         if (cachedResponse) {
+          // For vendor chunks, always return cached version (cache-first)
+          if (isVendorChunk(request.url)) {
+            return cachedResponse;
+          }
+          // For other assets, return cached but update in background (stale-while-revalidate)
+          fetch(request).then((response) => {
+            if (response && response.status === 200) {
+              const cacheName = getCacheName(request.url);
+              caches.open(cacheName).then((cache) => {
+                cache.put(request, response);
+              });
+            }
+          }).catch(() => {});
           return cachedResponse;
         }
 
@@ -88,10 +138,11 @@ self.addEventListener('fetch', (event) => {
               return response;
             }
 
-            // Only cache if it's a valid http(s) request
+            // Cache the response in appropriate cache
             if (request.url.startsWith('http')) {
               const responseToCache = response.clone();
-              caches.open(CACHE_NAME)
+              const cacheName = getCacheName(request.url);
+              caches.open(cacheName)
                 .then((cache) => {
                   cache.put(request, responseToCache);
                 })
