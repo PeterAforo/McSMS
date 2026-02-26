@@ -2,41 +2,16 @@
 /**
  * Authentication API
  * Handles login, logout, and user session management
- * Includes rate limiting for security
+ * Includes rate limiting and security headers
  */
 
-// Set CORS headers only if not already set by .htaccess
-if (!headers_sent()) {
-    $origin = $_SERVER['HTTP_ORIGIN'] ?? '*';
-    header('Content-Type: application/json');
-    header('Access-Control-Allow-Origin: ' . $origin);
-    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
-    header('Access-Control-Allow-Credentials: true');
-}
+// Load security bootstrap
+require_once __DIR__ . '/../middleware/security_bootstrap.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
-
-// Load rate limiter if available (optional)
-$rateLimiterFile = __DIR__ . '/../middleware/rate_limiter.php';
-$hasRateLimiter = file_exists($rateLimiterFile);
-if ($hasRateLimiter) {
-    require_once $rateLimiterFile;
-}
+// Initialize security for authentication endpoints (strict rate limiting)
+SecurityBootstrap::initAuth();
 
 require_once __DIR__ . '/../../config/database.php';
-
-// Apply rate limiting to login attempts (if available)
-$action = $_GET['action'] ?? null;
-if ($hasRateLimiter && $action === 'login' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-    $clientIP = RateLimiter::getClientIP();
-    if (!RateLimiter::check('login_' . $clientIP, 5, 300)) {
-        exit; // Rate limiter already sent response
-    }
-}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? null;

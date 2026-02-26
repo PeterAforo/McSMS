@@ -4,21 +4,11 @@
  * Handles: Fee Rules, Installment Plans, Invoices, Payments
  */
 
-header('Content-Type: application/json');
-$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
-if (preg_match('/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/', $origin) || strpos($origin, 'eea.mcaforo.com') !== false) {
-    header('Access-Control-Allow-Origin: ' . $origin);
-} else {
-    header('Access-Control-Allow-Origin: *');
-}
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-header('Access-Control-Allow-Credentials: true');
+// Load security bootstrap
+require_once __DIR__ . '/../middleware/security_bootstrap.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit();
-}
+// Initialize security for sensitive financial endpoints
+SecurityBootstrap::initSensitive();
 
 require_once __DIR__ . '/../../config/database.php';
 
