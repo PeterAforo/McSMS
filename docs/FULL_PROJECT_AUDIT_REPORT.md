@@ -440,7 +440,7 @@ PROTOTYPE → ALPHA → BETA → RELEASE_CANDIDATE → [PRODUCTION_READY]
 ### Sprint 5: Advanced Features (2 weeks)
 - [x] Complete AI backend integration ✅
 - [x] Biometric hardware integration ✅
-- [ ] Push notifications (FCM)
+- [x] Push notifications (FCM/VAPID) ✅
 - [x] Email notifications for key events ✅
 - [ ] Multi-school data isolation
 
