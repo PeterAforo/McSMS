@@ -388,7 +388,7 @@ export default function Subjects() {
   };
 
   // Filter and sort subjects
-  const filteredSubjects = subjects
+  const filteredSubjects = (subjects || [])
     .filter(s => {
       const matchesSearch = !searchTerm ||
         s.subject_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -414,15 +414,15 @@ export default function Subjects() {
   const totalCredits = filteredSubjects.reduce((sum, s) => sum + (parseInt(s.credit_hours) || 3), 0);
 
   // Available subjects for prerequisites (exclude current subject and already added)
-  const availableForPrerequisite = subjects.filter(s => 
+  const availableForPrerequisite = (subjects || []).filter(s => 
     s.id !== selectedSubject?.id && 
     !subjectDetails.prerequisites?.some(p => p.prerequisite_id == s.id)
   );
 
   const stats = [
-    { label: 'Total Subjects', value: subjects.length, color: 'bg-blue-500', icon: BookOpen },
-    { label: 'Departments', value: departments.length, color: 'bg-indigo-500', icon: Building2 },
-    { label: 'Core', value: subjects.filter(s => s.category === 'core').length, color: 'bg-green-500', icon: BookOpen },
+    { label: 'Total Subjects', value: (subjects || []).length, color: 'bg-blue-500', icon: BookOpen },
+    { label: 'Departments', value: (departments || []).length, color: 'bg-indigo-500', icon: Building2 },
+    { label: 'Core', value: (subjects || []).filter(s => s.category === 'core').length, color: 'bg-green-500', icon: BookOpen },
     { label: 'Total Credits', value: totalCredits, color: 'bg-orange-500', icon: Clock },
   ];
 
