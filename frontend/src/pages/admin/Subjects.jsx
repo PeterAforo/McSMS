@@ -38,16 +38,20 @@ export default function Subjects() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const [showPrerequisitesModal, setShowPrerequisitesModal] = useState(false);
+  const [showTeachersModal, setShowTeachersModal] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [subjectDetails, setSubjectDetails] = useState({ classes: [], teachers: [], prerequisites: [], required_by: [] });
   const [importData, setImportData] = useState([]);
   const [importErrors, setImportErrors] = useState([]);
   const [prerequisiteForm, setPrerequisiteForm] = useState({ prerequisite_id: '', is_mandatory: 1, min_grade: '' });
+  const [allTeachers, setAllTeachers] = useState([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState('');
   const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchSubjects();
     fetchDepartments();
+    fetchAllTeachers();
   }, []);
 
   const fetchSubjects = async () => {
@@ -69,6 +73,84 @@ export default function Subjects() {
       setDepartments(response.data.departments || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchAllTeachers = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/teachers.php`);
+      setAllTeachers(response.data.teachers || []);
+    } catch (error) {
+      console.error('Error fetching teachers:', error);
+    }
+  };
+
+  const handleManageTeachers = (subject) => {
+    setSelectedSubject(subject);
+    setSelectedTeacherId('');
+    setShowTeachersModal(true);
+  };
+
+  const handleAssignTeacher = async () => {
+    if (!selectedTeacherId || !selectedSubject) return;
+    try {
+      const response = await axios.post(`${API_BASE_URL}/subjects.php?action=assign_teacher`, {
+        subject_id: selectedSubject.id,
+        teacher_id: selectedTeacherId
+      });
+      if (response.data.success) {
+        // Update the subject's teachers in local state
+        setSubjects(prev => prev.map(s => 
+          s.id === selectedSubject.id 
+            ? { ...s, teachers: response.data.teachers }
+            : s
+        ));
+        setSelectedSubject(prev => ({ ...prev, teachers: response.data.teachers }));
+        setSelectedTeacherId('');
+      }
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to assign teacher');
+    }
+  };
+
+  const handleRemoveTeacher = async (teacherId) => {
+    if (!selectedSubject) return;
+    if (!confirm('Remove this teacher from the subject?')) return;
+    try {
+      const response = await axios.post(`${API_BASE_URL}/subjects.php?action=remove_teacher`, {
+        subject_id: selectedSubject.id,
+        teacher_id: teacherId
+      });
+      if (response.data.success) {
+        setSubjects(prev => prev.map(s => 
+          s.id === selectedSubject.id 
+            ? { ...s, teachers: response.data.teachers }
+            : s
+        ));
+        setSelectedSubject(prev => ({ ...prev, teachers: response.data.teachers }));
+      }
+    } catch (error) {
+      alert('Failed to remove teacher');
+    }
+  };
+
+  const handleSetPrimaryTeacher = async (teacherId) => {
+    if (!selectedSubject) return;
+    try {
+      const response = await axios.post(`${API_BASE_URL}/subjects.php?action=set_primary_teacher`, {
+        subject_id: selectedSubject.id,
+        teacher_id: teacherId
+      });
+      if (response.data.success) {
+        setSubjects(prev => prev.map(s => 
+          s.id === selectedSubject.id 
+            ? { ...s, teachers: response.data.teachers }
+            : s
+        ));
+        setSelectedSubject(prev => ({ ...prev, teachers: response.data.teachers }));
+      }
+    } catch (error) {
+      alert('Failed to set primary teacher');
     }
   };
 
@@ -538,6 +620,7 @@ export default function Subjects() {
                   </div>
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Department</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Teachers</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Credits</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
@@ -545,9 +628,9 @@ export default function Subjects() {
             </thead>
             <tbody className="divide-y divide-gray-200">
               {loading ? (
-                <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-500">Loading...</td></tr>
+                <tr><td colSpan="8" className="px-6 py-12 text-center text-gray-500">Loading...</td></tr>
               ) : filteredSubjects.length === 0 ? (
-                <tr><td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+                <tr><td colSpan="8" className="px-6 py-12 text-center text-gray-500">
                   {subjects.length === 0 ? 'No subjects found' : 'No subjects match your filters'}
                 </td></tr>
               ) : (
@@ -578,6 +661,15 @@ export default function Subjects() {
                       )}
                     </td>
                     <td className="px-4 py-3">
+                      <button 
+                        onClick={() => handleManageTeachers(subject)}
+                        className="flex items-center gap-1 px-2 py-1 bg-green-50 text-green-700 rounded text-xs hover:bg-green-100"
+                      >
+                        <Users className="w-3 h-3" />
+                        {(subject.teachers || []).length}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3">
                       <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
                         {subject.credit_hours || 3} hrs
                       </span>
@@ -594,6 +686,9 @@ export default function Subjects() {
                       <div className="flex items-center gap-1">
                         <button onClick={() => handleViewDetails(subject)} className="p-1.5 text-gray-600 hover:bg-gray-100 rounded" title="View Details">
                           <Eye className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleManageTeachers(subject)} className="p-1.5 text-green-600 hover:bg-green-50 rounded" title="Manage Teachers">
+                          <Users className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleManagePrerequisites(subject)} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Prerequisites">
                           <Link className="w-4 h-4" />
@@ -957,6 +1052,109 @@ export default function Subjects() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Teachers Modal */}
+      {showTeachersModal && selectedSubject && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-center justify-between sticky top-0 bg-white">
+              <div>
+                <h2 className="text-xl font-semibold">Manage Teachers</h2>
+                <p className="text-sm text-gray-500">{selectedSubject.subject_name} ({selectedSubject.subject_code})</p>
+              </div>
+              <button onClick={() => setShowTeachersModal(false)}><X className="w-6 h-6" /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Assign New Teacher */}
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Assign Teacher
+                </h4>
+                <div className="flex gap-2">
+                  <select
+                    value={selectedTeacherId}
+                    onChange={(e) => setSelectedTeacherId(e.target.value)}
+                    className="input flex-1"
+                  >
+                    <option value="">Select a teacher...</option>
+                    {(allTeachers || [])
+                      .filter(t => !(selectedSubject.teachers || []).some(st => st.teacher_id == t.id))
+                      .map(t => (
+                        <option key={t.id} value={t.id}>
+                          {t.first_name} {t.last_name} {t.specialization ? `(${t.specialization})` : ''}
+                        </option>
+                      ))
+                    }
+                  </select>
+                  <button 
+                    onClick={handleAssignTeacher} 
+                    className="btn btn-primary"
+                    disabled={!selectedTeacherId}
+                  >
+                    Assign
+                  </button>
+                </div>
+              </div>
+
+              {/* Current Teachers */}
+              <div>
+                <h4 className="font-medium mb-3">
+                  Assigned Teachers ({(selectedSubject.teachers || []).length})
+                </h4>
+                {(selectedSubject.teachers || []).length > 0 ? (
+                  <div className="space-y-2">
+                    {(selectedSubject.teachers || []).map((t) => (
+                      <div key={t.teacher_id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${t.is_primary ? 'bg-yellow-100' : 'bg-gray-100'}`}>
+                            <Users className={`w-5 h-5 ${t.is_primary ? 'text-yellow-600' : 'text-gray-600'}`} />
+                          </div>
+                          <div>
+                            <p className="font-medium flex items-center gap-2">
+                              {t.teacher_name}
+                              {t.is_primary == 1 && (
+                                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded">Primary</span>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500">{t.email}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {t.is_primary != 1 && (
+                            <button 
+                              onClick={() => handleSetPrimaryTeacher(t.teacher_id)}
+                              className="p-1.5 text-yellow-600 hover:bg-yellow-50 rounded"
+                              title="Set as primary teacher"
+                            >
+                              <GraduationCap className="w-4 h-4" />
+                            </button>
+                          )}
+                          <button 
+                            onClick={() => handleRemoveTeacher(t.teacher_id)}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                            title="Remove teacher"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm text-center py-8 bg-gray-50 rounded-lg">
+                    No teachers assigned to this subject yet
+                  </p>
+                )}
+              </div>
+
+              <div className="text-xs text-gray-500 bg-gray-50 p-3 rounded-lg">
+                <strong>Tip:</strong> The primary teacher is the main instructor for this subject. 
+                You can assign multiple teachers who can all teach this subject.
+              </div>
             </div>
           </div>
         </div>
