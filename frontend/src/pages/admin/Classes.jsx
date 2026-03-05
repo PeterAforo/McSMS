@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Edit, Trash2, School, X, Search, Filter, Eye, Users, BookOpen,
   Download, Upload, ChevronUp, ChevronDown, BarChart3, Calendar, UserPlus,
-  FileText, Printer, ArrowUpRight, GraduationCap, Clock, CheckCircle, XCircle
+  FileText, Printer, ArrowUpRight, GraduationCap, Clock, CheckCircle, XCircle, Layers
 } from 'lucide-react';
 import { classesAPI } from '../../services/api';
 import { API_BASE_URL } from '../../config';
@@ -50,6 +50,22 @@ export default function Classes() {
   const [promoteToClass, setPromoteToClass] = useState('');
   const [sortField, setSortField] = useState('class_name');
   const [sortDirection, setSortDirection] = useState('asc');
+  
+  // Subgroups state
+  const [showSubgroupsModal, setShowSubgroupsModal] = useState(false);
+  const [subgroups, setSubgroups] = useState([]);
+  const [showSubgroupForm, setShowSubgroupForm] = useState(false);
+  const [editingSubgroup, setEditingSubgroup] = useState(null);
+  const [subgroupForm, setSubgroupForm] = useState({
+    subgroup_name: '',
+    subgroup_code: '',
+    teacher_id: '',
+    capacity: '',
+    room: '',
+    schedule_notes: '',
+    has_separate_curriculum: false,
+    description: ''
+  });
 
   useEffect(() => {
     fetchClasses();
@@ -129,6 +145,88 @@ export default function Classes() {
     } catch (error) {
       console.error('Error fetching class teachers:', error);
       setClassTeachers([]);
+    }
+  };
+
+  // Subgroups functions
+  const fetchSubgroups = async (classId) => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/class_subgroups.php?class_id=${classId}`);
+      setSubgroups(response.data.subgroups || []);
+    } catch (error) {
+      console.error('Error fetching subgroups:', error);
+      setSubgroups([]);
+    }
+  };
+
+  const handleManageSubgroups = (cls) => {
+    setSelectedClass(cls);
+    fetchSubgroups(cls.id);
+    setShowSubgroupsModal(true);
+  };
+
+  const handleAddSubgroup = () => {
+    setEditingSubgroup(null);
+    setSubgroupForm({
+      subgroup_name: '',
+      subgroup_code: '',
+      teacher_id: '',
+      capacity: '',
+      room: '',
+      schedule_notes: '',
+      has_separate_curriculum: false,
+      description: ''
+    });
+    setShowSubgroupForm(true);
+  };
+
+  const handleEditSubgroup = (subgroup) => {
+    setEditingSubgroup(subgroup);
+    setSubgroupForm({
+      subgroup_name: subgroup.subgroup_name,
+      subgroup_code: subgroup.subgroup_code || '',
+      teacher_id: subgroup.teacher_id || '',
+      capacity: subgroup.capacity || '',
+      room: subgroup.room || '',
+      schedule_notes: subgroup.schedule_notes || '',
+      has_separate_curriculum: subgroup.has_separate_curriculum == 1,
+      description: subgroup.description || ''
+    });
+    setShowSubgroupForm(true);
+  };
+
+  const handleSaveSubgroup = async () => {
+    if (!subgroupForm.subgroup_name) {
+      alert('Subgroup name is required');
+      return;
+    }
+    try {
+      const payload = {
+        ...subgroupForm,
+        class_id: selectedClass.id,
+        has_separate_curriculum: subgroupForm.has_separate_curriculum ? 1 : 0
+      };
+
+      if (editingSubgroup) {
+        await axios.put(`${API_BASE_URL}/class_subgroups.php?id=${editingSubgroup.id}`, payload);
+      } else {
+        await axios.post(`${API_BASE_URL}/class_subgroups.php`, payload);
+      }
+      
+      fetchSubgroups(selectedClass.id);
+      setShowSubgroupForm(false);
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to save subgroup');
+    }
+  };
+
+  const handleDeleteSubgroup = async (subgroupId) => {
+    if (!confirm('Delete this subgroup? Students will be unassigned.')) return;
+    try {
+      await axios.delete(`${API_BASE_URL}/class_subgroups.php?id=${subgroupId}`);
+      fetchSubgroups(selectedClass.id);
+    } catch (error) {
+      alert('Failed to delete subgroup');
     }
   };
 
@@ -593,6 +691,9 @@ export default function Classes() {
                         </button>
                         <button onClick={() => handleManageTeachers(cls)} className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded" title="Manage Teachers">
                           <Users className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => handleManageSubgroups(cls)} className="p-1.5 text-cyan-600 hover:bg-cyan-50 rounded" title="Manage Subgroups">
+                          <Layers className="w-4 h-4" />
                         </button>
                         <button onClick={() => handleManageSubjects(cls)} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded" title="Manage Subjects">
                           <BookOpen className="w-4 h-4" />
@@ -1184,6 +1285,192 @@ export default function Classes() {
               <div className="mt-4 pt-4 border-t">
                 <button onClick={() => setShowSubjectsModal(false)} className="btn btn-primary w-full">Done</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subgroups Modal */}
+      {showSubgroupsModal && selectedClass && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex items-center justify-between sticky top-0 bg-white">
+              <div>
+                <h2 className="text-xl font-semibold">Manage Subgroups</h2>
+                <p className="text-sm text-gray-500">{selectedClass.class_name}</p>
+              </div>
+              <button onClick={() => { setShowSubgroupsModal(false); setShowSubgroupForm(false); }}><X className="w-6 h-6" /></button>
+            </div>
+            <div className="p-6">
+              {!showSubgroupForm ? (
+                <>
+                  <div className="flex justify-between items-center mb-4">
+                    <p className="text-sm text-gray-600">
+                      Divide large classes into smaller groups with their own teachers and curriculum.
+                    </p>
+                    <button onClick={handleAddSubgroup} className="btn btn-primary flex items-center gap-2">
+                      <Plus className="w-4 h-4" /> Add Subgroup
+                    </button>
+                  </div>
+
+                  {subgroups.length > 0 ? (
+                    <div className="space-y-3">
+                      {subgroups.map(sg => (
+                        <div key={sg.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                          <div className="flex items-start justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center">
+                                <Layers className="w-5 h-5 text-cyan-600" />
+                              </div>
+                              <div>
+                                <h4 className="font-medium">{sg.subgroup_name}</h4>
+                                <p className="text-xs text-gray-500">
+                                  {sg.subgroup_code && <span className="mr-2">Code: {sg.subgroup_code}</span>}
+                                  {sg.room && <span className="mr-2">Room: {sg.room}</span>}
+                                  {sg.capacity && <span>Capacity: {sg.capacity}</span>}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600">{sg.student_count || 0} students</span>
+                              <button onClick={() => handleEditSubgroup(sg)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDeleteSubgroup(sg.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="mt-2 flex items-center gap-4 text-sm">
+                            {sg.teacher_name && (
+                              <span className="text-green-600 flex items-center gap-1">
+                                <Users className="w-3 h-3" /> {sg.teacher_name}
+                              </span>
+                            )}
+                            {sg.has_separate_curriculum == 1 && (
+                              <span className="text-purple-600 flex items-center gap-1">
+                                <BookOpen className="w-3 h-3" /> Separate Curriculum
+                              </span>
+                            )}
+                            {sg.schedule_notes && (
+                              <span className="text-gray-500">{sg.schedule_notes}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 bg-gray-50 rounded-lg">
+                      <Layers className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                      <p className="text-gray-500">No subgroups created yet</p>
+                      <p className="text-sm text-gray-400">Create subgroups to divide this class into smaller groups</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-4">
+                  <h3 className="font-medium">{editingSubgroup ? 'Edit Subgroup' : 'Add New Subgroup'}</h3>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Subgroup Name *</label>
+                      <input
+                        type="text"
+                        value={subgroupForm.subgroup_name}
+                        onChange={(e) => setSubgroupForm({...subgroupForm, subgroup_name: e.target.value})}
+                        className="input w-full"
+                        placeholder="e.g., Group A, Morning Session"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Code</label>
+                      <input
+                        type="text"
+                        value={subgroupForm.subgroup_code}
+                        onChange={(e) => setSubgroupForm({...subgroupForm, subgroup_code: e.target.value})}
+                        className="input w-full"
+                        placeholder="e.g., G1A"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Teacher</label>
+                      <select
+                        value={subgroupForm.teacher_id}
+                        onChange={(e) => setSubgroupForm({...subgroupForm, teacher_id: e.target.value})}
+                        className="input w-full"
+                      >
+                        <option value="">Select Teacher</option>
+                        {(teachers || []).map(t => (
+                          <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
+                      <input
+                        type="number"
+                        value={subgroupForm.capacity}
+                        onChange={(e) => setSubgroupForm({...subgroupForm, capacity: e.target.value})}
+                        className="input w-full"
+                        placeholder="Max students"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
+                      <input
+                        type="text"
+                        value={subgroupForm.room}
+                        onChange={(e) => setSubgroupForm({...subgroupForm, room: e.target.value})}
+                        className="input w-full"
+                        placeholder="Classroom/Room"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Schedule Notes</label>
+                      <input
+                        type="text"
+                        value={subgroupForm.schedule_notes}
+                        onChange={(e) => setSubgroupForm({...subgroupForm, schedule_notes: e.target.value})}
+                        className="input w-full"
+                        placeholder="e.g., Morning shift"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                      value={subgroupForm.description}
+                      onChange={(e) => setSubgroupForm({...subgroupForm, description: e.target.value})}
+                      className="input w-full"
+                      rows={2}
+                      placeholder="Optional description"
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="has_separate_curriculum"
+                      checked={subgroupForm.has_separate_curriculum}
+                      onChange={(e) => setSubgroupForm({...subgroupForm, has_separate_curriculum: e.target.checked})}
+                      className="w-4 h-4"
+                    />
+                    <label htmlFor="has_separate_curriculum" className="text-sm">
+                      This subgroup has its own curriculum (different subjects/teachers)
+                    </label>
+                  </div>
+
+                  <div className="flex justify-end gap-2 pt-4 border-t">
+                    <button onClick={() => setShowSubgroupForm(false)} className="btn bg-gray-200 hover:bg-gray-300">
+                      Cancel
+                    </button>
+                    <button onClick={handleSaveSubgroup} className="btn btn-primary">
+                      {editingSubgroup ? 'Update' : 'Create'} Subgroup
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

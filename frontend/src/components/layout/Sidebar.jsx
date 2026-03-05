@@ -136,6 +136,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         { icon: CreditCard, label: 'Fee Structure', path: '/admin/fee-structure' },
         { icon: FileText, label: 'Invoices', path: '/admin/invoices' },
         { icon: DollarSign, label: 'Payments', path: '/admin/payments' },
+        { icon: Heart, label: 'Discounts', path: '/admin/discounts' },
       ]
     },
     {

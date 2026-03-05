@@ -78,6 +78,7 @@ const WhatsAppMessaging = lazy(() => import('./pages/admin/WhatsAppMessaging'));
 const SMSMessaging = lazy(() => import('./pages/admin/SMSMessaging'));
 const EmailMessaging = lazy(() => import('./pages/admin/EmailMessaging'));
 const AdminMessages = lazy(() => import('./pages/admin/Messages'));
+const StudentDiscounts = lazy(() => import('./pages/admin/StudentDiscounts'));
 
 // Lazy loaded - Role dashboards
 const PrincipalDashboard = lazy(() => import('./pages/principal/PrincipalDashboard'));
@@ -206,6 +207,7 @@ function App() {
           <Route path="fee-structure" element={<FeeStructure />} />
           <Route path="invoices" element={<Invoices />} />
           <Route path="payments" element={<Payments />} />
+          <Route path="discounts" element={<StudentDiscounts />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="grading" element={<Grading />} />
           <Route path="homework" element={<Homework />} />
