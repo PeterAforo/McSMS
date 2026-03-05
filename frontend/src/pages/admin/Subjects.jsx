@@ -567,7 +567,7 @@ export default function Subjects() {
             </select>
             <select value={departmentFilter} onChange={(e) => setDepartmentFilter(e.target.value)} className="input w-auto">
               <option value="">All Departments</option>
-              {departments.map(d => (
+              {(departments || []).map(d => (
                 <option key={d.id} value={d.id}>{d.department_name}</option>
               ))}
             </select>
@@ -792,7 +792,7 @@ export default function Subjects() {
                     className="input"
                   >
                     <option value="">No Department</option>
-                    {departments.map(d => (
+                    {(departments || []).map(d => (
                       <option key={d.id} value={d.id}>{d.department_name}</option>
                     ))}
                   </select>
@@ -902,7 +902,7 @@ export default function Subjects() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {subjectDetails.classes.map((cs, idx) => (
+                        {(subjectDetails.classes || []).map((cs, idx) => (
                           <tr key={idx} className="hover:bg-gray-50">
                             <td className="px-3 py-2 font-medium">{cs.class_name}</td>
                             <td className="px-3 py-2">{cs.teacher_name || 'Not assigned'}</td>
@@ -919,10 +919,10 @@ export default function Subjects() {
 
               {/* Teachers teaching this subject */}
               <div className="mb-6">
-                <h3 className="font-semibold mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> Teachers ({subjectDetails.teachers.length})</h3>
-                {subjectDetails.teachers.length > 0 ? (
+                <h3 className="font-semibold mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> Teachers ({(subjectDetails.teachers || []).length})</h3>
+                {(subjectDetails.teachers || []).length > 0 ? (
                   <div className="flex flex-wrap gap-2">
-                    {subjectDetails.teachers.map((t, idx) => (
+                    {(subjectDetails.teachers || []).map((t, idx) => (
                       <div key={idx} className="px-3 py-2 bg-green-50 rounded-lg">
                         <p className="font-medium text-green-700">{t.name}</p>
                         <p className="text-xs text-gray-500">{t.classes?.length || 0} class(es)</p>
@@ -952,11 +952,11 @@ export default function Subjects() {
               </div>
 
               {/* Required By */}
-              {subjectDetails.required_by?.length > 0 && (
+              {(subjectDetails.required_by || []).length > 0 && (
                 <div>
-                  <h3 className="font-semibold mb-3 flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Required By ({subjectDetails.required_by.length})</h3>
+                  <h3 className="font-semibold mb-3 flex items-center gap-2"><GraduationCap className="w-4 h-4" /> Required By ({(subjectDetails.required_by || []).length})</h3>
                   <div className="flex flex-wrap gap-2">
-                    {subjectDetails.required_by.map((r, idx) => (
+                    {(subjectDetails.required_by || []).map((r, idx) => (
                       <span key={idx} className="px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">{r.subject_name}</span>
                     ))}
                   </div>
