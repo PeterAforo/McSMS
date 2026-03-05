@@ -294,6 +294,37 @@ export default function FeeStructure() {
     a.click();
   };
 
+  const handleCleanupDuplicates = async () => {
+    if (!confirm('This will remove duplicate fee items and rules, keeping the oldest item and highest-amount rule for each duplicate group. Continue?')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      
+      // Cleanup fee items
+      const itemsRes = await axios.get(`${API_BASE_URL}/fee_items.php?action=cleanup_duplicates`);
+      
+      // Cleanup fee rules
+      const rulesRes = await axios.get(`${API_BASE_URL}/finance.php?resource=fee_rules&action=cleanup_duplicates`);
+      
+      const itemsDeleted = itemsRes.data.items_deleted || 0;
+      const rulesDeleted = rulesRes.data.rules_deleted || 0;
+      
+      if (itemsDeleted > 0 || rulesDeleted > 0) {
+        alert(`Cleanup complete!\n- ${itemsDeleted} duplicate fee items removed\n- ${rulesDeleted} duplicate fee rules removed`);
+        fetchData(); // Refresh data
+      } else {
+        alert('No duplicates found. Your fee structure is clean!');
+      }
+    } catch (error) {
+      console.error('Cleanup error:', error);
+      alert('Error during cleanup: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleExportCSV = () => {
     let csv = '';
     if (activeTab === 'rules') {
@@ -590,7 +621,10 @@ export default function FeeStructure() {
           <h1 className="text-2xl font-bold text-gray-900">Fee Structure Management</h1>
           <p className="text-gray-600 mt-1">Manage fee groups, items, pricing rules, and discounts</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button onClick={handleCleanupDuplicates} className="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-2" title="Remove duplicate fee items and rules">
+            <RefreshCw className="w-4 h-4" /> Cleanup Duplicates
+          </button>
           <button onClick={() => { setSelectedClass(''); setSelectedTerm(''); setShowCalculator(true); }} className="btn bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2">
             <Calculator className="w-4 h-4" /> Fee Calculator
           </button>

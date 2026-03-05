@@ -81,6 +81,17 @@ try {
     // FEE RULES
     // ============================================
     if ($resource === 'fee_rules') {
+        // Handle cleanup action
+        if ($action === 'cleanup_duplicates') {
+            cleanupDuplicateFeeRules($pdo);
+            exit;
+        }
+        
+        if ($action === 'find_duplicates') {
+            findDuplicateFeeRules($pdo);
+            exit;
+        }
+        
         switch ($method) {
             case 'GET':
                 if ($id) {
@@ -101,7 +112,7 @@ try {
                         LEFT JOIN fee_groups fg ON fi.fee_group_id = fg.id
                         LEFT JOIN classes c ON fr.class_id = c.id
                         LEFT JOIN terms t ON fr.term_id = t.id
-                        ORDER BY fg.group_name, fi.item_name
+                        ORDER BY fg.group_name, fi.item_name, fr.academic_year DESC
                     ");
                     echo json_encode(['success' => true, 'fee_rules' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
                 }
@@ -109,15 +120,54 @@ try {
 
             case 'POST':
                 $data = json_decode(file_get_contents('php://input'), true);
+                
+                // Check for existing duplicate rule
+                $checkStmt = $pdo->prepare("
+                    SELECT id FROM fee_item_rules 
+                    WHERE fee_item_id = ? 
+                    AND (class_id = ? OR (class_id IS NULL AND ? IS NULL))
+                    AND (level = ? OR (level IS NULL AND ? IS NULL))
+                    AND academic_year = ?
+                    AND is_active = 1
+                ");
+                $classId = $data['class_id'] ?? null;
+                $level = $data['level'] ?? null;
+                $academicYear = $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
+                
+                $checkStmt->execute([
+                    $data['fee_item_id'],
+                    $classId, $classId,
+                    $level, $level,
+                    $academicYear
+                ]);
+                $existing = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                
+                if ($existing) {
+                    // Update existing rule instead of creating duplicate
+                    $updateStmt = $pdo->prepare("UPDATE fee_item_rules SET amount = ?, currency = ?, term_id = ? WHERE id = ?");
+                    $updateStmt->execute([
+                        $data['amount'],
+                        $data['currency'] ?? 'GHS',
+                        $data['term_id'] ?? null,
+                        $existing['id']
+                    ]);
+                    echo json_encode([
+                        'success' => true, 
+                        'id' => $existing['id'], 
+                        'message' => 'Existing rule updated instead of creating duplicate'
+                    ]);
+                    break;
+                }
+                
                 $stmt = $pdo->prepare("INSERT INTO fee_item_rules (fee_item_id, class_id, term_id, level, amount, currency, academic_year, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([
                     $data['fee_item_id'],
-                    $data['class_id'] ?? null,
+                    $classId,
                     $data['term_id'] ?? null,
-                    $data['level'] ?? null,
+                    $level,
                     $data['amount'],
                     $data['currency'] ?? 'GHS',
-                    $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
+                    $academicYear,
                     $data['is_active'] ?? 1
                 ]);
                 echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
@@ -1034,5 +1084,82 @@ function triggerPaymentEmail($paymentId) {
         ]);
     } catch (Exception $e) {
         error_log("Payment email error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Find duplicate fee rules
+ */
+function findDuplicateFeeRules($pdo) {
+    $stmt = $pdo->query("
+        SELECT fee_item_id, class_id, level, academic_year, 
+               COUNT(*) as count, 
+               GROUP_CONCAT(id) as ids,
+               GROUP_CONCAT(amount) as amounts
+        FROM fee_item_rules 
+        WHERE is_active = 1
+        GROUP BY fee_item_id, COALESCE(class_id, 0), COALESCE(level, ''), academic_year
+        HAVING COUNT(*) > 1
+    ");
+    $duplicates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Get item names for better display
+    foreach ($duplicates as &$dup) {
+        $itemStmt = $pdo->prepare("SELECT item_name FROM fee_items WHERE id = ?");
+        $itemStmt->execute([$dup['fee_item_id']]);
+        $item = $itemStmt->fetch(PDO::FETCH_ASSOC);
+        $dup['item_name'] = $item ? $item['item_name'] : 'Unknown';
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'duplicates' => $duplicates,
+        'total_duplicate_groups' => count($duplicates)
+    ]);
+}
+
+/**
+ * Cleanup duplicate fee rules - keeps the one with highest amount
+ */
+function cleanupDuplicateFeeRules($pdo) {
+    $pdo->beginTransaction();
+    
+    try {
+        // Find duplicates
+        $stmt = $pdo->query("
+            SELECT fee_item_id, class_id, level, academic_year,
+                   GROUP_CONCAT(id ORDER BY amount DESC) as ids
+            FROM fee_item_rules 
+            WHERE is_active = 1
+            GROUP BY fee_item_id, COALESCE(class_id, 0), COALESCE(level, ''), academic_year
+            HAVING COUNT(*) > 1
+        ");
+        $duplicates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $deleted = 0;
+        
+        foreach ($duplicates as $dup) {
+            $ids = explode(',', $dup['ids']);
+            $keepId = array_shift($ids); // Keep the first one (highest amount)
+            
+            if (count($ids) > 0) {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $deleteStmt = $pdo->prepare("DELETE FROM fee_item_rules WHERE id IN ($placeholders)");
+                $deleteStmt->execute($ids);
+                $deleted += $deleteStmt->rowCount();
+            }
+        }
+        
+        $pdo->commit();
+        
+        echo json_encode([
+            'success' => true,
+            'message' => "Cleanup complete",
+            'duplicates_found' => count($duplicates),
+            'rules_deleted' => $deleted
+        ]);
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
     }
 }
