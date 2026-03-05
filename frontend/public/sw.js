@@ -1,5 +1,5 @@
 // McSMS Service Worker - Offline Support, Push Notifications & Caching
-const CACHE_VERSION = 'v3';
+const CACHE_VERSION = 'v4';
 const STATIC_CACHE = `mcsms-static-${CACHE_VERSION}`;
 const DYNAMIC_CACHE = `mcsms-dynamic-${CACHE_VERSION}`;
 const VENDOR_CACHE = `mcsms-vendor-${CACHE_VERSION}`;
