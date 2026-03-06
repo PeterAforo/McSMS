@@ -33,13 +33,17 @@ export default function Invoices() {
   const [invoiceHistory, setInvoiceHistory] = useState([]);
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [editingInvoice, setEditingInvoice] = useState(null);
+  const [studentDiscounts, setStudentDiscounts] = useState([]);
+  const [selectedDiscounts, setSelectedDiscounts] = useState([]);
+  const [loadingDiscounts, setLoadingDiscounts] = useState(false);
 
   const [invoiceForm, setInvoiceForm] = useState({
     student_id: '',
     term_id: '',
     due_date: '',
     notes: '',
-    items: [{ fee_item_id: '', description: '', quantity: 1, unit_price: 0 }]
+    items: [{ fee_item_id: '', description: '', quantity: 1, unit_price: 0 }],
+    applied_discounts: []
   });
 
   const [paymentForm, setPaymentForm] = useState({
@@ -139,9 +143,62 @@ export default function Invoices() {
       term_id: '',
       due_date: '',
       notes: '',
-      items: [{ fee_item_id: '', description: '', quantity: 1, unit_price: 0 }]
+      items: [{ fee_item_id: '', description: '', quantity: 1, unit_price: 0 }],
+      applied_discounts: []
     });
     setEditingInvoice(null);
+    setStudentDiscounts([]);
+    setSelectedDiscounts([]);
+  };
+
+  const fetchStudentDiscounts = async (studentId) => {
+    if (!studentId) {
+      setStudentDiscounts([]);
+      setSelectedDiscounts([]);
+      return;
+    }
+    try {
+      setLoadingDiscounts(true);
+      const response = await axios.post(`${API_BASE_URL}/finance.php?resource=invoices&action=get_discounts&id=${studentId}`);
+      const discounts = response.data.discounts || [];
+      setStudentDiscounts(discounts);
+      // Auto-select all active discounts by default
+      setSelectedDiscounts(discounts.map(d => d.id));
+    } catch (error) {
+      console.error('Error fetching discounts:', error);
+      setStudentDiscounts([]);
+    } finally {
+      setLoadingDiscounts(false);
+    }
+  };
+
+  const handleStudentChange = (studentId) => {
+    setInvoiceForm({...invoiceForm, student_id: studentId});
+    fetchStudentDiscounts(studentId);
+  };
+
+  const toggleDiscount = (discountId) => {
+    setSelectedDiscounts(prev => 
+      prev.includes(discountId) 
+        ? prev.filter(id => id !== discountId)
+        : [...prev, discountId]
+    );
+  };
+
+  const getDiscountTotal = () => {
+    const subtotal = getInvoiceTotal();
+    return studentDiscounts
+      .filter(d => selectedDiscounts.includes(d.id))
+      .reduce((sum, d) => {
+        if (d.discount_type === 'percentage') {
+          let amount = (subtotal * d.discount_value) / 100;
+          if (d.max_discount_amount && amount > d.max_discount_amount) {
+            amount = d.max_discount_amount;
+          }
+          return sum + amount;
+        }
+        return sum + Math.min(d.discount_value, subtotal);
+      }, 0);
   };
 
   const handleCreateInvoice = async (e) => {
@@ -149,15 +206,21 @@ export default function Invoices() {
     try {
       const data = {
         ...invoiceForm,
-        items: invoiceForm.items.filter(i => i.description && i.unit_price > 0)
+        items: invoiceForm.items.filter(i => i.description && i.unit_price > 0),
+        applied_discounts: selectedDiscounts
       };
       
       if (editingInvoice) {
         await axios.put(`${API_BASE_URL}/finance.php?resource=invoices&id=${editingInvoice.id}`, data);
         alert('Invoice updated!');
       } else {
-        await axios.post(`${API_BASE_URL}/finance.php?resource=invoices`, data);
-        alert('Invoice created!');
+        const response = await axios.post(`${API_BASE_URL}/finance.php?resource=invoices`, data);
+        const result = response.data;
+        if (result.discount_amount > 0) {
+          alert(`Invoice created!\nSubtotal: GHS ${result.subtotal?.toFixed(2)}\nDiscount: -GHS ${result.discount_amount?.toFixed(2)}\nTotal: GHS ${result.total_amount?.toFixed(2)}`);
+        } else {
+          alert('Invoice created!');
+        }
       }
       setShowCreateModal(false);
       resetInvoiceForm();
@@ -789,7 +852,7 @@ export default function Invoices() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Student *</label>
-                  <select required value={invoiceForm.student_id} onChange={(e) => setInvoiceForm({...invoiceForm, student_id: e.target.value})} className="input">
+                  <select required value={invoiceForm.student_id} onChange={(e) => handleStudentChange(e.target.value)} className="input">
                     <option value="">Select Student</option>
                     {students.map(s => <option key={s.id} value={s.id}>{s.first_name} {s.last_name} ({s.student_id})</option>)}
                   </select>
@@ -846,10 +909,70 @@ export default function Invoices() {
                     </div>
                   ))}
                   <div className="text-right pt-2 border-t mt-2">
-                    <span className="font-semibold">Total: {formatCurrency(getInvoiceTotal())}</span>
+                    <span className="font-semibold">Subtotal: {formatCurrency(getInvoiceTotal())}</span>
                   </div>
                 </div>
               </div>
+
+              {/* Discounts Section */}
+              {invoiceForm.student_id && (
+                <div>
+                  <label className="block text-sm font-medium mb-2">Available Discounts</label>
+                  <div className="border rounded-lg p-4 bg-purple-50">
+                    {loadingDiscounts ? (
+                      <p className="text-sm text-gray-500">Loading discounts...</p>
+                    ) : studentDiscounts.length === 0 ? (
+                      <p className="text-sm text-gray-500">No discounts available for this student</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {studentDiscounts.map(discount => (
+                          <label key={discount.id} className="flex items-center gap-3 p-2 bg-white rounded border cursor-pointer hover:bg-purple-50">
+                            <input
+                              type="checkbox"
+                              checked={selectedDiscounts.includes(discount.id)}
+                              onChange={() => toggleDiscount(discount.id)}
+                              className="w-4 h-4 text-purple-600"
+                            />
+                            <div className="flex-1">
+                              <span className="font-medium">{discount.discount_name}</span>
+                              <span className="ml-2 text-sm text-purple-600">
+                                {discount.discount_type === 'percentage' 
+                                  ? `${discount.discount_value}% off` 
+                                  : `GHS ${discount.discount_value} off`}
+                              </span>
+                              {discount.duration === 'one_time' && (
+                                <span className="ml-2 text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded">One-time</span>
+                              )}
+                            </div>
+                          </label>
+                        ))}
+                        {selectedDiscounts.length > 0 && (
+                          <div className="text-right pt-2 border-t mt-2 text-purple-700">
+                            <span className="font-semibold">Discount: -{formatCurrency(getDiscountTotal())}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Final Total */}
+              {invoiceForm.student_id && getInvoiceTotal() > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex justify-between items-center text-lg">
+                    <span className="font-medium">Final Total:</span>
+                    <span className="font-bold text-blue-700">
+                      {formatCurrency(Math.max(0, getInvoiceTotal() - getDiscountTotal()))}
+                    </span>
+                  </div>
+                  {getDiscountTotal() > 0 && (
+                    <p className="text-sm text-blue-600 mt-1">
+                      You save {formatCurrency(getDiscountTotal())} with {selectedDiscounts.length} discount(s)
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex justify-end gap-4 pt-4 border-t">
                 <button type="button" onClick={() => { setShowCreateModal(false); resetInvoiceForm(); }} className="btn bg-gray-200">Cancel</button>

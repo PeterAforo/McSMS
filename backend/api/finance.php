@@ -379,6 +379,11 @@ try {
                     $stmt = $pdo->prepare("UPDATE invoices SET status='rejected', rejection_reason=? WHERE id=?");
                     $stmt->execute([$data['rejection_reason'], $id]);
                     echo json_encode(['success' => true, 'message' => 'Invoice rejected']);
+                } elseif ($action === 'get_discounts' && $id) {
+                    // Get applicable discounts for a student
+                    $studentId = $id;
+                    $discounts = getStudentDiscounts($pdo, $studentId);
+                    echo json_encode(['success' => true, 'discounts' => $discounts]);
                 } else {
                     // Create invoice
                     $data = json_decode(file_get_contents('php://input'), true);
@@ -388,19 +393,73 @@ try {
                     $count = $stmt->fetch(PDO::FETCH_ASSOC)['count'];
                     $invoiceNumber = 'INV' . date('Y') . str_pad($count + 1, 5, '0', STR_PAD_LEFT);
                     
-                    $stmt = $pdo->prepare("INSERT INTO invoices (invoice_number, student_id, parent_id, term_id, class_id, academic_year, total_amount, balance, installment_plan_id, status, due_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    // Calculate subtotal from items
+                    $subtotal = 0;
+                    if (isset($data['items'])) {
+                        foreach ($data['items'] as $item) {
+                            $subtotal += ($item['quantity'] ?? 1) * $item['unit_price'];
+                        }
+                    }
+                    
+                    // Apply discounts
+                    $discountAmount = 0;
+                    $appliedDiscounts = [];
+                    
+                    // Auto-apply student discounts if not manually specified
+                    if (!isset($data['applied_discounts']) || empty($data['applied_discounts'])) {
+                        $studentDiscounts = getStudentDiscounts($pdo, $data['student_id']);
+                        foreach ($studentDiscounts as $discount) {
+                            if ($discount['is_active']) {
+                                $discountValue = calculateDiscountAmount($discount, $subtotal);
+                                $discountAmount += $discountValue;
+                                $appliedDiscounts[] = [
+                                    'discount_id' => $discount['id'],
+                                    'discount_name' => $discount['discount_name'],
+                                    'discount_type' => $discount['discount_type'],
+                                    'discount_value' => $discount['discount_value'],
+                                    'amount' => $discountValue
+                                ];
+                            }
+                        }
+                    } else {
+                        // Use manually selected discounts
+                        foreach ($data['applied_discounts'] as $discountId) {
+                            $stmt = $pdo->prepare("SELECT * FROM student_discounts WHERE id = ? AND is_active = 1");
+                            $stmt->execute([$discountId]);
+                            $discount = $stmt->fetch(PDO::FETCH_ASSOC);
+                            if ($discount) {
+                                $discountValue = calculateDiscountAmount($discount, $subtotal);
+                                $discountAmount += $discountValue;
+                                $appliedDiscounts[] = [
+                                    'discount_id' => $discount['id'],
+                                    'discount_name' => $discount['discount_name'],
+                                    'discount_type' => $discount['discount_type'],
+                                    'discount_value' => $discount['discount_value'],
+                                    'amount' => $discountValue
+                                ];
+                            }
+                        }
+                    }
+                    
+                    $totalAmount = $subtotal - $discountAmount;
+                    if ($totalAmount < 0) $totalAmount = 0;
+                    
+                    $stmt = $pdo->prepare("INSERT INTO invoices (invoice_number, student_id, parent_id, term_id, class_id, academic_year, subtotal, discount_amount, total_amount, balance, installment_plan_id, status, due_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                     $stmt->execute([
                         $invoiceNumber,
                         $data['student_id'],
-                        $data['parent_id'],
+                        $data['parent_id'] ?? null,
                         $data['term_id'],
-                        $data['class_id'],
-                        $data['academic_year'],
-                        $data['total_amount'],
-                        $data['total_amount'],
+                        $data['class_id'] ?? null,
+                        $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
+                        $subtotal,
+                        $discountAmount,
+                        $totalAmount,
+                        $totalAmount,
                         $data['installment_plan_id'] ?? null,
                         $data['status'] ?? 'draft',
-                        $data['due_date'] ?? null
+                        $data['due_date'] ?? null,
+                        $data['notes'] ?? null
                     ]);
                     $invoiceId = $pdo->lastInsertId();
                     
@@ -408,19 +467,53 @@ try {
                     if (isset($data['items'])) {
                         $stmt = $pdo->prepare("INSERT INTO invoice_items (invoice_id, fee_item_id, description, quantity, unit_price, amount, is_optional) VALUES (?, ?, ?, ?, ?, ?, ?)");
                         foreach ($data['items'] as $item) {
+                            $amount = ($item['quantity'] ?? 1) * $item['unit_price'];
                             $stmt->execute([
                                 $invoiceId,
-                                $item['fee_item_id'],
+                                $item['fee_item_id'] ?? null,
                                 $item['description'],
                                 $item['quantity'] ?? 1,
                                 $item['unit_price'],
-                                $item['amount'],
+                                $amount,
                                 $item['is_optional'] ?? 0
                             ]);
                         }
                     }
                     
-                    echo json_encode(['success' => true, 'invoice_id' => $invoiceId, 'invoice_number' => $invoiceNumber]);
+                    // Add discount line items (negative amounts)
+                    if (!empty($appliedDiscounts)) {
+                        $stmt = $pdo->prepare("INSERT INTO invoice_items (invoice_id, fee_item_id, description, quantity, unit_price, amount, is_optional) VALUES (?, NULL, ?, 1, ?, ?, 0)");
+                        foreach ($appliedDiscounts as $disc) {
+                            $stmt->execute([
+                                $invoiceId,
+                                'Discount: ' . $disc['discount_name'],
+                                -$disc['amount'],
+                                -$disc['amount']
+                            ]);
+                        }
+                        
+                        // Record discount application for one-time discounts
+                        foreach ($appliedDiscounts as $disc) {
+                            // Check if it's a one-time discount and mark as used
+                            $checkStmt = $pdo->prepare("SELECT duration FROM student_discounts WHERE id = ?");
+                            $checkStmt->execute([$disc['discount_id']]);
+                            $discountInfo = $checkStmt->fetch(PDO::FETCH_ASSOC);
+                            
+                            if ($discountInfo && $discountInfo['duration'] === 'one_time') {
+                                $pdo->prepare("UPDATE student_discounts SET is_active = 0 WHERE id = ?")->execute([$disc['discount_id']]);
+                            }
+                        }
+                    }
+                    
+                    echo json_encode([
+                        'success' => true, 
+                        'invoice_id' => $invoiceId, 
+                        'invoice_number' => $invoiceNumber,
+                        'subtotal' => $subtotal,
+                        'discount_amount' => $discountAmount,
+                        'total_amount' => $totalAmount,
+                        'applied_discounts' => $appliedDiscounts
+                    ]);
                 }
                 break;
         }
@@ -1161,6 +1254,45 @@ function triggerPaymentEmail($paymentId) {
         ]);
     } catch (Exception $e) {
         error_log("Payment email error: " . $e->getMessage());
+    }
+}
+
+/**
+ * Get active discounts for a student
+ */
+function getStudentDiscounts($pdo, $studentId) {
+    // Check if student_discounts table exists
+    try {
+        $stmt = $pdo->prepare("
+            SELECT sd.*, s.first_name, s.last_name
+            FROM student_discounts sd
+            LEFT JOIN students s ON sd.student_id = s.id
+            WHERE sd.student_id = ? AND sd.is_active = 1
+            AND (sd.end_date IS NULL OR sd.end_date >= CURDATE())
+            AND (sd.start_date IS NULL OR sd.start_date <= CURDATE())
+        ");
+        $stmt->execute([$studentId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        // Table might not exist yet
+        return [];
+    }
+}
+
+/**
+ * Calculate discount amount based on discount type
+ */
+function calculateDiscountAmount($discount, $subtotal) {
+    if ($discount['discount_type'] === 'percentage') {
+        $amount = ($subtotal * $discount['discount_value']) / 100;
+        // Apply max cap if set
+        if (!empty($discount['max_discount_amount']) && $amount > $discount['max_discount_amount']) {
+            $amount = $discount['max_discount_amount'];
+        }
+        return round($amount, 2);
+    } else {
+        // Fixed amount
+        return min($discount['discount_value'], $subtotal);
     }
 }
 
