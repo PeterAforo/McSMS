@@ -1019,6 +1019,83 @@ try {
         echo json_encode(['success' => true, 'daily_stats' => $stats]);
     }
 
+    // ============================================
+    // DISCOUNTS (Fee Structure Discounts)
+    // ============================================
+    elseif ($resource === 'discounts') {
+        // Check if discount_rules table exists, create if not
+        $pdo->exec("
+            CREATE TABLE IF NOT EXISTS fee_discounts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                code VARCHAR(50),
+                type ENUM('percentage', 'fixed') DEFAULT 'percentage',
+                value DECIMAL(10,2) NOT NULL,
+                applies_to ENUM('all', 'tuition', 'specific') DEFAULT 'all',
+                fee_item_id INT DEFAULT NULL,
+                min_siblings INT DEFAULT 0,
+                early_payment_days INT DEFAULT 0,
+                status ENUM('active', 'inactive') DEFAULT 'active',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+        ");
+        
+        switch ($method) {
+            case 'GET':
+                if ($id) {
+                    $stmt = $pdo->prepare("SELECT * FROM fee_discounts WHERE id = ?");
+                    $stmt->execute([$id]);
+                    echo json_encode(['success' => true, 'discount' => $stmt->fetch(PDO::FETCH_ASSOC)]);
+                } else {
+                    $stmt = $pdo->query("SELECT * FROM fee_discounts ORDER BY name");
+                    echo json_encode(['success' => true, 'discounts' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+                }
+                break;
+                
+            case 'POST':
+                $data = json_decode(file_get_contents('php://input'), true);
+                $stmt = $pdo->prepare("INSERT INTO fee_discounts (name, code, type, value, applies_to, fee_item_id, min_siblings, early_payment_days, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt->execute([
+                    $data['name'],
+                    $data['code'] ?? null,
+                    $data['type'] ?? 'percentage',
+                    $data['value'],
+                    $data['applies_to'] ?? 'all',
+                    $data['fee_item_id'] ?? null,
+                    $data['min_siblings'] ?? 0,
+                    $data['early_payment_days'] ?? 0,
+                    $data['status'] ?? 'active'
+                ]);
+                echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+                break;
+                
+            case 'PUT':
+                $data = json_decode(file_get_contents('php://input'), true);
+                $stmt = $pdo->prepare("UPDATE fee_discounts SET name=?, code=?, type=?, value=?, applies_to=?, fee_item_id=?, min_siblings=?, early_payment_days=?, status=? WHERE id=?");
+                $stmt->execute([
+                    $data['name'],
+                    $data['code'] ?? null,
+                    $data['type'] ?? 'percentage',
+                    $data['value'],
+                    $data['applies_to'] ?? 'all',
+                    $data['fee_item_id'] ?? null,
+                    $data['min_siblings'] ?? 0,
+                    $data['early_payment_days'] ?? 0,
+                    $data['status'] ?? 'active',
+                    $id
+                ]);
+                echo json_encode(['success' => true]);
+                break;
+                
+            case 'DELETE':
+                $stmt = $pdo->prepare("DELETE FROM fee_discounts WHERE id = ?");
+                $stmt->execute([$id]);
+                echo json_encode(['success' => true]);
+                break;
+        }
+    }
+
     else {
         http_response_code(400);
         echo json_encode(['error' => 'Invalid resource or action']);
