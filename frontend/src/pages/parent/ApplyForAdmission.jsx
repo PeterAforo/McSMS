@@ -228,7 +228,8 @@ export default function ApplyForAdmission() {
     // Validate all steps before final submission
     const step1Errors = validateStep(1);
     const step2Errors = validateStep(2);
-    const allErrors = [...step1Errors, ...step2Errors];
+    const step4Errors = validateStep(4);
+    const allErrors = [...step1Errors, ...step2Errors, ...step4Errors];
     
     if (allErrors.length > 0) {
       alert('Please fix the following errors before submitting:\n\n' + allErrors.join('\n'));
@@ -260,6 +261,7 @@ export default function ApplyForAdmission() {
       if (!formData.gender) errors.push('Gender is required');
       if (!formData.nationality) errors.push('Nationality is required');
       if (!formData.class_applying_for) errors.push('Class applying for is required');
+      if (!formData.address.trim()) errors.push('Child\'s address is required');
     }
     
     if (stepNumber === 2) {
@@ -267,6 +269,12 @@ export default function ApplyForAdmission() {
       if (!formData.guardian_phone.trim()) errors.push('Guardian phone is required');
       if (!formData.guardian_email.trim()) errors.push('Guardian email is required');
       if (!formData.guardian_relationship) errors.push('Relationship to child is required');
+      if (!formData.guardian_address.trim()) errors.push('Guardian/Parent address is required');
+      
+      // Emergency contact validation
+      if (!formData.emergency_contact_name.trim()) errors.push('Emergency contact name is required');
+      if (!formData.emergency_contact_phone.trim()) errors.push('Emergency contact phone is required');
+      if (!formData.emergency_contact_relationship) errors.push('Emergency contact relationship is required');
       
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -278,10 +286,19 @@ export default function ApplyForAdmission() {
       if (formData.guardian_phone && formData.guardian_phone.replace(/\D/g, '').length < 10) {
         errors.push('Please enter a valid phone number');
       }
+      
+      // Validate emergency phone format
+      if (formData.emergency_contact_phone && formData.emergency_contact_phone.replace(/\D/g, '').length < 10) {
+        errors.push('Please enter a valid emergency contact phone number');
+      }
     }
     
     // Step 3 (Medical) - optional fields, no validation required
-    // Step 4 (Photo & Review) - photo is optional
+    
+    // Step 4 (Photo & Review) - photo is required
+    if (stepNumber === 4) {
+      if (!formData.photo) errors.push('Child\'s photo is required');
+    }
     
     return errors;
   };
@@ -605,15 +622,16 @@ export default function ApplyForAdmission() {
                   </div>
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Child's Address *</label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                     <textarea
+                      required
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                       className="input input-focus pl-10 transition-all duration-200"
                       rows="2"
-                      placeholder="Enter residential address"
+                      placeholder="Enter child's residential address"
                     />
                   </div>
                 </div>
@@ -728,15 +746,16 @@ export default function ApplyForAdmission() {
                   />
                 </div>
                 <div className="col-span-1 md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Guardian Address</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Guardian/Parent Address *</label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
                     <textarea
+                      required
                       value={formData.guardian_address}
                       onChange={(e) => setFormData({ ...formData, guardian_address: e.target.value })}
                       className="input input-focus pl-10 transition-all duration-200"
                       rows="2"
-                      placeholder="Enter guardian's address"
+                      placeholder="Enter guardian's/parent's address"
                     />
                   </div>
                 </div>
@@ -748,13 +767,14 @@ export default function ApplyForAdmission() {
                   <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                     <Phone className="w-4 h-4 text-red-600" />
                   </div>
-                  <h3 className="text-md font-semibold text-gray-900">Emergency Contact</h3>
+                  <h3 className="text-md font-semibold text-gray-900">Emergency Contact *</h3>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Name *</label>
                     <input
                       type="text"
+                      required
                       value={formData.emergency_contact_name}
                       onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
                       className="input input-focus transition-all duration-200"
@@ -762,9 +782,10 @@ export default function ApplyForAdmission() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Phone</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Contact Phone *</label>
                     <input
                       type="tel"
+                      required
                       value={formData.emergency_contact_phone}
                       onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
                       className="input input-focus transition-all duration-200"
@@ -772,8 +793,9 @@ export default function ApplyForAdmission() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Relationship</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Relationship *</label>
                     <select
+                      required
                       value={formData.emergency_contact_relationship}
                       onChange={(e) => setFormData({ ...formData, emergency_contact_relationship: e.target.value })}
                       className="input input-focus transition-all duration-200"
@@ -862,9 +884,16 @@ export default function ApplyForAdmission() {
                   <Camera className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Photo & Review</h2>
-                  <p className="text-sm text-gray-500">Upload a photo and review your application</p>
+                  <h2 className="text-lg font-semibold text-gray-900">Photo & Review *</h2>
+                  <p className="text-sm text-gray-500">Upload a photo of your child (required) and review your application</p>
                 </div>
+              </div>
+              
+              {/* Photo Required Notice */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Required:</strong> Please upload a recent passport-sized photo of your child. This photo will be used for identification purposes.
+                </p>
               </div>
               
               {/* Photo Upload Section */}
