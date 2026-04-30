@@ -20,6 +20,18 @@ $resource = $_GET['resource'] ?? null;
 $id = $_GET['id'] ?? null;
 $action = $_GET['action'] ?? null;
 
+// Helper function to get current academic year from academic calendar
+function getCurrentAcademicYear($pdo) {
+    try {
+        $stmt = $pdo->query("SELECT year_name FROM academic_years WHERE is_active = 1 LIMIT 1");
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        return $result ? $result['year_name'] : date('Y') . '/' . (date('Y') + 1);
+    } catch (Exception $e) {
+        // Fallback to default format if academic_years table doesn't exist yet
+        return date('Y') . '/' . (date('Y') + 1);
+    }
+}
+
 // Version check endpoint
 if (isset($_GET['version'])) {
     echo json_encode(['version' => '2024-12-16-v2', 'resource' => $resource, 'id' => $id]);
@@ -132,7 +144,7 @@ try {
                 ");
                 $classId = $data['class_id'] ?? null;
                 $level = $data['level'] ?? null;
-                $academicYear = $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1);
+                $academicYear = $data['academic_year'] ?? getCurrentAcademicYear($pdo);
                 
                 $checkStmt->execute([
                     $data['fee_item_id'],
@@ -197,7 +209,7 @@ try {
                     $levelToSave,
                     $data['amount'],
                     $data['currency'] ?? 'GHS',
-                    $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
+                    $data['academic_year'] ?? getCurrentAcademicYear($pdo),
                     $data['is_active'] ?? 1,
                     $data['late_fee'] ?? 0,
                     $data['late_fee_type'] ?? 'fixed',
@@ -465,7 +477,7 @@ try {
                         $data['parent_id'] ?? null,
                         $data['term_id'],
                         $data['class_id'] ?? null,
-                        $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
+                        $data['academic_year'] ?? getCurrentAcademicYear($pdo),
                         $subtotal,
                         $discountAmount,
                         $totalAmount,
@@ -1385,4 +1397,308 @@ function cleanupDuplicateFeeRules($pdo) {
         $pdo->rollBack();
         throw $e;
     }
+}
+
+// ============================================
+// USABILITY IMPROVEMENTS API ENDPOINTS
+// ============================================
+
+// Setup Status API
+if ($resource === 'setup_status') {
+    switch ($method) {
+        case 'GET':
+            $stmt = $pdo->prepare("SELECT * FROM fee_structure_setup_status ORDER BY id DESC LIMIT 1");
+            $stmt->execute();
+            $status = $stmt->fetch(PDO::FETCH_ASSOC);
+            echo json_encode(['success' => true, 'setup_status' => $status]);
+            break;
+            
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("INSERT INTO fee_structure_setup_status (school_id, step_completed, is_complete) VALUES (?, ?, ?)");
+            $stmt->execute([
+                $data['school_id'] ?? 1,
+                $data['step_completed'] ?? 0,
+                $data['is_complete'] ?? 0
+            ]);
+            echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+            break;
+    }
+    exit;
+}
+
+// Snapshots API
+if ($resource === 'snapshots') {
+    switch ($method) {
+        case 'GET':
+            $year = $_GET['year'] ?? null;
+            if ($year) {
+                $stmt = $pdo->prepare("SELECT * FROM fee_structure_snapshots WHERE academic_year = ?");
+                $stmt->execute([$year]);
+            } else {
+                $stmt = $pdo->query("SELECT * FROM fee_structure_snapshots ORDER BY academic_year DESC");
+            }
+            echo json_encode(['success' => true, 'snapshots' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+            
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("INSERT INTO fee_structure_snapshots (school_id, academic_year, snapshot_data) VALUES (?, ?, ?)");
+            $stmt->execute([
+                $data['school_id'] ?? 1,
+                $data['academic_year'],
+                json_encode($data['snapshot_data'])
+            ]);
+            echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+            break;
+    }
+    exit;
+}
+
+// Templates API
+if ($resource === 'templates') {
+    switch ($method) {
+        case 'GET':
+            $category = $_GET['category'] ?? null;
+            if ($category) {
+                $stmt = $pdo->prepare("SELECT * FROM fee_structure_templates WHERE category = ? OR is_public = 1");
+                $stmt->execute([$category]);
+            } else {
+                $stmt = $pdo->query("SELECT * FROM fee_structure_templates ORDER BY category, name");
+            }
+            echo json_encode(['success' => true, 'templates' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+            
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("INSERT INTO fee_structure_templates (name, description, school_id, template_data, is_public, category, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $data['name'],
+                $data['description'] ?? null,
+                $data['school_id'] ?? 1,
+                json_encode($data['template_data']),
+                $data['is_public'] ?? 0,
+                $data['category'] ?? 'custom',
+                $data['created_by'] ?? 1
+            ]);
+            echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+            break;
+            
+        case 'PUT':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("UPDATE fee_structure_templates SET name=?, description=?, template_data=?, is_public=?, category=? WHERE id=?");
+            $stmt->execute([
+                $data['name'],
+                $data['description'] ?? null,
+                json_encode($data['template_data']),
+                $data['is_public'] ?? 0,
+                $data['category'] ?? 'custom',
+                $id
+            ]);
+            echo json_encode(['success' => true]);
+            break;
+            
+        case 'DELETE':
+            $stmt = $pdo->prepare("DELETE FROM fee_structure_templates WHERE id = ?");
+            $stmt->execute([$id]);
+            echo json_encode(['success' => true]);
+            break;
+    }
+    exit;
+}
+
+// Suggestions API
+if ($resource === 'suggestions') {
+    switch ($method) {
+        case 'GET':
+            $field = $_GET['field'] ?? null;
+            if ($field) {
+                $stmt = $pdo->prepare("SELECT * FROM fee_structure_suggestions WHERE field_name = ? ORDER BY confidence_score DESC LIMIT 5");
+                $stmt->execute([$field]);
+            } else {
+                $stmt = $pdo->query("SELECT * FROM fee_structure_suggestions ORDER BY confidence_score DESC");
+            }
+            echo json_encode(['success' => true, 'suggestions' => $stmt->fetchAll(PDO::FETCH_ASSOC)]);
+            break;
+            
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $stmt = $pdo->prepare("INSERT INTO fee_structure_suggestions (field_name, suggested_value, confidence_score, source) VALUES (?, ?, ?, ?)");
+            $stmt->execute([
+                $data['field_name'],
+                $data['suggested_value'],
+                $data['confidence_score'] ?? 0.50,
+                $data['source'] ?? 'manual'
+            ]);
+            echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
+            break;
+    }
+    exit;
+}
+
+// Bulk Rules API
+if ($resource === 'bulk_rules') {
+    switch ($method) {
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $rules = $data['rules'];
+            $created = 0;
+            $errors = [];
+            
+            $pdo->beginTransaction();
+            try {
+                foreach ($rules as $rule) {
+                    $stmt = $pdo->prepare("INSERT INTO fee_item_rules (fee_item_id, class_id, term_id, level, amount, currency, academic_year, is_active, late_fee, late_fee_type, is_taxable, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([
+                        $rule['fee_item_id'],
+                        $rule['class_id'] ?? null,
+                        $rule['term_id'] ?? null,
+                        $rule['level'] ?? null,
+                        $rule['amount'],
+                        $rule['currency'] ?? 'GHS',
+                        $rule['academic_year'] ?? '2024/2025',
+                        $rule['is_active'] ?? 1,
+                        $rule['late_fee'] ?? 0,
+                        $rule['late_fee_type'] ?? 'fixed',
+                        $rule['is_taxable'] ?? 0,
+                        $rule['tax_rate'] ?? 0
+                    ]);
+                    $created++;
+                }
+                $pdo->commit();
+                echo json_encode(['success' => true, 'created' => $created, 'errors' => $errors]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+            break;
+    }
+    exit;
+}
+
+// Copy Structure API
+if ($resource === 'copy_structure') {
+    switch ($method) {
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $sourceYear = $data['source_year'];
+            $targetYear = $data['target_year'];
+            $amountAdjustment = $data['amount_adjustment'] ?? 1.0;
+            
+            // Fetch source structure
+            $stmt = $pdo->prepare("SELECT * FROM fee_item_rules WHERE academic_year = ?");
+            $stmt->execute([$sourceYear]);
+            $sourceRules = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            $created = 0;
+            $pdo->beginTransaction();
+            try {
+                foreach ($sourceRules as $rule) {
+                    $newAmount = $rule['amount'] * $amountAdjustment;
+                    $stmt = $pdo->prepare("INSERT INTO fee_item_rules (fee_item_id, class_id, term_id, level, amount, currency, academic_year, is_active, late_fee, late_fee_type, is_taxable, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                    $stmt->execute([
+                        $rule['fee_item_id'],
+                        $rule['class_id'],
+                        $rule['term_id'],
+                        $rule['level'],
+                        $newAmount,
+                        $rule['currency'],
+                        $targetYear,
+                        $rule['is_active'],
+                        $rule['late_fee'] ?? 0,
+                        $rule['late_fee_type'] ?? 'fixed',
+                        $rule['is_taxable'] ?? 0,
+                        $rule['tax_rate'] ?? 0
+                    ]);
+                    $created++;
+                }
+                $pdo->commit();
+                echo json_encode(['success' => true, 'created' => $created]);
+            } catch (Exception $e) {
+                $pdo->rollBack();
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+            break;
+    }
+    exit;
+}
+
+// Clone Item API
+if ($resource === 'clone_item') {
+    switch ($method) {
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $itemId = $data['item_id'];
+            $newName = $data['new_name'];
+            
+            // Fetch original item
+            $stmt = $pdo->prepare("SELECT * FROM fee_items WHERE id = ?");
+            $stmt->execute([$itemId]);
+            $item = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$item) {
+                echo json_encode(['success' => false, 'error' => 'Item not found']);
+                exit;
+            }
+            
+            // Create clone
+            $stmt = $pdo->prepare("INSERT INTO fee_items (fee_group_id, item_name, item_code, description, frequency, is_optional, status, is_taxable, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $item['fee_group_id'],
+                $newName,
+                $newName . '-CLONE',
+                $item['description'],
+                $item['frequency'],
+                $item['is_optional'],
+                $item['status'],
+                $item['is_taxable'] ?? 0,
+                $item['tax_rate'] ?? 0
+            ]);
+            $newItemId = $pdo->lastInsertId();
+            
+            echo json_encode(['success' => true, 'new_item_id' => $newItemId]);
+            break;
+    }
+    exit;
+}
+
+// Clone Rule API
+if ($resource === 'clone_rule') {
+    switch ($method) {
+        case 'POST':
+            $data = json_decode(file_get_contents('php://input'), true);
+            $ruleId = $data['rule_id'];
+            
+            // Fetch original rule
+            $stmt = $pdo->prepare("SELECT * FROM fee_item_rules WHERE id = ?");
+            $stmt->execute([$ruleId]);
+            $rule = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$rule) {
+                echo json_encode(['success' => false, 'error' => 'Rule not found']);
+                exit;
+            }
+            
+            // Create clone
+            $stmt = $pdo->prepare("INSERT INTO fee_item_rules (fee_item_id, class_id, term_id, level, amount, currency, academic_year, is_active, late_fee, late_fee_type, is_taxable, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->execute([
+                $rule['fee_item_id'],
+                $rule['class_id'],
+                $rule['term_id'],
+                $rule['level'],
+                $rule['amount'],
+                $rule['currency'],
+                $rule['academic_year'],
+                $rule['is_active'],
+                $rule['late_fee'] ?? 0,
+                $rule['late_fee_type'] ?? 'fixed',
+                $rule['is_taxable'] ?? 0,
+                $rule['tax_rate'] ?? 0
+            ]);
+            $newRuleId = $pdo->lastInsertId();
+            
+            echo json_encode(['success' => true, 'new_rule_id' => $newRuleId]);
+            break;
+    }
+    exit;
 }

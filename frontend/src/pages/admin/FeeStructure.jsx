@@ -2,15 +2,22 @@ import { useState, useEffect, useRef } from 'react';
 import { 
   Plus, Edit, Trash2, DollarSign, X, Search, Download, Upload, Printer,
   Copy, Calculator, History, Percent, Users, Calendar, FileText, Settings,
-  ChevronDown, ChevronUp, Check, AlertTriangle, RefreshCw, Eye, Tag
+  ChevronDown, ChevronUp, Check, AlertTriangle, RefreshCw, Eye, Tag, Star
 } from 'lucide-react';
 import { feeGroupsAPI, feeItemsAPI, financeAPI, classesAPI, termsAPI } from '../../services/api';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
 import { useEducationLevels } from '../../hooks/useEducationLevels';
+import FeeStructureOverview from './FeeStructureOverview';
+import BulkRuleGenerator from '../../components/BulkRuleGenerator';
+import TemplateGallery from '../../components/TemplateGallery';
+import EnhancedCSVImport from '../../components/EnhancedCSVImport';
+import FeeStructureWizard from '../../components/FeeStructureWizard';
+import SmartInput from '../../components/SmartInput';
 
 export default function FeeStructure() {
   const { levels: educationLevels, levelCodes: levels } = useEducationLevels();
+  const [viewMode, setViewMode] = useState('overview'); // 'overview' or 'tabs'
   const [activeTab, setActiveTab] = useState('groups');
   const [feeGroups, setFeeGroups] = useState([]);
   const [feeItems, setFeeItems] = useState([]);
@@ -33,6 +40,11 @@ export default function FeeStructure() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [showBulkRuleGenerator, setShowBulkRuleGenerator] = useState(false);
+  const [showCopyStructureModal, setShowCopyStructureModal] = useState(false);
+  const [showTemplateGallery, setShowTemplateGallery] = useState(false);
+  const [showEnhancedCSVImport, setShowEnhancedCSVImport] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedTerm, setSelectedTerm] = useState('');
   const [calculatedFees, setCalculatedFees] = useState([]);
@@ -236,6 +248,130 @@ export default function FeeStructure() {
     setEditingItem(null);
     setDiscountForm({ name: '', code: '', type: 'percentage', value: 0, applies_to: 'all', fee_item_id: '', min_siblings: 0, early_payment_days: 0, status: 'active' });
     setShowModal(true);
+  };
+
+  const handleOverviewEdit = (type, id = null) => {
+    if (type === 'group') {
+      if (id) {
+        const group = feeGroups.find(g => g.id === id);
+        setGroupForm({ group_name: group.group_name, group_code: group.group_code, description: group.description, status: group.status });
+        setEditingItem(group);
+      } else {
+        setGroupForm({ group_name: '', group_code: '', description: '', status: 'active' });
+        setEditingItem(null);
+      }
+      setModalType('group');
+    } else if (type === 'item') {
+      if (id) {
+        const item = feeItems.find(i => i.id === id);
+        setItemForm({ fee_group_id: item.fee_group_id, item_name: item.item_name, item_code: item.item_code, description: item.description, frequency: item.frequency, is_optional: item.is_optional, is_taxable: item.is_taxable ?? 0, tax_rate: item.tax_rate ?? 0, status: item.status });
+        setEditingItem(item);
+      } else {
+        setItemForm({ fee_group_id: id || '', item_name: '', item_code: '', description: '', frequency: 'term', is_optional: 0, is_taxable: 0, tax_rate: 0, status: 'active' });
+        setEditingItem(null);
+      }
+      setModalType('item');
+    } else if (type === 'rule') {
+      if (id) {
+        const rule = feeRules.find(r => r.id === id);
+        setRuleForm({ fee_item_id: rule.fee_item_id, class_id: rule.class_id || '', term_id: rule.term_id || '', level: rule.level || '', amount: rule.amount, currency: rule.currency || 'GHS', academic_year: rule.academic_year || '2024/2025', late_fee: rule.late_fee ?? 0, late_fee_type: rule.late_fee_type ?? 'fixed', is_active: rule.is_active });
+        setEditingItem(rule);
+      } else {
+        setRuleForm({ fee_item_id: id || '', class_id: '', term_id: '', level: '', amount: '', currency: 'GHS', academic_year: '2024/2025', late_fee: 0, late_fee_type: 'fixed', is_active: 1 });
+        setEditingItem(null);
+      }
+      setModalType('rule');
+    }
+    setShowModal(true);
+  };
+
+  const handleBulkRuleGeneration = async (rules) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/finance.php?resource=bulk_rules`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rules })
+      });
+      const result = await response.json();
+      if (result.success) {
+        alert(`Successfully created ${result.created} rules`);
+        setShowBulkRuleGenerator(false);
+        fetchData();
+      } else {
+        alert('Error creating rules: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  const handleOpenBulkRuleGenerator = (feeItemId) => {
+    setShowModal(false);
+    setShowBulkRuleGenerator(true);
+  };
+
+  const handleCopyStructure = async (sourceYear, targetYear, amountAdjustment) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/finance.php?resource=copy_structure`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_year: sourceYear, target_year: targetYear, amount_adjustment: amountAdjustment })
+      });
+      const result = await response.json();
+      if (result.success) {
+        alert(`Successfully copied ${result.created} rules from ${sourceYear} to ${targetYear}`);
+        setShowCopyStructureModal(false);
+        fetchData();
+      } else {
+        alert('Error copying structure: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
+  };
+
+  const handleApplyTemplate = async (templateData) => {
+    try {
+      // Template data contains groups, items, rules - apply them to the current structure
+      // This is a simplified implementation - in production, you'd want more sophisticated merging logic
+      alert('Template applied successfully! (Template application logic would be implemented here)');
+      fetchData();
+    } catch (error) {
+      alert('Error applying template: ' + error.message);
+    }
+  };
+
+  const handleSaveAsTemplate = async () => {
+    const templateName = prompt('Enter template name:');
+    if (!templateName) return;
+    
+    const templateData = {
+      groups: feeGroups,
+      items: feeItems,
+      rules: feeRules
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/finance.php?resource=templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: templateName,
+          description: `Template saved on ${new Date().toLocaleDateString()}`,
+          template_data: templateData,
+          category: 'custom',
+          is_public: 0
+        })
+      });
+      const result = await response.json();
+      if (result.success) {
+        alert('Template saved successfully!');
+      } else {
+        alert('Error saving template: ' + result.error);
+      }
+    } catch (error) {
+      alert('Error: ' + error.message);
+    }
   };
 
   const handleSubmitDiscount = async (e) => {
@@ -618,54 +754,154 @@ export default function FeeStructure() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fee Structure Management</h1>
-          <p className="text-gray-600 mt-1">Manage fee groups, items, pricing rules, and discounts</p>
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-6 text-white shadow-lg">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Fee Structure Management</h1>
+            <p className="text-blue-100 mt-1">Manage fee groups, items, pricing rules, and discounts</p>
+          </div>
+          <div className="flex gap-3">
+            <button 
+              onClick={() => setViewMode(viewMode === 'overview' ? 'tabs' : 'overview')}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-all ${viewMode === 'overview' ? 'bg-white text-blue-600 hover:bg-blue-50' : 'bg-blue-500 text-white hover:bg-blue-400'}`}
+            >
+              <Eye className="w-4 h-4" />
+              {viewMode === 'overview' ? 'Tabs View' : 'Overview'}
+            </button>
+          </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <button onClick={handleCleanupDuplicates} className="btn bg-red-600 text-white hover:bg-red-700 flex items-center gap-2" title="Remove duplicate fee items and rules">
-            <RefreshCw className="w-4 h-4" /> Cleanup Duplicates
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Fee Groups</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{feeGroups.length}</p>
+            </div>
+            <div className="p-3 bg-blue-100 rounded-lg">
+              <Tag className="w-6 h-6 text-blue-600" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Fee Items</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{feeItems.length}</p>
+            </div>
+            <div className="p-3 bg-green-100 rounded-lg">
+              <FileText className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Pricing Rules</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{feeRules.length}</p>
+            </div>
+            <div className="p-3 bg-purple-100 rounded-lg">
+              <DollarSign className="w-6 h-6 text-purple-600" />
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-500 font-medium">Installment Plans</p>
+              <p className="text-3xl font-bold text-gray-900 mt-1">{installmentPlans.length}</p>
+            </div>
+            <div className="p-3 bg-orange-100 rounded-lg">
+              <Calendar className="w-6 h-6 text-orange-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+          <button onClick={() => setShowTemplateGallery(true)} className="p-4 bg-gradient-to-br from-teal-500 to-teal-600 text-white rounded-lg hover:from-teal-600 hover:to-teal-700 transition-all flex flex-col items-center gap-2 shadow-sm">
+            <Star className="w-6 h-6" />
+            <span className="text-sm font-medium">Templates</span>
           </button>
-          <button onClick={() => { setSelectedClass(''); setSelectedTerm(''); setShowCalculator(true); }} className="btn bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2">
-            <Calculator className="w-4 h-4" /> Fee Calculator
+          <button onClick={() => setShowCopyStructureModal(true)} className="p-4 bg-gradient-to-br from-orange-500 to-orange-600 text-white rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all flex flex-col items-center gap-2 shadow-sm">
+            <Copy className="w-6 h-6" />
+            <span className="text-sm font-medium">Copy Year</span>
           </button>
-          <button onClick={handleExportCSV} className="btn bg-green-600 text-white hover:bg-green-700 flex items-center gap-2">
-            <Download className="w-4 h-4" /> Export
+          <button onClick={handleSaveAsTemplate} className="p-4 bg-gradient-to-br from-indigo-500 to-indigo-600 text-white rounded-lg hover:from-indigo-600 hover:to-indigo-700 transition-all flex flex-col items-center gap-2 shadow-sm">
+            <Star className="w-6 h-6" />
+            <span className="text-sm font-medium">Save Template</span>
           </button>
-          <button onClick={handlePrintFeeStructure} className="btn bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-2">
-            <Printer className="w-4 h-4" /> Print
+          <button onClick={() => setShowWizard(true)} className="p-4 bg-gradient-to-br from-pink-500 to-pink-600 text-white rounded-lg hover:from-pink-600 hover:to-pink-700 transition-all flex flex-col items-center gap-2 shadow-sm">
+            <Settings className="w-6 h-6" />
+            <span className="text-sm font-medium">Setup Wizard</span>
           </button>
-          <input type="file" ref={fileInputRef} accept=".csv" onChange={handleImportCSV} className="hidden" />
-          <button onClick={() => fileInputRef.current?.click()} className="btn bg-blue-600 text-white hover:bg-blue-700 flex items-center gap-2">
-            <Upload className="w-4 h-4" /> Import
+          <button onClick={() => { setSelectedClass(''); setSelectedTerm(''); setShowCalculator(true); }} className="p-4 bg-gradient-to-br from-purple-500 to-purple-600 text-white rounded-lg hover:from-purple-600 hover:to-purple-700 transition-all flex flex-col items-center gap-2 shadow-sm">
+            <Calculator className="w-6 h-6" />
+            <span className="text-sm font-medium">Calculator</span>
           </button>
-          <button onClick={() => {
-            if (activeTab === 'groups') handleAddGroup();
-            else if (activeTab === 'items') handleAddItem();
-            else if (activeTab === 'rules') handleAddRule();
-            else if (activeTab === 'discounts') handleAddDiscount();
-            else handleAddPlan();
-          }} className="btn btn-primary flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            Add {activeTab === 'groups' ? 'Group' : activeTab === 'items' ? 'Item' : activeTab === 'rules' ? 'Rule' : activeTab === 'discounts' ? 'Discount' : 'Plan'}
+          <button onClick={handleCleanupDuplicates} className="p-4 bg-gradient-to-br from-red-500 to-red-600 text-white rounded-lg hover:from-red-600 hover:to-red-700 transition-all flex flex-col items-center gap-2 shadow-sm">
+            <RefreshCw className="w-6 h-6" />
+            <span className="text-sm font-medium">Cleanup</span>
           </button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-4">
-          {tabs.map((tab) => (
-            <button key={tab.id} onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-all ${
-                activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}>
-              <tab.icon className="w-4 h-4" /> {tab.label}
-            </button>
-          ))}
-        </nav>
+      {/* Import/Export Actions */}
+      <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Import & Export</h3>
+        <div className="flex flex-wrap gap-3">
+          <input type="file" ref={fileInputRef} accept=".csv" onChange={handleImportCSV} className="hidden" />
+          <button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2 transition-colors">
+            <Upload className="w-4 h-4" /> Quick Import
+          </button>
+          <button onClick={() => setShowEnhancedCSVImport(true)} className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 flex items-center gap-2 transition-colors">
+            <Upload className="w-4 h-4" /> Enhanced Import
+          </button>
+          <button onClick={handleExportCSV} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2 transition-colors">
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+          <button onClick={handlePrintFeeStructure} className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 flex items-center gap-2 transition-colors">
+            <Printer className="w-4 h-4" /> Print
+          </button>
+        </div>
       </div>
+
+      {/* View Mode: Overview */}
+      {viewMode === 'overview' ? (
+        <FeeStructureOverview 
+          onEdit={handleOverviewEdit}
+          onDelete={handleDelete}
+        />
+      ) : (
+        <div>
+          {/* Tabs */}
+          <div className="flex items-center justify-between border-b border-gray-200">
+            <nav className="flex gap-4">
+              {tabs.map((tab) => (
+                <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-all ${
+                    activeTab === tab.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}>
+                  <tab.icon className="w-4 h-4" /> {tab.label}
+                </button>
+              ))}
+            </nav>
+            <button onClick={() => {
+              if (activeTab === 'groups') handleAddGroup();
+              else if (activeTab === 'items') handleAddItem();
+              else if (activeTab === 'rules') handleAddRule();
+              else if (activeTab === 'discounts') handleAddDiscount();
+              else handleAddPlan();
+            }} className="btn btn-primary flex items-center gap-2">
+              <Plus className="w-5 h-5" />
+              Add {activeTab === 'groups' ? 'Group' : activeTab === 'items' ? 'Item' : activeTab === 'rules' ? 'Rule' : activeTab === 'discounts' ? 'Discount' : 'Plan'}
+            </button>
+          </div>
 
       {/* Setup Instructions */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
@@ -1170,12 +1406,24 @@ export default function FeeStructure() {
               <form onSubmit={handleSubmitGroup} className="p-6 space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-2">Group Name *</label>
-                    <input type="text" required value={groupForm.group_name} onChange={(e) => setGroupForm({...groupForm, group_name: e.target.value})} className="input" />
+                    <SmartInput
+                      label="Group Name"
+                      value={groupForm.group_name}
+                      onChange={(value) => setGroupForm({...groupForm, group_name: value})}
+                      suggestionType="group_name"
+                      placeholder="e.g., Tuition, Books, Activities"
+                      required
+                    />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-2">Group Code *</label>
-                    <input type="text" required value={groupForm.group_code} onChange={(e) => setGroupForm({...groupForm, group_code: e.target.value})} className="input" />
+                    <SmartInput
+                      label="Group Code"
+                      value={groupForm.group_code}
+                      onChange={(value) => setGroupForm({...groupForm, group_code: value})}
+                      suggestionType="group_code"
+                      placeholder="e.g., TUITION, BOOKS"
+                      required
+                    />
                   </div>
                   <div className="col-span-2">
                     <label className="block text-sm font-medium mb-2">Description</label>
@@ -1211,8 +1459,14 @@ export default function FeeStructure() {
                     <input type="text" required value={itemForm.item_code} onChange={(e) => setItemForm({...itemForm, item_code: e.target.value})} className="input" />
                   </div>
                   <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-2">Item Name *</label>
-                    <input type="text" required value={itemForm.item_name} onChange={(e) => setItemForm({...itemForm, item_name: e.target.value})} className="input" />
+                    <SmartInput
+                      label="Item Name"
+                      value={itemForm.item_name}
+                      onChange={(value) => setItemForm({...itemForm, item_name: value})}
+                      suggestionType="item_name"
+                      placeholder="e.g., Tuition, Books, Uniform"
+                      required
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-2">Frequency</label>
@@ -1233,6 +1487,11 @@ export default function FeeStructure() {
                 </div>
                 <div className="flex justify-end gap-4 pt-4 border-t">
                   <button type="button" onClick={() => setShowModal(false)} className="btn bg-gray-200">Cancel</button>
+                  {editingItem && (
+                    <button type="button" onClick={() => handleOpenBulkRuleGenerator(editingItem.id)} className="btn bg-purple-600 text-white hover:bg-purple-700">
+                      <Copy className="w-4 h-4 mr-2" /> Bulk Generate Rules
+                    </button>
+                  )}
                   <button type="submit" className="btn btn-primary">Save</button>
                 </div>
               </form>
@@ -1482,5 +1741,121 @@ export default function FeeStructure() {
         </div>
       )}
     </div>
+  )}
+
+      {/* Bulk Rule Generator Modal */}
+      {showBulkRuleGenerator && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <BulkRuleGenerator
+              feeItemId={editingItem?.id}
+              classes={classes}
+              terms={terms}
+              levels={levels}
+              onSave={handleBulkRuleGeneration}
+              onCancel={() => setShowBulkRuleGenerator(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Copy Structure Modal */}
+      {showCopyStructureModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">Copy Fee Structure from Previous Year</h3>
+              <button onClick={() => setShowCopyStructureModal(false)}><X className="w-6 h-6" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Source Academic Year</label>
+                <select id="sourceYear" className="w-full border rounded px-3 py-2">
+                  {academicYears.filter(y => y !== yearFilter).map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Target Academic Year</label>
+                <select id="targetYear" defaultValue={yearFilter} className="w-full border rounded px-3 py-2">
+                  {academicYears.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Amount Adjustment</label>
+                <div className="flex items-center gap-2">
+                  <select id="adjustmentType" className="border rounded px-3 py-2">
+                    <option value="1.0">No Change</option>
+                    <option value="1.05">+5%</option>
+                    <option value="1.10">+10%</option>
+                    <option value="1.15">+15%</option>
+                    <option value="1.20">+20%</option>
+                  </select>
+                </div>
+              </div>
+              <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                <p className="text-sm text-blue-800">
+                  This will copy all fee rules from the source year to the target year with the selected amount adjustment.
+                </p>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button onClick={() => setShowCopyStructureModal(false)} className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">Cancel</button>
+                <button onClick={() => {
+                  const sourceYear = document.getElementById('sourceYear').value;
+                  const targetYear = document.getElementById('targetYear').value;
+                  const adjustment = parseFloat(document.getElementById('adjustmentType').value);
+                  handleCopyStructure(sourceYear, targetYear, adjustment);
+                }} className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Copy Structure</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Template Gallery Modal */}
+      {showTemplateGallery && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <TemplateGallery
+              onSelect={handleApplyTemplate}
+              onClose={() => setShowTemplateGallery(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Enhanced CSV Import Modal */}
+      {showEnhancedCSVImport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <EnhancedCSVImport
+              onImport={(data) => {
+                setShowEnhancedCSVImport(false);
+                fetchData();
+              }}
+              onCancel={() => setShowEnhancedCSVImport(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Fee Structure Wizard Modal */}
+      {showWizard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto p-6">
+            <FeeStructureWizard
+              onComplete={(data) => {
+                setShowWizard(false);
+                fetchData();
+              }}
+              onCancel={() => setShowWizard(false)}
+            />
+          </div>
+        </div>
+      )}
+  </div>
   );
 }

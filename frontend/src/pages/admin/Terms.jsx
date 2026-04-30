@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { 
   Plus, Edit, Trash2, Calendar, CheckCircle, X, Search, Download, Printer,
   Copy, ChevronUp, ChevronDown, CalendarDays, Clock, Archive, RotateCcw,
-  CalendarPlus, Eye, AlertCircle, PartyPopper, BookOpen
+  CalendarPlus, Eye, AlertCircle, PartyPopper, BookOpen, Settings, RefreshCw
 } from 'lucide-react';
 import { termsAPI } from '../../services/api';
 import axios from 'axios';
 import { API_BASE_URL } from '../../config';
+import AcademicCalendarSetup from '../../components/AcademicCalendarSetup';
 
 export default function Terms() {
   const [terms, setTerms] = useState([]);
@@ -37,8 +38,14 @@ export default function Terms() {
   const [termEvents, setTermEvents] = useState([]);
   const [eventForm, setEventForm] = useState({ event_name: '', event_date: '', event_type: 'holiday', description: '' });
 
+  // Academic calendar state
+  const [currentPeriod, setCurrentPeriod] = useState(null);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  const [transitionStatus, setTransitionStatus] = useState(null);
+
   useEffect(() => {
     fetchTerms();
+    fetchCurrentPeriod();
   }, []);
 
   const fetchTerms = async () => {
@@ -51,6 +58,42 @@ export default function Terms() {
       alert('Failed to load terms');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchCurrentPeriod = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/academic_calendar.php?action=current`);
+      setCurrentPeriod(response.data.period);
+      
+      // Auto-update current term based on date
+      await axios.post(`${API_BASE_URL}/academic_calendar.php?action=auto_update`);
+    } catch (error) {
+      console.error('Error fetching current period:', error);
+    }
+  };
+
+  const checkTransitionStatus = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/academic_calendar.php?action=check_transition`);
+      setTransitionStatus(response.data);
+    } catch (error) {
+      console.error('Error checking transition status:', error);
+    }
+  };
+
+  const triggerAutoTransition = async () => {
+    if (!window.confirm('Are you sure you want to trigger automatic term transition? This will move to the next term.')) return;
+    
+    try {
+      const response = await axios.post(`${API_BASE_URL}/academic_calendar.php?action=auto_transition`);
+      if (response.data.success) {
+        alert('Term transition completed successfully!');
+        fetchTerms();
+        fetchCurrentPeriod();
+      }
+    } catch (error) {
+      alert('Failed to trigger transition: ' + error.message);
     }
   };
 
@@ -368,11 +411,51 @@ export default function Terms() {
           <h1 className="text-2xl font-bold text-gray-900">Academic Terms</h1>
           <p className="text-gray-600 mt-1">Manage academic terms and sessions</p>
         </div>
-        <button onClick={handleAdd} className="btn btn-primary flex items-center gap-2">
-          <Plus className="w-5 h-5" />
-          Add Term
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setShowSetupWizard(true)} className="btn bg-purple-600 text-white hover:bg-purple-700 flex items-center gap-2">
+            <Settings className="w-5 h-5" /> Setup Calendar
+          </button>
+          <button onClick={triggerAutoTransition} className="btn bg-orange-600 text-white hover:bg-orange-700 flex items-center gap-2">
+            <RefreshCw className="w-5 h-5" /> Auto-Transition
+          </button>
+          <button onClick={handleAdd} className="btn btn-primary flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            Add Term
+          </button>
+        </div>
       </div>
+
+      {/* Current Academic Period */}
+      {currentPeriod && currentPeriod.year_name && (
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Current Academic Year</h3>
+              <p className="text-blue-100">{currentPeriod.year_name}</p>
+            </div>
+            <div className="text-right">
+              <p className="text-2xl font-bold">{currentPeriod.term_name || 'No active term'}</p>
+              <p className="text-blue-100 text-sm">{currentPeriod.term_start ? `${new Date(currentPeriod.term_start).toLocaleDateString()} - ${new Date(currentPeriod.term_end).toLocaleDateString()}` : ''}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Setup Wizard Modal */}
+      {showSetupWizard && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl max-w-2xl w-full p-6">
+            <AcademicCalendarSetup 
+              onComplete={(data) => {
+                setShowSetupWizard(false);
+                fetchTerms();
+                fetchCurrentPeriod();
+              }}
+              onCancel={() => setShowSetupWizard(false)}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
