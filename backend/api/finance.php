@@ -144,11 +144,15 @@ try {
                 
                 if ($existing) {
                     // Update existing rule instead of creating duplicate
-                    $updateStmt = $pdo->prepare("UPDATE fee_item_rules SET amount = ?, currency = ?, term_id = ? WHERE id = ?");
+                    $updateStmt = $pdo->prepare("UPDATE fee_item_rules SET amount = ?, currency = ?, term_id = ?, late_fee = ?, late_fee_type = ?, is_taxable = ?, tax_rate = ? WHERE id = ?");
                     $updateStmt->execute([
                         $data['amount'],
                         $data['currency'] ?? 'GHS',
                         $data['term_id'] ?? null,
+                        $data['late_fee'] ?? 0,
+                        $data['late_fee_type'] ?? 'fixed',
+                        $data['is_taxable'] ?? 0,
+                        $data['tax_rate'] ?? 0,
                         $existing['id']
                     ]);
                     echo json_encode([
@@ -159,7 +163,7 @@ try {
                     break;
                 }
                 
-                $stmt = $pdo->prepare("INSERT INTO fee_item_rules (fee_item_id, class_id, term_id, level, amount, currency, academic_year, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmt = $pdo->prepare("INSERT INTO fee_item_rules (fee_item_id, class_id, term_id, level, amount, currency, academic_year, is_active, late_fee, late_fee_type, is_taxable, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([
                     $data['fee_item_id'],
                     $classId,
@@ -168,7 +172,11 @@ try {
                     $data['amount'],
                     $data['currency'] ?? 'GHS',
                     $academicYear,
-                    $data['is_active'] ?? 1
+                    $data['is_active'] ?? 1,
+                    $data['late_fee'] ?? 0,
+                    $data['late_fee_type'] ?? 'fixed',
+                    $data['is_taxable'] ?? 0,
+                    $data['tax_rate'] ?? 0
                 ]);
                 echo json_encode(['success' => true, 'id' => $pdo->lastInsertId()]);
                 break;
@@ -181,7 +189,7 @@ try {
                 $levelValue = isset($data['level']) ? $data['level'] : 'NOT_SET';
                 $levelToSave = !empty($data['level']) ? $data['level'] : null;
                 
-                $stmt = $pdo->prepare("UPDATE fee_item_rules SET fee_item_id=?, class_id=?, term_id=?, level=?, amount=?, currency=?, academic_year=?, is_active=? WHERE id=?");
+                $stmt = $pdo->prepare("UPDATE fee_item_rules SET fee_item_id=?, class_id=?, term_id=?, level=?, amount=?, currency=?, academic_year=?, is_active=?, late_fee=?, late_fee_type=?, is_taxable=?, tax_rate=? WHERE id=?");
                 $result = $stmt->execute([
                     $data['fee_item_id'],
                     $data['class_id'] ?? null,
@@ -191,6 +199,10 @@ try {
                     $data['currency'] ?? 'GHS',
                     $data['academic_year'] ?? date('Y') . '/' . (date('Y') + 1),
                     $data['is_active'] ?? 1,
+                    $data['late_fee'] ?? 0,
+                    $data['late_fee_type'] ?? 'fixed',
+                    $data['is_taxable'] ?? 0,
+                    $data['tax_rate'] ?? 0,
                     $id
                 ]);
                 
@@ -252,11 +264,13 @@ try {
 
             case 'PUT':
                 $data = json_decode(file_get_contents('php://input'), true);
-                $stmt = $pdo->prepare("UPDATE installment_plans SET plan_name=?, description=?, installments=?, status=? WHERE id=?");
+                $stmt = $pdo->prepare("UPDATE installment_plans SET plan_name=?, plan_code=?, description=?, installments=?, is_default=?, status=? WHERE id=?");
                 $stmt->execute([
                     $data['plan_name'],
+                    $data['plan_code'],
                     $data['description'],
                     json_encode($data['installments']),
+                    $data['is_default'] ?? 0,
                     $data['status'],
                     $id
                 ]);

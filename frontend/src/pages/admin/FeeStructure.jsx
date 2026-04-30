@@ -126,7 +126,7 @@ export default function FeeStructure() {
   const handleAddRule = () => {
     setModalType('rule');
     setEditingItem(null);
-    setRuleForm({ fee_item_id: '', level: '', amount: '', academic_year: '2024/2025', is_active: 1 });
+    setRuleForm({ fee_item_id: '', class_id: '', term_id: '', level: '', amount: '', currency: 'GHS', academic_year: '2024/2025', late_fee: 0, late_fee_type: 'fixed', is_active: 1 });
     setShowModal(true);
   };
 
@@ -180,14 +180,16 @@ export default function FeeStructure() {
     e.preventDefault();
     try {
       console.log('Submitting rule form:', ruleForm);
+      let response;
       if (editingItem) {
-        await financeAPI.updateFeeRule(editingItem.id, ruleForm);
+        response = await financeAPI.updateFeeRule(editingItem.id, ruleForm);
       } else {
-        await financeAPI.createFeeRule(ruleForm);
+        response = await financeAPI.createFeeRule(ruleForm);
       }
       setShowModal(false);
       fetchData();
-      alert('Fee rule saved successfully!');
+      const message = response?.data?.message;
+      alert('Fee rule saved successfully! ' + (message || ''));
     } catch (error) {
       console.error('Error saving rule:', error);
       alert('Error: ' + (error.response?.data?.error || error.message));

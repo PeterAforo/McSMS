@@ -70,7 +70,7 @@ try {
                 break;
             }
             
-            $stmt = $pdo->prepare("INSERT INTO fee_items (fee_group_id, item_name, item_code, description, frequency, is_optional, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt = $pdo->prepare("INSERT INTO fee_items (fee_group_id, item_name, item_code, description, frequency, is_optional, status, is_taxable, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
             $stmt->execute([
                 $data['fee_group_id'],
                 $data['item_name'],
@@ -78,7 +78,9 @@ try {
                 $data['description'] ?? null,
                 $data['frequency'] ?? 'term',
                 $data['is_optional'] ?? 0,
-                $data['status'] ?? 'active'
+                $data['status'] ?? 'active',
+                $data['is_taxable'] ?? 0,
+                $data['tax_rate'] ?? 0
             ]);
             $id = $pdo->lastInsertId();
             $stmt = $pdo->prepare("SELECT fi.*, fg.group_name FROM fee_items fi LEFT JOIN fee_groups fg ON fi.fee_group_id = fg.id WHERE fi.id = ?");
@@ -88,7 +90,7 @@ try {
 
         case 'PUT':
             $data = json_decode(file_get_contents('php://input'), true);
-            $stmt = $pdo->prepare("UPDATE fee_items SET fee_group_id=?, item_name=?, item_code=?, description=?, frequency=?, is_optional=?, status=? WHERE id=?");
+            $stmt = $pdo->prepare("UPDATE fee_items SET fee_group_id=?, item_name=?, item_code=?, description=?, frequency=?, is_optional=?, status=?, is_taxable=?, tax_rate=? WHERE id=?");
             $stmt->execute([
                 $data['fee_group_id'],
                 $data['item_name'],
@@ -97,6 +99,8 @@ try {
                 $data['frequency'],
                 $data['is_optional'],
                 $data['status'],
+                $data['is_taxable'] ?? 0,
+                $data['tax_rate'] ?? 0,
                 $id
             ]);
             $stmt = $pdo->prepare("SELECT fi.*, fg.group_name FROM fee_items fi LEFT JOIN fee_groups fg ON fi.fee_group_id = fg.id WHERE fi.id = ?");
