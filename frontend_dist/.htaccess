@@ -1,55 +1,33 @@
-RewriteEngine On
-RewriteBase /
-
-# Handle OPTIONS preflight requests for CORS
-RewriteCond %{REQUEST_METHOD} OPTIONS
-RewriteRule ^(.*)$ $1 [R=200,L]
-
-# Allow API requests to pass through
-RewriteRule ^api/ - [L]
-RewriteRule ^backend/api/ - [L]
-RewriteRule ^backend/ - [L]
-
-# Allow config requests to pass through
-RewriteRule ^config/ - [L]
-
-# Allow uploads requests to pass through
-RewriteRule ^uploads/ - [L]
-
-# Allow real files and directories
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-
-# Redirect all other requests to index.html for SPA routing
-RewriteRule ^ index.html [QSA,L]
-
-# PHP settings
-<IfModule mod_php.c>
-    php_flag display_errors Off
-    php_value error_reporting 0
-</IfModule>
-
-# Cache-Control Headers - Prevent browser caching issues
 <IfModule mod_headers.c>
-    # Disable caching for HTML files (always fetch latest)
-    <FilesMatch "\.(html)$">
-        Header set Cache-Control "no-cache, no-store, must-revalidate"
-        Header set Pragma "no-cache"
-        Header set Expires 0
-    </FilesMatch>
-    
-    # Cache JS and CSS for 1 year (Vite adds hash to filenames for cache busting)
-    <FilesMatch "\.(js|css)$">
-        Header set Cache-Control "public, max-age=31536000, immutable"
-    </FilesMatch>
-    
-    # Cache images and fonts for 1 year
-    <FilesMatch "\.(ico|jpg|jpeg|png|gif|svg|woff|woff2|ttf|eot)$">
-        Header set Cache-Control "public, max-age=31536000, immutable"
-    </FilesMatch>
+  # Never cache service worker - must always be fetched fresh
+  <FilesMatch "sw\.js$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+
+  # Never cache index.html - must always fetch fresh to get new asset hashes
+  <FilesMatch "index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
 </IfModule>
 
-# Enable Gzip compression for faster loading
-<IfModule mod_deflate.c>
-    AddOutputFilterByType DEFLATE text/html text/plain text/css application/json application/javascript text/xml application/xml
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Serve real files directly (JS/CSS/images/etc under assets, icons, uploads, etc.)
+  RewriteCond %{REQUEST_FILENAME} -f
+  RewriteRule ^ - [L]
+
+  # Serve real directories directly
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Let the backend API and uploads handle their own paths
+  RewriteRule ^backend/ - [L]
+  RewriteRule ^uploads/ - [L]
+
+  # Everything else is a frontend SPA route - serve index.html so React Router
+  # can handle deep links and page refreshes (e.g. /login, /admin/students).
+  RewriteRule ^ /index.html [L]
 </IfModule>

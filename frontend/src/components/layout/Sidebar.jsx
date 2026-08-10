@@ -44,7 +44,20 @@ import {
   Heart,
   PieChart,
   FileSpreadsheet,
-  VideoIcon
+  VideoIcon,
+  UserCog,
+  Timer,
+  Wallet,
+  ClipboardList,
+  History,
+  BookMarked,
+  Scale,
+  ShoppingCart,
+  Receipt,
+  Package,
+  Calculator,
+  Building2,
+  Image
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useSchoolSettings } from '../../hooks/useSchoolSettings';
@@ -108,6 +121,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         { icon: ClipboardCheck, label: 'Admissions', path: '/admin/admissions' },
         { icon: Users, label: 'Teachers', path: '/admin/teachers' },
         { icon: School, label: 'Classes', path: '/admin/classes' },
+        { icon: Award, label: 'Promotions', path: '/admin/promotions' },
         { icon: BookOpen, label: 'Class Curriculum', path: '/admin/class-subjects' },
         { icon: GraduationCap, label: 'Education Levels', path: '/admin/education-levels' },
         { icon: BookOpen, label: 'Subjects', path: '/admin/subjects' },
@@ -115,6 +129,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         { icon: Clock, label: 'Timetable', path: '/admin/timetable' },
         { icon: FileCheck, label: 'Exams', path: '/admin/exams' },
         { icon: Video, label: 'LMS', path: '/admin/lms' },
+        { icon: Users, label: 'Parent-Child Mgmt', path: '/admin/parent-children' },
       ]
     },
     {
@@ -140,6 +155,25 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
       ]
     },
     {
+      id: 'accounting',
+      label: 'Accounting',
+      icon: BookMarked,
+      items: [
+        { icon: BarChart3, label: 'Dashboard', path: '/admin/accounting/dashboard' },
+        { icon: BookOpen, label: 'Chart of Accounts', path: '/admin/accounting/accounts' },
+        { icon: FileText, label: 'Journal Entries', path: '/admin/accounting/journal' },
+        { icon: Scale, label: 'General Ledger', path: '/admin/accounting/ledger' },
+        { icon: FileSpreadsheet, label: 'Financial Statements', path: '/admin/accounting/statements' },
+        { icon: Calculator, label: 'Fee → GL Mapping', path: '/admin/accounting/fee-mapping' },
+        { icon: Wallet, label: 'Petty Cash', path: '/admin/accounting/petty-cash' },
+        { icon: RefreshCw, label: 'Imprest', path: '/admin/accounting/imprest' },
+        { icon: ShoppingCart, label: 'Purchase Orders', path: '/admin/accounting/purchase-orders' },
+        { icon: Receipt, label: 'Expenses', path: '/admin/accounting/expenses' },
+        { icon: Package, label: 'Inventory', path: '/admin/accounting/inventory' },
+        { icon: Building2, label: 'Suppliers', path: '/admin/accounting/suppliers' },
+      ]
+    },
+    {
       id: 'advanced',
       label: 'Advanced Features',
       icon: Brain,
@@ -147,13 +181,40 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         { icon: TrendingUp, label: 'Reports & Analytics', path: '/admin/analytics' },
         { icon: PieChart, label: 'Predictive Analytics', path: '/admin/advanced-analytics' },
         { icon: Truck, label: 'Transport', path: '/admin/transport' },
-        { icon: Briefcase, label: 'HR Management', path: '/admin/hr-management' },
         { icon: Fingerprint, label: 'Biometric', path: '/admin/biometric' },
         { icon: Building, label: 'Multi-School', path: '/admin/multi-school' },
         { icon: Brain, label: 'AI Features', path: '/admin/ai-features' },
         { icon: Heart, label: 'Alumni', path: '/admin/alumni' },
         { icon: VideoIcon, label: 'Video Conferencing', path: '/admin/video-conferencing' },
         { icon: Plug, label: 'Integrations', path: '/admin/integrations' },
+      ]
+    },
+    {
+      id: 'hr_payroll',
+      label: 'HR & Payroll',
+      icon: Briefcase,
+      items: [
+        { icon: PieChart, label: 'Overview', path: '/admin/hr-payroll' },
+        { icon: Users, label: 'Employees', path: '/admin/hr-payroll?tab=employees' },
+        { icon: UserCog, label: 'Org Chart', path: '/admin/hr-payroll?tab=org_chart' },
+        { icon: BarChart3, label: 'Analytics', path: '/admin/hr-payroll?tab=analytics' },
+        { icon: Building, label: 'Departments', path: '/admin/hr-payroll?tab=departments' },
+        { icon: DollarSign, label: 'Payroll', path: '/admin/hr-payroll?tab=payroll' },
+        { icon: History, label: 'Payroll History', path: '/admin/hr-payroll?tab=history' },
+        { icon: CreditCard, label: 'Salary Structure', path: '/admin/hr-payroll?tab=salary' },
+        { icon: Calendar, label: 'Leave', path: '/admin/hr-payroll?tab=leave' },
+        { icon: Clock, label: 'Attendance', path: '/admin/hr-payroll?tab=attendance' },
+        { icon: BarChart3, label: 'Attendance Report', path: '/admin/hr-payroll?tab=attendance_report' },
+        { icon: Timer, label: 'Overtime', path: '/admin/hr-payroll?tab=overtime' },
+        { icon: Wallet, label: 'Loans', path: '/admin/hr-payroll?tab=loans' },
+        { icon: Clock, label: 'Shifts', path: '/admin/hr-payroll?tab=shifts' },
+        { icon: Award, label: 'Performance', path: '/admin/hr-payroll?tab=performance' },
+        { icon: Award, label: 'Training', path: '/admin/hr-payroll?tab=training' },
+        { icon: FileText, label: 'Documents', path: '/admin/hr-payroll?tab=documents' },
+        { icon: UserPlus, label: 'Onboarding', path: '/admin/hr-payroll?tab=onboarding' },
+        { icon: UserCog, label: 'Offboarding', path: '/admin/hr-payroll?tab=offboarding' },
+        { icon: ClipboardList, label: 'Self-Service', path: '/admin/hr-payroll?tab=self_service' },
+        { icon: FileText, label: 'Reports', path: '/admin/hr-payroll?tab=reports' },
       ]
     },
     {
@@ -165,6 +226,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
         { icon: MessageCircle, label: 'WhatsApp', path: '/admin/whatsapp' },
         { icon: Phone, label: 'SMS', path: '/admin/sms' },
         { icon: Mail, label: 'Email', path: '/admin/email' },
+        { icon: FileText, label: 'Message Center', path: '/admin/message-center' },
       ]
     },
     {
@@ -185,6 +247,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
       items: [
         { icon: Sliders, label: 'System Configuration', path: '/admin/system-config' },
         { icon: RefreshCw, label: 'System Reset', path: '/admin/system-reset' },
+        { icon: Image, label: 'Gallery Management', path: '/admin/gallery' },
         { icon: HelpCircle, label: 'Help Center', path: '/admin/help' },
       ]
     },
@@ -313,6 +376,7 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
   const getMenuCategories = () => {
     switch (user?.user_type) {
       case 'admin':
+      case 'super_admin':
         return adminMenuCategories;
       case 'teacher':
         return teacherMenuCategories;
@@ -325,11 +389,22 @@ export default function Sidebar({ isOpen = false, onClose = () => {} }) {
 
   const menuCategories = getMenuCategories();
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (path.includes('?')) {
+      return `${location.pathname}${location.search}` === path;
+    }
+    return location.pathname === path && !location.search;
+  };
 
   // Check if any item in a category is active
   const isCategoryActive = (category) => {
-    return category.items.some(item => location.pathname === item.path);
+    return category.items.some(item => {
+      if (isActive(item.path)) return true;
+      // For paths with sub-routes (e.g. /admin/accounting/dashboard),
+      // also match the base path prefix
+      return location.pathname.startsWith(item.path + '/') ||
+             (item.path === '/admin/accounting/dashboard' && location.pathname === '/admin/accounting');
+    });
   };
 
   // Toggle category expansion

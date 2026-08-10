@@ -1,23 +1,56 @@
-// McSMS Service Worker - Offline Support & Push Notifications
-const CACHE_NAME = 'mcsms-v2';
+// McSMS Service Worker - Offline Support, Push Notifications & Caching
+const CACHE_VERSION = 'v8';
+const STATIC_CACHE = `mcsms-static-${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `mcsms-dynamic-${CACHE_VERSION}`;
+const VENDOR_CACHE = `mcsms-vendor-${CACHE_VERSION}`;
+const IMAGE_CACHE = `mcsms-images-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
-// Assets to cache immediately
+// Assets to cache immediately (shell)
 const PRECACHE_ASSETS = [
   '/',
   '/index.html',
   '/offline.html',
   '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/icons/icon-192x192.svg',
+  '/icons/icon-512x512.svg'
 ];
 
+// Cache duration settings (in seconds)
+const CACHE_DURATIONS = {
+  vendor: 30 * 24 * 60 * 60, // 30 days for vendor chunks
+  static: 7 * 24 * 60 * 60,  // 7 days for static assets
+  dynamic: 24 * 60 * 60,     // 1 day for dynamic content
+  images: 14 * 24 * 60 * 60  // 14 days for images
+};
+
+// Check if URL is a vendor chunk (long-term cacheable)
+const isVendorChunk = (url) => {
+  return url.includes('/assets/vendor-') || 
+         url.includes('/assets/html2canvas') ||
+         url.includes('/assets/purify') ||
+         url.includes('/assets/index.es');
+};
+
+// Check if URL is an image
+const isImage = (url) => {
+  return /\.(jpg|jpeg|png|gif|webp|svg|ico)$/i.test(url);
+};
+
 // Install event - cache core assets
+// Cache each asset individually (instead of cache.addAll) so a single missing
+// or failing resource can never abort the whole install/precache step.
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
+    caches.open(STATIC_CACHE).then((cache) => {
       console.log('Service Worker: Caching core assets');
-      return cache.addAll(PRECACHE_ASSETS);
+      return Promise.all(
+        PRECACHE_ASSETS.map((url) =>
+          cache.add(url).catch((err) => {
+            console.warn('Service Worker: Failed to precache', url, err);
+          })
+        )
+      );
     })
   );
   self.skipWaiting();
@@ -25,12 +58,16 @@ self.addEventListener('install', (event) => {
 
 // Activate event - clean old caches
 self.addEventListener('activate', (event) => {
+  const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, VENDOR_CACHE, IMAGE_CACHE];
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+          .filter((name) => name.startsWith('mcsms-') && !currentCaches.includes(name))
+          .map((name) => {
+            console.log('Service Worker: Deleting old cache:', name);
+            return caches.delete(name);
+          })
       );
     })
   );
@@ -74,10 +111,54 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Network-first for navigations / HTML documents. This guarantees that after a
+  // new deployment (which produces new hashed asset filenames) the freshest
+  // index.html is served, instead of a stale cached copy that references deleted
+  // assets and triggers MIME-type errors. Falls back to cache when offline.
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.status === 200) {
+            const copy = response.clone();
+            caches.open(DYNAMIC_CACHE).then((cache) => cache.put(request, copy)).catch(() => {});
+          }
+          return response;
+        })
+        .catch(() =>
+          caches.match(request)
+            .then((cached) => cached || caches.match('/index.html'))
+            .then((cached) => cached || caches.match(OFFLINE_URL))
+        )
+    );
+    return;
+  }
+
+  // Determine which cache to use based on request type
+  const getCacheName = (url) => {
+    if (isVendorChunk(url)) return VENDOR_CACHE;
+    if (isImage(url)) return IMAGE_CACHE;
+    if (url.includes('/assets/')) return STATIC_CACHE;
+    return DYNAMIC_CACHE;
+  };
+
   event.respondWith(
     caches.match(request)
       .then((cachedResponse) => {
         if (cachedResponse) {
+          // For vendor chunks, always return cached version (cache-first)
+          if (isVendorChunk(request.url)) {
+            return cachedResponse;
+          }
+          // For other assets, return cached but update in background (stale-while-revalidate)
+          fetch(request).then((response) => {
+            if (response && response.status === 200) {
+              const cacheName = getCacheName(request.url);
+              caches.open(cacheName).then((cache) => {
+                cache.put(request, response);
+              });
+            }
+          }).catch(() => {});
           return cachedResponse;
         }
 
@@ -88,10 +169,11 @@ self.addEventListener('fetch', (event) => {
               return response;
             }
 
-            // Only cache if it's a valid http(s) request
+            // Cache the response in appropriate cache
             if (request.url.startsWith('http')) {
               const responseToCache = response.clone();
-              caches.open(CACHE_NAME)
+              const cacheName = getCacheName(request.url);
+              caches.open(cacheName)
                 .then((cache) => {
                   cache.put(request, responseToCache);
                 })

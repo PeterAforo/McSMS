@@ -1,0 +1,1 @@
+import{j as s}from"./index-C7DEIqkB.js";import{M as r}from"./MessagesModule-BXBkLWOC.js";import"./vendor-react-BOoqVYcK.js";import"./vendor-pdf-BiD6jRqH.js";import"./vendor-state-BaC3wVMW.js";import"./vendor-utils-Dos3PyFQ.js";import"./vendor-icons-tA6JzCqp.js";import"./studentHelpers-r3h6uSCK.js";function e(){return s.jsx(r,{userType:"student"})}export{e as default};

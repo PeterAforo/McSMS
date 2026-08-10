@@ -2,28 +2,38 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#1e40af" />
     <meta name="description" content="McSMS - Complete School Management System with AI-powered features" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="McSMS" />
     
-    <link rel="icon" type="image/png" href="/favicon.png" />
-    <link rel="manifest" href="/backend/api/manifest.php" />
-    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <!-- Preconnect to API domain for faster requests -->
+    <link rel="preconnect" href="https://app.earlyexcellenceacademy.com" crossorigin />
+    <link rel="dns-prefetch" href="https://app.earlyexcellenceacademy.com" />
+    
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/svg+xml" href="/icons/icon-192x192.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.svg" />
     
     <title>McSMS - School Management System</title>
-    <script type="module" crossorigin src="/assets/index-BPSrnhOO.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DDr4h9HM.css">
+    <script type="module" crossorigin src="/assets/index-C7DEIqkB.js"></script>
+    <link rel="modulepreload" crossorigin href="/assets/vendor-react-BOoqVYcK.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-pdf-BiD6jRqH.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-state-BaC3wVMW.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-utils-Dos3PyFQ.js">
+    <link rel="modulepreload" crossorigin href="/assets/vendor-icons-tA6JzCqp.js">
+    <link rel="stylesheet" crossorigin href="/assets/index-B56BOR9-.css">
   </head>
   <body>
     <div id="root"></div>
     <script>
-      // Register Service Worker
+      // Register Service Worker — versioned URL to bypass HTTP cache on deploys
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
+          navigator.serviceWorker.register('/sw.js?v=8')
             .then(reg => console.log('Service Worker registered:', reg.scope))
             .catch(err => console.error('Service Worker registration failed:', err));
         });

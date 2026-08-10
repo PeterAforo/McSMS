@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useSchoolSettings } from '../../hooks/useSchoolSettings';
+import { useGalleryImages } from '../../hooks/useGalleryImages';
 import { GraduationCap, Mail, ArrowLeft, CheckCircle, Sparkles, Shield, Key, Lock } from 'lucide-react';
 import axios from 'axios';
+import { API_BASE_URL } from '../../config';
 
 export default function ForgotPassword() {
   const { settings, loading: settingsLoading } = useSchoolSettings();
@@ -11,13 +13,22 @@ export default function ForgotPassword() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
+  const { images } = useGalleryImages();
+  const selectedImage = useMemo(() => {
+    if (!images || images.length === 0) return null;
+    const pageImages = images.filter((img) => img.page_assignment === 'forgot_password');
+    const pool = pageImages.length > 0 ? pageImages : images.filter((img) => img.page_assignment === 'any');
+    if (pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)].url;
+  }, [images]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      const response = await axios.post('https://eea.mcaforo.com/backend/api/auth.php?action=forgot_password', {
+      const response = await axios.post(`${API_BASE_URL}/auth.php?action=forgot_password`, {
         email
       });
 
@@ -61,20 +72,29 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Welcome Section (60%) */}
-      <div className="hidden lg:flex lg:w-[60%] relative bg-gradient-to-br from-orange-600 via-red-600 to-pink-700 overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}></div>
-        </div>
+      <div className={`hidden lg:flex lg:w-[60%] relative overflow-hidden ${selectedImage ? '' : 'bg-gradient-to-br from-orange-600 via-red-600 to-pink-700'}`}>
+        {selectedImage ? (
+          <>
+            <img src={selectedImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/50"></div>
+          </>
+        ) : (
+          <>
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              }}></div>
+            </div>
 
-        {/* Animated Background Shapes */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-red-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
+            {/* Animated Background Shapes */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+              <div className="absolute bottom-20 right-20 w-96 h-96 bg-pink-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-red-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+            </div>
+          </>
+        )}
 
         {/* Welcome Content */}
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-12 text-white">

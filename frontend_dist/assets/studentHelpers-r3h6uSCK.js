@@ -1,0 +1,1 @@
+function r(r){if(!r)return"";return[r.first_name||"",r.other_names||"",r.last_name||""].filter(r=>r&&r.trim()).map(r=>r.trim()).join(" ")}function t(r){if(!r)return"";return((r.first_name||"").charAt(0)+(r.last_name||"").charAt(0)).toUpperCase()}export{r as a,t as g};

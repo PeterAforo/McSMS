@@ -1,0 +1,1 @@
+import{j as r}from"./index-C7DEIqkB.js";import{M as e}from"./MessagesModule-BXBkLWOC.js";import"./vendor-react-BOoqVYcK.js";import"./vendor-pdf-BiD6jRqH.js";import"./vendor-state-BaC3wVMW.js";import"./vendor-utils-Dos3PyFQ.js";import"./vendor-icons-tA6JzCqp.js";import"./studentHelpers-r3h6uSCK.js";function s(){return r.jsx(e,{userType:"teacher"})}export{s as default};

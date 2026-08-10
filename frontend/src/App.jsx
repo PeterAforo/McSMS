@@ -8,6 +8,7 @@ import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import DashboardLayout from './components/layout/DashboardLayout';
 import Unauthorized from './pages/Unauthorized';
+import ErrorBoundary from './components/shared/ErrorBoundary';
 
 // Loading fallback component
 const PageLoader = () => (
@@ -18,7 +19,9 @@ const PageLoader = () => (
 
 // Lazy loaded components - Auth
 const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/auth/ResetPassword'));
 const Activate = lazy(() => import('./pages/auth/Activate'));
+const ForcePasswordChange = lazy(() => import('./pages/auth/ForcePasswordChange'));
 
 // Lazy loaded - Shared components
 const AIChatbot = lazy(() => import('./components/shared/AIChatbot'));
@@ -74,11 +77,16 @@ const ReportBuilder = lazy(() => import('./pages/admin/ReportBuilder'));
 const VideoConferencing = lazy(() => import('./pages/admin/VideoConferencing'));
 const ComprehensiveDashboard = lazy(() => import('./pages/admin/ComprehensiveDashboard'));
 const DashboardSelector = lazy(() => import('./pages/admin/DashboardSelector'));
+const GalleryManagement = lazy(() => import('./pages/admin/GalleryManagement'));
 const WhatsAppMessaging = lazy(() => import('./pages/admin/WhatsAppMessaging'));
 const SMSMessaging = lazy(() => import('./pages/admin/SMSMessaging'));
 const EmailMessaging = lazy(() => import('./pages/admin/EmailMessaging'));
+const MessageCenter = lazy(() => import('./pages/admin/MessageCenter'));
 const AdminMessages = lazy(() => import('./pages/admin/Messages'));
 const StudentDiscounts = lazy(() => import('./pages/admin/StudentDiscounts'));
+const Promotions = lazy(() => import('./pages/admin/Promotions'));
+const Accounting = lazy(() => import('./pages/admin/Accounting'));
+const ParentChildren = lazy(() => import('./pages/admin/ParentChildren'));
 
 // Lazy loaded - Role dashboards
 const PrincipalDashboard = lazy(() => import('./pages/principal/PrincipalDashboard'));
@@ -89,6 +97,8 @@ const HRDashboard = lazy(() => import('./pages/hr/HRDashboard'));
 const EmployeeManagement = lazy(() => import('./pages/hr/EmployeeManagement'));
 const LeaveManagement = lazy(() => import('./pages/hr/LeaveManagement'));
 const PayrollManagement = lazy(() => import('./pages/hr/PayrollManagement'));
+const PerformanceReviews = lazy(() => import('./pages/hr/PerformanceReviews'));
+const SalaryStructures = lazy(() => import('./pages/hr/SalaryStructures'));
 const FinanceDashboard = lazy(() => import('./pages/finance/FinanceDashboard'));
 const InvoiceManagement = lazy(() => import('./pages/finance/InvoiceManagement'));
 const PaymentTracking = lazy(() => import('./pages/finance/PaymentTracking'));
@@ -118,6 +128,10 @@ const BehaviorTracking = lazy(() => import('./pages/teacher/BehaviorTracking'));
 const ResourceLibrary = lazy(() => import('./pages/teacher/ResourceLibrary'));
 const SeatingChart = lazy(() => import('./pages/teacher/SeatingChart'));
 const SubstituteMode = lazy(() => import('./pages/teacher/SubstituteMode'));
+const TeacherReportCards = lazy(() => import('./pages/teacher/ReportCards'));
+
+// Lazy loaded - Admin pages (report card approval)
+const ReportCardApproval = lazy(() => import('./pages/admin/ReportCardApproval'));
 
 // Lazy loaded - Parent pages
 const ParentComprehensiveDashboard = lazy(() => import('./pages/parent/ParentDashboard'));
@@ -145,12 +159,28 @@ function ProtectedRoute({ children, allowedRoles }) {
     return <Navigate to="/login" replace />;
   }
 
+  // Force password change before allowing access to any protected route
+  if (user?.must_change_password) {
+    return <Navigate to="/force-password-change" replace />;
+  }
+
   // Check user_type or role field (different APIs may use different field names)
-  const userRole = user?.user_type || user?.role || user?.type;
-  
-  if (allowedRoles && !allowedRoles.includes(userRole)) {
-    console.log('Access denied - User role:', userRole, 'Allowed roles:', allowedRoles);
-    return <Navigate to="/unauthorized" replace />;
+  const rawRole = user?.user_type || user?.role || user?.type || '';
+  // Normalize: lowercase, trim, collapse spaces/hyphens to underscores
+  const normalize = (r) => String(r).trim().toLowerCase().replace(/[\s-]+/g, '_');
+  const userRole = normalize(rawRole);
+
+  // Super admin has universal access to every route
+  if (userRole === 'super_admin' || userRole === 'superadmin') {
+    return children;
+  }
+
+  if (allowedRoles) {
+    const normalizedAllowed = allowedRoles.map(normalize);
+    if (!normalizedAllowed.includes(userRole)) {
+      console.log('Access denied - User role:', rawRole, '(normalized:', userRole, ') Allowed roles:', allowedRoles);
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
   return children;
@@ -169,24 +199,27 @@ function ThemeInitializer({ children }) {
 
 function App() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<PageLoader />}>
-        <DynamicFavicon />
-      </Suspense>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Suspense fallback={<PageLoader />}>
+          <DynamicFavicon />
+        </Suspense>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/activate" element={<Activate />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/force-password-change" element={<ForcePasswordChange />} />
         <Route path="/unauthorized" element={<Unauthorized />} />
         
         {/* Protected Admin Routes */}
         <Route
           path="/admin"
           element={
-            <ProtectedRoute allowedRoles={['admin']}>
+            <ProtectedRoute allowedRoles={['admin', 'super_admin', 'librarian', 'receptionist', 'employee', 'staff']}>
               <DashboardLayout />
             </ProtectedRoute>
           }
@@ -201,6 +234,7 @@ function App() {
           <Route path="education-levels" element={<EducationLevels />} />
           <Route path="subjects" element={<Subjects />} />
           <Route path="terms" element={<Terms />} />
+          <Route path="promotions" element={<Promotions />} />
           <Route path="teachers" element={<Teachers />} />
           <Route path="teachers/:teacherId" element={<TeacherProfile />} />
           <Route path="finance" element={<Finance />} />
@@ -208,8 +242,12 @@ function App() {
           <Route path="invoices" element={<Invoices />} />
           <Route path="payments" element={<Payments />} />
           <Route path="discounts" element={<StudentDiscounts />} />
+          <Route path="accounting" element={<Accounting />} />
+          <Route path="accounting/:tab" element={<Accounting />} />
+          <Route path="parent-children" element={<ParentChildren />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="grading" element={<Grading />} />
+          <Route path="report-card-approval" element={<ReportCardApproval />} />
           <Route path="homework" element={<Homework />} />
           <Route path="roles" element={<RoleManagement />} />
           <Route path="reports" element={<Reports />} />
@@ -234,6 +272,7 @@ function App() {
           <Route path="video-conferencing" element={<VideoConferencing />} />
           <Route path="settings" element={<Navigate to="/admin/system-config" replace />} />
           <Route path="import" element={<BulkImport />} />
+          <Route path="gallery" element={<GalleryManagement />} />
           <Route path="system-config" element={<SystemConfiguration />} />
           <Route path="system-reset" element={<SystemReset />} />
           <Route path="logs" element={<SystemLogs />} />
@@ -245,6 +284,7 @@ function App() {
           <Route path="whatsapp" element={<WhatsAppMessaging />} />
           <Route path="sms" element={<SMSMessaging />} />
           <Route path="email" element={<EmailMessaging />} />
+          <Route path="message-center" element={<MessageCenter />} />
           <Route path="help" element={<HelpCenter />} />
           <Route index element={<Navigate to="dashboard" replace />} />
         </Route>
@@ -253,7 +293,7 @@ function App() {
         <Route
           path="/principal"
           element={
-            <ProtectedRoute allowedRoles={['principal', 'admin']}>
+            <ProtectedRoute allowedRoles={['principal', 'admin', 'super_admin']}>
               <DashboardLayout />
             </ProtectedRoute>
           }
@@ -272,7 +312,7 @@ function App() {
         <Route
           path="/hr"
           element={
-            <ProtectedRoute allowedRoles={['hr', 'admin']}>
+            <ProtectedRoute allowedRoles={['hr', 'hr_manager', 'admin', 'super_admin']}>
               <DashboardLayout />
             </ProtectedRoute>
           }
@@ -281,6 +321,8 @@ function App() {
           <Route path="employees" element={<EmployeeManagement />} />
           <Route path="leave" element={<LeaveManagement />} />
           <Route path="payroll" element={<PayrollManagement />} />
+          <Route path="performance-reviews" element={<PerformanceReviews />} />
+          <Route path="salary-structures" element={<SalaryStructures />} />
           <Route path="profile" element={<Profile />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="help" element={<HelpCenter />} />
@@ -291,7 +333,7 @@ function App() {
         <Route
           path="/finance"
           element={
-            <ProtectedRoute allowedRoles={['finance', 'admin']}>
+            <ProtectedRoute allowedRoles={['finance', 'accountant', 'admin', 'super_admin']}>
               <DashboardLayout />
             </ProtectedRoute>
           }
@@ -309,7 +351,7 @@ function App() {
         <Route
           path="/student"
           element={
-            <ProtectedRoute allowedRoles={['student', 'admin']}>
+            <ProtectedRoute allowedRoles={['student', 'admin', 'super_admin']}>
               <DashboardLayout />
             </ProtectedRoute>
           }
@@ -330,7 +372,7 @@ function App() {
         <Route
           path="/teacher"
           element={
-            <ProtectedRoute allowedRoles={['teacher', 'admin']}>
+            <ProtectedRoute allowedRoles={['teacher', 'class_teacher', 'admin', 'super_admin']}>
               <DashboardLayout />
             </ProtectedRoute>
           }
@@ -352,6 +394,7 @@ function App() {
           <Route path="resources" element={<ResourceLibrary />} />
           <Route path="seating" element={<SeatingChart />} />
           <Route path="substitute" element={<SubstituteMode />} />
+          <Route path="report-cards" element={<TeacherReportCards />} />
           <Route path="settings" element={<TeacherSettings />} />
           <Route path="profile" element={<Profile />} />
           <Route path="notifications" element={<Notifications />} />
@@ -363,7 +406,7 @@ function App() {
         <Route
           path="/parent"
           element={
-            <ProtectedRoute allowedRoles={['parent', 'admin']}>
+            <ProtectedRoute allowedRoles={['parent', 'admin', 'super_admin']}>
               <DashboardLayout />
             </ProtectedRoute>
           }
@@ -395,14 +438,15 @@ function App() {
         
         {/* 404 */}
         <Route path="*" element={<div className="p-8"><h1 className="text-2xl">404 - Page Not Found</h1></div>} />
-      </Routes>
-      </Suspense>
-      
-      {/* AI Chatbot - Available on all pages (bottom-left) */}
-      <Suspense fallback={null}>
-        <AIChatbot />
-      </Suspense>
-    </BrowserRouter>
+          </Routes>
+        </Suspense>
+        
+        {/* AI Chatbot - Available on all pages (bottom-left) */}
+        <Suspense fallback={null}>
+          <AIChatbot />
+        </Suspense>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

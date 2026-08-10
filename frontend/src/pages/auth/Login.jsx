@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
 import { authAPI } from '../../services/api';
 import { useSchoolSettings } from '../../hooks/useSchoolSettings';
+import { useGalleryImages } from '../../hooks/useGalleryImages';
 import { GraduationCap, Mail, Lock, AlertCircle, Sparkles } from 'lucide-react';
+import PasswordInput from '../../components/PasswordInput';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -17,6 +19,15 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const { images } = useGalleryImages();
+  const selectedImage = useMemo(() => {
+    if (!images || images.length === 0) return null;
+    const pageImages = images.filter((img) => img.page_assignment === 'login');
+    const pool = pageImages.length > 0 ? pageImages : images.filter((img) => img.page_assignment === 'any');
+    if (pool.length === 0) return null;
+    return pool[Math.floor(Math.random() * pool.length)].url;
+  }, [images]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -27,27 +38,32 @@ export default function Login() {
       const { user, token } = response.data;
       
       login(user, token);
-      
-      // Redirect based on user type
-      switch (user.user_type) {
-        case 'super_admin':
-        case 'admin':
-          navigate('/admin/dashboard');
-          break;
-        case 'parent':
-          navigate('/parent/dashboard');
-          break;
-        case 'teacher':
-          navigate('/teacher/dashboard');
-          break;
-        case 'finance':
-          navigate('/finance/dashboard');
-          break;
-        default:
-          navigate('/admin/dashboard');
+
+      if (user.must_change_password) {
+        navigate('/force-password-change');
+        return;
       }
+
+      // Redirect based on user type — comprehensive role mapping
+      const roleRoutes = {
+        super_admin: '/admin/dashboard',
+        admin: '/admin/dashboard',
+        parent: '/parent/dashboard',
+        teacher: '/teacher/dashboard',
+        class_teacher: '/teacher/dashboard',
+        finance: '/finance/dashboard',
+        accountant: '/finance/dashboard',
+        principal: '/principal/dashboard',
+        hr: '/hr/dashboard',
+        hr_manager: '/hr/dashboard',
+        student: '/student/dashboard',
+      };
+      const rawRole = (user.user_type || user.role || user.type || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+      const route = roleRoutes[rawRole] || '/admin/dashboard';
+      navigate(route);
     } catch (err) {
-      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
+      const msg = err.response?.data?.error || err.response?.data?.message;
+      setError(msg || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
@@ -56,20 +72,29 @@ export default function Login() {
   return (
     <div className="min-h-screen flex">
       {/* Left Side - Welcome Section (60%) */}
-      <div className="hidden lg:flex lg:w-[60%] relative bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700 overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}></div>
-        </div>
+      <div className={`hidden lg:flex lg:w-[60%] relative overflow-hidden ${selectedImage ? '' : 'bg-gradient-to-br from-blue-600 via-purple-600 to-indigo-700'}`}>
+        {selectedImage ? (
+          <>
+            <img src={selectedImage} alt="" className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute inset-0 bg-black/50"></div>
+          </>
+        ) : (
+          <>
+            {/* Background Pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute inset-0" style={{
+                backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+              }}></div>
+            </div>
 
-        {/* Animated Background Shapes */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
-        </div>
+            {/* Animated Background Shapes */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute top-20 left-20 w-72 h-72 bg-white/10 rounded-full blur-3xl animate-pulse"></div>
+              <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }}></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-blue-300/10 rounded-full blur-3xl animate-pulse" style={{ animationDelay: '2s' }}></div>
+            </div>
+          </>
+        )}
 
         {/* Welcome Content */}
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-12 text-white">
@@ -122,7 +147,7 @@ export default function Login() {
 
             {/* Tagline */}
             <p className="text-xl text-blue-100 mt-8 animate-slide-up" style={{ animationDelay: '0.8s' }}>
-              Ghana Schools - GES & Cambridge Curriculum
+              Ghana Schools - Cambridge Curriculum
             </p>
           </div>
         </div>
@@ -204,15 +229,14 @@ export default function Login() {
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" aria-hidden="true" />
-                  <input
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" aria-hidden="true" />
+                  <PasswordInput
                     id="password"
                     name="password"
-                    type="password"
                     required
                     autoComplete="current-password"
                     aria-required="true"
-                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+                    className="w-full pl-11 pr-10 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                     placeholder="••••••••"
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
